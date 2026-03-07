@@ -3,15 +3,23 @@ varying vec2 vUv;
 
 uniform sampler2D uTexture;
 uniform float opacity;
+uniform float uTime;
 
 void main() {
-  // Sphere radius is 2, so position is in [-2, 2]. Normalize to [0, 1] for RGB.
   vec3 normalizedPos = (vPosition / 2.0 + 1.0) * 0.5;
-  // gl_FragColor = vec4(normalizedPos, opacity);
   vec4 texColor = texture2D(uTexture, vUv);
 
-  vec4 finalColor = vec4((-1. * (texColor.rgb - 1.0)) * normalizedPos, opacity);
+  // Animated RGB gradient based on position + time
+  vec3 animatedGradient = 0.5 + 0.5 * sin(
+    vec3(
+      normalizedPos.x * 6.28318 + uTime,
+      normalizedPos.y * 6.28318 + uTime * 1.2,
+      normalizedPos.z * 6.28318 + uTime * 0.8
+    )
+  );
 
+  // Keep black map areas black, color only land
+  vec3 finalRgb = texColor.rgb * animatedGradient;
 
-  gl_FragColor = finalColor;
+  gl_FragColor = vec4(finalRgb, opacity);
 }

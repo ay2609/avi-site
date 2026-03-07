@@ -9,6 +9,7 @@ import { useRouter } from "next/navigation";
 
 import vertexShader from "@/lib/shaders/globe/positionColor.vert";
 import fragmentShader from "@/lib/shaders/globe/positionColor.frag";
+import { TickManager, type TickData } from "@/lib/render/tick-manager";
 
 interface POI {
   name: string;
@@ -62,7 +63,8 @@ export default function ThreeCanvas() {
 
     // --- Globe ---
     const textureLoader = new THREE.TextureLoader();
-    const mapTexture = textureLoader.load('/water_16k.png')
+    const mapTexture = textureLoader.load("/water_16k.png");
+    mapTexture.colorSpace = THREE.SRGBColorSpace;
 
 
     const globeRadius = 2;
@@ -71,8 +73,9 @@ export default function ThreeCanvas() {
       vertexShader,
       fragmentShader,
       uniforms: {
-        uTexture: {value: mapTexture},
+        uTexture: { value: mapTexture },
         opacity: { value: 0.9 },
+        uTime: { value: 0 },
       },
       transparent: true,
     });
@@ -136,9 +139,9 @@ export default function ThreeCanvas() {
       isUserInteracting = true;
     });
 
-    controls.addEventListener('end', () => {
+    controls.addEventListener("end", () => {
       isUserInteracting = false;
-      lastInteractionTime = Date.now();
+      lastInteractionTime = performance.now();
     });
 
     const resize = () => {
@@ -152,20 +155,20 @@ export default function ThreeCanvas() {
 
     window.addEventListener("resize", resize);
 
-    let raf = 0;
-    const animate = () => {
-      raf = requestAnimationFrame(animate);
-      
-      const now = Date.now();
-      
+    const tickManager = new TickManager();
+    const removeTickListener = TickManager.useTick(tickManager, ({ timestamp }) => {
+      material.uniforms.uTime.value = timestamp * 0.001;
+    });
+
+    const render = (data: TickData) => {
+      const now = data.timestamp;
+
       // Handle Auto-Spin Acceleration
       if (!isUserInteracting) {
         const timeSinceLastInteraction = now - lastInteractionTime;
         if (timeSinceLastInteraction > 1000) {
-          // Smoothly accelerate back to autoSpinSpeed
           currentSpinSpeed = THREE.MathUtils.lerp(currentSpinSpeed, autoSpinSpeed, 0.01);
         } else {
-          // Briefly stay still or very slow before resuming
           currentSpinSpeed = THREE.MathUtils.lerp(currentSpinSpeed, 0, 0.05);
         }
       } else {
@@ -177,27 +180,24 @@ export default function ThreeCanvas() {
       // Update POI visibility (closest few)
       const cameraPosition = new THREE.Vector3();
       camera.getWorldPosition(cameraPosition);
-      
-      const poiDistances = pois.map(poi => {
+
+      const poiDistances = pois.map((poi) => {
         const worldPos = new THREE.Vector3();
         poi.object?.getWorldPosition(worldPos);
         const dist = worldPos.distanceTo(cameraPosition);
-        
-        // Dot product to hide points on the back side of the sphere
         const dot = worldPos.normalize().dot(cameraPosition.clone().normalize());
-        return { poi, dist, visible: dot > 0.2 }; // dot > 0 means it's on the hemisphere facing camera
+        return { poi, dist, visible: dot > 0.2 };
       });
 
-      // Sort by distance and visibility
       poiDistances.sort((a, b) => a.dist - b.dist);
 
       poiDistances.forEach((item, index) => {
-        if (item.visible && index < 3) { // Show only 3 closest on the front
-          item.poi.element!.style.opacity = '1';
-          item.poi.element!.style.pointerEvents = 'auto';
+        if (item.visible && index < 3) {
+          item.poi.element!.style.opacity = "1";
+          item.poi.element!.style.pointerEvents = "auto";
         } else {
-          item.poi.element!.style.opacity = '0';
-          item.poi.element!.style.pointerEvents = 'none';
+          item.poi.element!.style.opacity = "0";
+          item.poi.element!.style.pointerEvents = "none";
         }
       });
 
@@ -206,11 +206,12 @@ export default function ThreeCanvas() {
       labelRenderer.render(scene, camera);
     };
 
-    animate();
+    tickManager.startLoop(render);
 
     return () => {
       window.removeEventListener("resize", resize);
-      cancelAnimationFrame(raf);
+      removeTickListener();
+      tickManager.stopLoop();
       controls.dispose();
       renderer.dispose();
       labelRenderer.domElement.remove();
