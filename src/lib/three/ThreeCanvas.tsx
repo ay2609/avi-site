@@ -63,8 +63,11 @@ export default function ThreeCanvas() {
 
     // --- Globe ---
     const textureLoader = new THREE.TextureLoader();
-    const mapTexture = textureLoader.load("/water_16k.png");
-    mapTexture.colorSpace = THREE.SRGBColorSpace;
+    const landTexture = textureLoader.load("/water_16k.png");
+    const heightTexture = textureLoader.load("/World_elevation_map.png");
+
+    landTexture.colorSpace = THREE.NoColorSpace;
+    heightTexture.colorSpace = THREE.NoColorSpace;
 
 
     const globeRadius = 2;
@@ -73,7 +76,8 @@ export default function ThreeCanvas() {
       vertexShader,
       fragmentShader,
       uniforms: {
-        uTexture: { value: mapTexture },
+        uLandTexture: { value: landTexture },
+        uHeightTexture: { value: heightTexture },
         opacity: { value: 0.9 },
         uTime: { value: 0 },
       },
@@ -130,7 +134,7 @@ export default function ThreeCanvas() {
     controls.autoRotate = false; // We'll handle rotation ourselves for smoother control
 
     // --- State for Animation ---
-    let autoSpinSpeed = 0.002;
+    const autoSpinSpeed = 0.002;
     let currentSpinSpeed = autoSpinSpeed;
     let isUserInteracting = false;
     let lastInteractionTime = 0;
@@ -156,12 +160,9 @@ export default function ThreeCanvas() {
     window.addEventListener("resize", resize);
 
     const tickManager = new TickManager();
-    const removeTickListener = TickManager.useTick(tickManager, ({ timestamp }) => {
-      material.uniforms.uTime.value = timestamp * 0.001;
-    });
-
     const render = (data: TickData) => {
       const now = data.timestamp;
+      material.uniforms.uTime.value = now * 0.001;
 
       // Handle Auto-Spin Acceleration
       if (!isUserInteracting) {
@@ -210,14 +211,13 @@ export default function ThreeCanvas() {
 
     return () => {
       window.removeEventListener("resize", resize);
-      removeTickListener();
       tickManager.stopLoop();
       controls.dispose();
       renderer.dispose();
       labelRenderer.domElement.remove();
       host.removeChild(renderer.domElement);
     };
-  }, []);
+  }, [router]);
 
   return (
     <div className="relative h-[80vh] w-full overflow-hidden">

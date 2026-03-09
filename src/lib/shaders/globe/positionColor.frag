@@ -1,14 +1,10 @@
-varying vec3 vPosition;
 varying vec2 vUv;
 
-uniform sampler2D uTexture;
+uniform sampler2D uLandTexture;
+uniform sampler2D uHeightTexture;
 uniform float opacity;
 uniform float uTime;
-uniform vec2 uResolution;
 
-// ------------------------------------
-// 3D value noise
-// ------------------------------------
 float hash31(vec3 p) {
   return fract(sin(1000.0 * dot(p, vec3(1.0, 57.0, -13.7))) * 4375.5453);
 }
@@ -16,7 +12,6 @@ float hash31(vec3 p) {
 float noise3(vec3 x) {
   vec3 p = floor(x);
   vec3 f = fract(x);
-
   f = f * f * (3.0 - 2.0 * f);
 
   float v000 = hash31(p + vec3(0.0, 0.0, 0.0));
@@ -29,16 +24,8 @@ float noise3(vec3 x) {
   float v111 = hash31(p + vec3(1.0, 1.0, 1.0));
 
   return mix(
-    mix(
-      mix(v000, v100, f.x),
-      mix(v010, v110, f.x),
-      f.y
-    ),
-    mix(
-      mix(v001, v101, f.x),
-      mix(v011, v111, f.x),
-      f.y
-    ),
+    mix(mix(v000, v100, f.x), mix(v010, v110, f.x), f.y),
+    mix(mix(v001, v101, f.x), mix(v011, v111, f.x), f.y),
     f.z
   );
 }
@@ -47,62 +34,58 @@ float noiseVal(vec3 x) {
   return 0.5 * (noise3(x) + noise3(x + 11.5));
 }
 
-// ------------------------------------
-// soft land field from the texture
-// ------------------------------------
-float getLandField(vec2 uv) {
-  vec2 texel = 1.0 / uResolution;
+float getLandMask(vec2 uv) {
+  // The existing map is white ocean / black land.
+  return clamp(1.0 - texture2D(uLandTexture, uv).r, 0.0, 1.0);
+}
 
-  float c  = texture2D(uTexture, uv).r;
-  float n  = texture2D(uTexture, uv + vec2(0.0,  texel.y)).r;
-  float s  = texture2D(uTexture, uv - vec2(0.0,  texel.y)).r;
-  float e  = texture2D(uTexture, uv + vec2(texel.x, 0.0)).r;
-  float w  = texture2D(uTexture, uv - vec2(texel.x, 0.0)).r;
-  float ne = texture2D(uTexture, uv + vec2(texel.x,  texel.y)).r;
-  float nw = texture2D(uTexture, uv + vec2(-texel.x, texel.y)).r;
-  float se = texture2D(uTexture, uv + vec2(texel.x, -texel.y)).r;
-  float sw = texture2D(uTexture, uv + vec2(-texel.x, -texel.y)).r;
+float getHeightField(vec2 uv) {
+  vec2 stepUv = vec2(0.0012, 0.0012);
 
-  // simple local blur
-  float blurred =
-      c * 0.30 +
-      (n + s + e + w) * 0.12 +
-      (ne + nw + se + sw) * 0.055;
+  float c = texture2D(uHeightTexture, uv).r;
+  float n = texture2D(uHeightTexture, uv + vec2(0.0, stepUv.y)).r;
+  float s = texture2D(uHeightTexture, uv - vec2(0.0, stepUv.y)).r;
+  float e = texture2D(uHeightTexture, uv + vec2(stepUv.x, 0.0)).r;
+  float w = texture2D(uHeightTexture, uv - vec2(stepUv.x, 0.0)).r;
 
-  return blurred;
+  return c * 0.48 + (n + s + e + w) * 0.13;
+}
+
+float getContourMask(float fieldValue, float intervalCount) {
+  float contourPos = fieldValue * intervalCount;
+  float f = fract(contourPos);
+  float distToLine = min(f, 1.0 - f);
+  float aa = fwidth(contourPos) * 1.0 + 0.0005;
+  return 1.0 - smoothstep(0.0, aa, distToLine);
 }
 
 void main() {
-  float landMask = -1. * (texture2D(uTexture, vUv).r - 1.) ;
+  float landMask = getLandMask(vUv);
+  float heightField = getHeightField(vUv);
 
+  // Reintroduce a smooth, repeating animated transition on top of the real heightmap.
+  vec2 U = vUv * 9.0;
+  float flow = noiseVal(vec3(U, uTime * 0.06));
+  float detail = noiseVal(vec3(U * 2.2 + 17.0, uTime * 0.09));
+  float scalarField = heightField * 2.0 + flow * 0.22 + detail * 0.08;
 
-  // soft map-based scalar field
-  float landField = getLandField(vUv);
+  float contour = getContourMask(scalarField, 25.0);
 
-  // procedural distortion that stays attached to UV/map space
-  vec2 U = vUv * 10.0;
-  float flow = noiseVal(vec3(U, 0.08 * uTime));
-  float detail = noiseVal(vec3(U * 2.0 + 20.0, 0.12 * uTime));
+  float slope = length(vec2(dFdx(heightField), dFdy(heightField)));
+  float slopeBoost = smoothstep(0.0008, 0.008, slope);
 
-  // combined scalar field:
-  // landField makes contours follow continents
-  // noise adds organic motion/detail
-  float n = landField * 1.8 + flow * 0.45 + detail * 0.18;
+  float lineMask = contour * (0.65 + 0.35 * slopeBoost);
+  lineMask *= smoothstep(0.02, 0.2, landMask);
 
-  // contour rings
-  float v = sin(6.28318 * 10.0 * n);
+  vec3 oceanColor = vec3(0.015, 0.02, 0.03);
+  vec3 landColor = vec3(0.07, 0.08, 0.08);
 
-  // anti-aliased contour line mask
-  v = smoothstep(1.0, 0.0, 0.5 * abs(v) / fwidth(v));
+  // Grayscale oscillation similar to the old shader's repeating transition.
+  float wave = 0.5 + 0.5 * sin(12.0 * scalarField + uTime * 0.9);
+  vec3 contourColor = vec3(wave);
 
-  // smooth palette
-  vec3 topoColor = 0.5 + 0.5 * sin(12.0 * n + vec3(0.0, 2.1, -2.1));
-
-  // optional land fill so continents aren't only thin lines
-  vec3 filledColor = topoColor * (0.18 + 0.82 * v);
-
-  // apply only on land
-  vec3 finalRgb = filledColor * landMask;
+  vec3 landWithContours = mix(landColor, contourColor, lineMask);
+  vec3 finalRgb = mix(oceanColor, landWithContours, landMask);
 
   gl_FragColor = vec4(finalRgb, opacity);
 }
