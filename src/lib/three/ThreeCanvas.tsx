@@ -28,6 +28,13 @@ const POI_DATA: POI[] = [
   { name: "GLOBE", path: "/globe", lat: 60, lng: 150 },
 ];
 
+const TOPOGRAPHY_CONFIG = {
+  intervalCount: 20, // Number of contour bands across normalized elevation range.
+  phaseSpeed: 0.04, // How fast contours drift through elevations.
+  lineWidth: 1.1, // Multiplier for contour anti-alias width.
+  lineBias: 0.0006, // Base contour softness.
+} as const;
+
 export default function ThreeCanvas() {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const router = useRouter();
@@ -80,6 +87,10 @@ export default function ThreeCanvas() {
         uHeightTexture: { value: heightTexture },
         opacity: { value: 0.9 },
         uTime: { value: 0 },
+        uIntervalCount: { value: TOPOGRAPHY_CONFIG.intervalCount },
+        uPhaseSpeed: { value: TOPOGRAPHY_CONFIG.phaseSpeed },
+        uLineWidth: { value: TOPOGRAPHY_CONFIG.lineWidth },
+        uLineBias: { value: TOPOGRAPHY_CONFIG.lineBias },
       },
       transparent: true,
     });
