@@ -10,6 +10,7 @@ import { useRouter } from "next/navigation";
 import vertexShader from "@/lib/shaders/globe/positionColor.vert";
 import fragmentShader from "@/lib/shaders/globe/positionColor.frag";
 import { TickManager, type TickData } from "@/lib/render/tick-manager";
+import { PopulationNetworkLayer } from "@/lib/three/network/PopulationNetworkLayer";
 
 import { HybridCamera } from "./HybridCamera";
 
@@ -195,6 +196,10 @@ export default function ThreeCanvas() {
     });
     const globe = new THREE.Mesh(geometry, material);
     scene.add(globe);
+
+    const networkLayer = new PopulationNetworkLayer(globeRadius);
+    globe.add(networkLayer.group);
+    void networkLayer.init();
 
     // --- Underline Grid Plane ---
     const underlineGeometry = new THREE.PlaneGeometry(
@@ -398,6 +403,7 @@ export default function ThreeCanvas() {
       HYBRID_CAMERA_CONFIG.maxDistance
     );
     let currentSpinSpeed = autoSpinSpeed;
+    let isAutoSpinPaused = false;
     let isUserInteracting = false;
     let lastInteractionTime = 0;
 
@@ -445,7 +451,34 @@ export default function ThreeCanvas() {
       );
     };
 
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.code !== "Space" || event.repeat) return;
+
+      const target = event.target;
+      if (
+        target instanceof HTMLElement &&
+        (target.isContentEditable ||
+          target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.tagName === "SELECT")
+      ) {
+        return;
+      }
+
+      event.preventDefault();
+      isAutoSpinPaused = !isAutoSpinPaused;
+
+      if (isAutoSpinPaused) {
+        currentSpinSpeed = 0;
+        return;
+      }
+
+      // Resume with the normal auto-spin ramp instead of snapping immediately.
+      lastInteractionTime = performance.now() - 1001;
+    };
+
     host.addEventListener("wheel", handleWheel, { passive: false });
+    window.addEventListener("keydown", handleKeyDown);
 
     const resize = () => {
       const w = host.clientWidth;
@@ -491,7 +524,9 @@ export default function ThreeCanvas() {
       underlineMaterial.uniforms.uTime.value = now * 0.001;
 
       // Handle Auto-Spin Acceleration
-      if (!isUserInteracting) {
+      if (isAutoSpinPaused) {
+        currentSpinSpeed = 0;
+      } else if (!isUserInteracting) {
         const timeSinceLastInteraction = now - lastInteractionTime;
         if (timeSinceLastInteraction > 1000) {
           currentSpinSpeed = THREE.MathUtils.lerp(currentSpinSpeed, autoSpinSpeed, 0.01);
@@ -577,6 +612,16 @@ export default function ThreeCanvas() {
         updatePoiLabelFx(poi, shouldShow, deltaSeconds);
       });
 
+      networkLayer.update(
+        {
+          camera,
+          globe,
+          projectionBlend: normalizedProjectionBlend,
+          timestampMs: now,
+        },
+        deltaSeconds
+      );
+
       renderer.render(scene, camera);
       labelRenderer.render(scene, camera);
 
@@ -640,6 +685,7 @@ export default function ThreeCanvas() {
 
     return () => {
       host.removeEventListener("wheel", handleWheel);
+      window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("resize", resize);
       tickManager.stopLoop();
       controls.dispose();
@@ -647,6 +693,7 @@ export default function ThreeCanvas() {
       underlineMaterial.dispose();
       surfaceDotGeometry.dispose();
       surfaceDotMaterial.dispose();
+      networkLayer.dispose();
       renderer.dispose();
       connectorCanvas.remove();
       labelRenderer.domElement.remove();
