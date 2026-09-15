@@ -75,7 +75,7 @@ const TOPOGRAPHY_CONFIG = {
 
 const UNDERLINE_GRID_CONFIG = {
   color: 0x9ca3af,
-  opacity: 0.22,
+  opacity: 0.0,
   radius: 0.29, // In plane UV space [0, 0.707], controls visible circular footprint.
   feather: 0.12, // Soft edge for the circular mask.
   gridScale: 8.0, // Number of grid cells across plane UV.
@@ -146,6 +146,23 @@ export default function ThreeCanvas() {
     connectorCanvas.style.pointerEvents = "none";
     connectorCanvas.style.zIndex = "1";
     host.appendChild(connectorCanvas);
+
+    const debugZoomEl = document.createElement("div");
+    debugZoomEl.style.position = "absolute";
+    debugZoomEl.style.top = "12px";
+    debugZoomEl.style.left = "12px";
+    debugZoomEl.style.zIndex = "3";
+    debugZoomEl.style.pointerEvents = "none";
+    debugZoomEl.style.padding = "6px 8px";
+    debugZoomEl.style.border = "1px solid rgba(255,255,255,0.18)";
+    debugZoomEl.style.background = "rgba(0,0,0,0.58)";
+    debugZoomEl.style.color = "rgba(255,255,255,0.9)";
+    debugZoomEl.style.fontFamily = "monospace";
+    debugZoomEl.style.fontSize = "11px";
+    debugZoomEl.style.letterSpacing = "0.06em";
+    debugZoomEl.style.textTransform = "uppercase";
+    debugZoomEl.textContent = "Zoom 0.000";
+    host.appendChild(debugZoomEl);
 
     // --- CSS2D Renderer for Labels ---
     const labelRenderer = new CSS2DRenderer();
@@ -554,11 +571,17 @@ export default function ThreeCanvas() {
       offsetFromTarget.normalize().multiplyScalar(smoothedDistance);
       camera.position.copy(controls.target).add(offsetFromTarget);
 
-      // Match the hybrid camera's orthographic footprint to the orbit target plane.
-      camera.focusDistance = Math.max(
-        camera.position.distanceTo(controls.target),
-        camera.near + 1e-4
+      // Match the orthographic framing to the globe's projected silhouette, not
+      // just the center target plane. Using the tangent depth keeps the globe's
+      // on-screen radius stable while blending between perspective and ortho.
+      const cameraTargetDistance = camera.position.distanceTo(controls.target);
+      const globeSilhouetteDistance = Math.sqrt(
+        Math.max(
+          cameraTargetDistance * cameraTargetDistance - globeRadius * globeRadius,
+          (camera.near + 1e-4) * (camera.near + 1e-4)
+        )
       );
+      camera.focusDistance = Math.max(globeSilhouetteDistance, camera.near + 1e-4);
       camera.projectionBlend = projectionBlendCurrent;
       camera.updateProjectionMatrix();
 
@@ -577,6 +600,20 @@ export default function ThreeCanvas() {
           0,
           1
         );
+      const normalizedDistanceZoom = THREE.MathUtils.clamp(
+        1 -
+          (camera.position.distanceTo(controls.target) - HYBRID_CAMERA_CONFIG.minDistance) /
+            Math.max(0.0001, HYBRID_CAMERA_CONFIG.maxDistance - HYBRID_CAMERA_CONFIG.minDistance),
+        0,
+        1
+      );
+      const debugZoomLevel = THREE.MathUtils.clamp(
+        normalizedDistanceZoom * 0.67 + normalizedProjectionBlend * 0.33,
+        0,
+        1
+      );
+      debugZoomEl.textContent =
+        `Zoom ${debugZoomLevel.toFixed(3)}  Dist ${camera.position.distanceTo(controls.target).toFixed(2)}  Proj ${normalizedProjectionBlend.toFixed(3)}`;
       const visibilityPlaneOffset = THREE.MathUtils.lerp(
         POI_ANCHOR_CONFIG.visibilityPlaneOffsetPerspective,
         POI_ANCHOR_CONFIG.visibilityPlaneOffsetOrtho,
@@ -695,6 +732,7 @@ export default function ThreeCanvas() {
       surfaceDotMaterial.dispose();
       networkLayer.dispose();
       renderer.dispose();
+      debugZoomEl.remove();
       connectorCanvas.remove();
       labelRenderer.domElement.remove();
       host.removeChild(renderer.domElement);

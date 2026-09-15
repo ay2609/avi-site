@@ -1,7 +1,9 @@
+import ThreeCanvas from "@/lib/three/ThreeCanvas";
+
 export default function Home() {
   return (
-    <main className="flex min-h-screen items-center justify-center bg-black text-white">
-      <h1 className="text-4xl tracking-widest">AVI</h1>
+    <main className="relative h-screen overflow-hidden bg-black text-white">
+      <ThreeCanvas />
     </main>
   );
 }

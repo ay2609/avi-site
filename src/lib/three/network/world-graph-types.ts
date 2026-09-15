@@ -7,7 +7,8 @@ export type WorldRegionId =
   | "south-asia"
   | "east-asia"
   | "southeast-asia"
-  | "oceania";
+  | "oceania"
+  | "antarctica";
 
 export interface Hotspot {
   id: string;

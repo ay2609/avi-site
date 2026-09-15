@@ -4,7 +4,7 @@ export const MESH_TUNING = {
   // Global caps and solve cadence.
   network: {
     maxNodes: 2600,
-    maxLinks: 3600,
+    maxLinks: 4000,
     maxVisibleNodes: 1500,
     maxVisibleLinks: 3600,
     solveIntervalMs: 220,
@@ -13,15 +13,15 @@ export const MESH_TUNING = {
   // Visible hemisphere culling relative to camera and projection mode.
   visibility: {
     planeOffsetPerspective: -0.31,
-    planeOffsetOrtho: 0.03,
+    planeOffsetOrtho: -0.31,
   },
   // Role-level population mix and per-role rendering/interaction scale.
   roles: {
     split: {
-      cluster: 0.45,
+      cluster: 0.54,
       person: 0.15,
-      bridge: 0.15,
-      mover: 0.25,
+      bridge: 0.01,
+      mover: 0.30,
     } satisfies Record<NodeRole, number>,
     linkBudgets: {
       cluster: [2, 3],
@@ -207,14 +207,14 @@ export const MESH_TUNING = {
     nodeAlphaActivityWeight: 0.4,
     nodeAlphaClamp: [0.08, 1.0],
     linkAlpha: {
-      localBase: 0.04,
-      localStrengthWeight: 0.22,
-      localMax: 0.3,
-      bridgeBase: 0.05,
-      bridgeStrengthWeight: 0.14,
-      pinnedBridgeStrengthWeight: 0.18,
-      bridgeMax: 0.22,
-      pinnedBridgeMax: 0.28,
+      localBase: 0.06,
+      localStrengthWeight: 0.28,
+      localMax: 0.38,
+      bridgeBase: 0.07,
+      bridgeStrengthWeight: 0.18,
+      pinnedBridgeStrengthWeight: 0.22,
+      bridgeMax: 0.28,
+      pinnedBridgeMax: 0.34,
     },
     pointSize: {
       distanceScale: 10,

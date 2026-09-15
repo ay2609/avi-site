@@ -14,7 +14,141 @@ type RawHotspot = [
   bridgeBias: number,
 ];
 
-const HOTSPOT_DATA: RawHotspot[] = [
+type HotspotPresetId = "global_hub" | "major_hub" | "regional_hub" | "gateway_hub" | "micro_hub";
+type AnglePresetId =
+  | "north-america east"
+  | "north-america central"
+  | "north-america west"
+  | "mexico"
+  | "latin-america andes"
+  | "latin-america brazil"
+  | "latin-america southern-cone"
+  | "europe atlantic"
+  | "europe central"
+  | "europe mediterranean"
+  | "europe nordic"
+  | "mena gulf"
+  | "mena maghreb"
+  | "mena levant/iran"
+  | "africa west"
+  | "africa east"
+  | "africa south/central"
+  | "south-asia north/east"
+  | "south-asia west"
+  | "south-asia south"
+  | "east-asia coastal"
+  | "east-asia north"
+  | "east-asia inland"
+  | "japan/korea"
+  | "southeast-asia mainland"
+  | "southeast-asia archipelago"
+  | "oceania east"
+  | "oceania south/west";
+type CorridorPresetId =
+  | "transatlantic_major"
+  | "americas_link"
+  | "euro_africa_mena"
+  | "gulf_southasia"
+  | "southasia_sea"
+  | "eastasia_pacific";
+type RawCrossRegionLane = [fromName: string, toName: string, strength: number, curvature: number, thicknessDeg: number];
+type PresetCrossRegionLane = [fromName: string, toName: string, presetId: CorridorPresetId];
+
+interface PresetHotspotSeed {
+  name: string;
+  regionId: WorldRegionId;
+  lat: number;
+  lng: number;
+  presetId: HotspotPresetId;
+  anglePresetId: AnglePresetId;
+}
+
+const HOTSPOT_PRESETS = {
+  global_hub: {
+    strength: 0.78,
+    radiusDeg: 3.4,
+    elongation: 1.22,
+    clusterBias: 0.78,
+    bridgeBias: 0.84,
+  },
+  major_hub: {
+    strength: 0.62,
+    radiusDeg: 2.9,
+    elongation: 1.16,
+    clusterBias: 0.62,
+    bridgeBias: 0.72,
+  },
+  regional_hub: {
+    strength: 0.46,
+    radiusDeg: 2.3,
+    elongation: 1.12,
+    clusterBias: 0.48,
+    bridgeBias: 0.58,
+  },
+  gateway_hub: {
+    strength: 0.54,
+    radiusDeg: 2.5,
+    elongation: 1.14,
+    clusterBias: 0.5,
+    bridgeBias: 0.82,
+  },
+  micro_hub: {
+    strength: 0.2,
+    radiusDeg: 1.5,
+    elongation: 1.08,
+    clusterBias: 0.24,
+    bridgeBias: 0.34,
+  },
+} as const;
+
+const ANGLE_PRESETS: Record<AnglePresetId, number> = {
+  "north-america east": 26,
+  "north-america central": -8,
+  "north-america west": -14,
+  mexico: 6,
+  "latin-america andes": 18,
+  "latin-america brazil": -16,
+  "latin-america southern-cone": -10,
+  "europe atlantic": 12,
+  "europe central": 18,
+  "europe mediterranean": -6,
+  "europe nordic": 18,
+  "mena gulf": 10,
+  "mena maghreb": 4,
+  "mena levant/iran": 12,
+  "africa west": -6,
+  "africa east": 18,
+  "africa south/central": 8,
+  "south-asia north/east": 14,
+  "south-asia west": -8,
+  "south-asia south": 0,
+  "east-asia coastal": 10,
+  "east-asia north": 14,
+  "east-asia inland": 6,
+  "japan/korea": 18,
+  "southeast-asia mainland": 4,
+  "southeast-asia archipelago": -12,
+  "oceania east": 10,
+  "oceania south/west": 6,
+};
+
+const CORRIDOR_PRESETS = {
+  transatlantic_major: { strength: 0.72, curvature: 0.34, thicknessDeg: 0.3 },
+  americas_link: { strength: 0.56, curvature: 0.24, thicknessDeg: 0.24 },
+  euro_africa_mena: { strength: 0.56, curvature: 0.22, thicknessDeg: 0.24 },
+  gulf_southasia: { strength: 0.66, curvature: 0.22, thicknessDeg: 0.26 },
+  southasia_sea: { strength: 0.6, curvature: 0.2, thicknessDeg: 0.24 },
+  eastasia_pacific: { strength: 0.68, curvature: 0.3, thicknessDeg: 0.28 },
+} as const;
+
+const NEIGHBOR_COUNT_BY_REGION_SIZE = [
+  { min: 12, count: 4 },
+  { min: 8, count: 3 },
+  { min: 5, count: 2 },
+  { min: 0, count: 2 },
+] as const;
+
+const LEGACY_HOTSPOT_DATA: RawHotspot[] = [
   ["New York", "north-america", 40.7128, -74.006, 1.0, 4.8, 1.45, 32, 0.94, 0.9],
   ["Boston", "north-america", 42.3601, -71.0589, 0.64, 2.6, 1.2, 28, 0.66, 0.64],
   ["Washington", "north-america", 38.9072, -77.0369, 0.66, 2.9, 1.24, 28, 0.68, 0.66],
@@ -93,6 +227,54 @@ const HOTSPOT_DATA: RawHotspot[] = [
   ["Auckland", "oceania", -36.8509, 174.7645, 0.24, 1.9, 1.08, 10, 0.26, 0.42],
 ];
 
+const EXPANDED_HOTSPOT_DATA: PresetHotspotSeed[] = [
+  { name: "Philadelphia", regionId: "north-america", lat: 39.9526, lng: -75.1652, presetId: "major_hub", anglePresetId: "north-america east" },
+  { name: "Phoenix", regionId: "north-america", lat: 33.4484, lng: -112.074, presetId: "major_hub", anglePresetId: "north-america west" },
+  { name: "Montreal", regionId: "north-america", lat: 45.5017, lng: -73.5673, presetId: "major_hub", anglePresetId: "north-america east" },
+  { name: "Minneapolis-Saint Paul", regionId: "north-america", lat: 44.9778, lng: -93.265, presetId: "regional_hub", anglePresetId: "north-america central" },
+  { name: "Detroit-Windsor", regionId: "north-america", lat: 42.3314, lng: -83.0458, presetId: "regional_hub", anglePresetId: "north-america east" },
+  { name: "Guadalajara", regionId: "latin-america", lat: 20.6597, lng: -103.3496, presetId: "major_hub", anglePresetId: "mexico" },
+  { name: "Cali", regionId: "latin-america", lat: 3.4516, lng: -76.532, presetId: "regional_hub", anglePresetId: "latin-america andes" },
+  { name: "Belo Horizonte", regionId: "latin-america", lat: -19.9167, lng: -43.9345, presetId: "major_hub", anglePresetId: "latin-america brazil" },
+  { name: "Brasilia", regionId: "latin-america", lat: -15.7939, lng: -47.8828, presetId: "major_hub", anglePresetId: "latin-america brazil" },
+  { name: "Curitiba", regionId: "latin-america", lat: -25.4296, lng: -49.2719, presetId: "regional_hub", anglePresetId: "latin-america brazil" },
+  { name: "Recife", regionId: "latin-america", lat: -8.0476, lng: -34.877, presetId: "regional_hub", anglePresetId: "latin-america brazil" },
+  { name: "Vienna", regionId: "europe", lat: 48.2082, lng: 16.3738, presetId: "major_hub", anglePresetId: "europe central" },
+  { name: "Hamburg", regionId: "europe", lat: 53.5511, lng: 9.9937, presetId: "major_hub", anglePresetId: "europe central" },
+  { name: "Zurich", regionId: "europe", lat: 47.3769, lng: 8.5417, presetId: "major_hub", anglePresetId: "europe central" },
+  { name: "Prague", regionId: "europe", lat: 50.0755, lng: 14.4378, presetId: "regional_hub", anglePresetId: "europe central" },
+  { name: "Lisbon", regionId: "europe", lat: 38.7223, lng: -9.1393, presetId: "major_hub", anglePresetId: "europe atlantic" },
+  { name: "Dublin", regionId: "europe", lat: 53.3498, lng: -6.2603, presetId: "major_hub", anglePresetId: "europe atlantic" },
+  { name: "Copenhagen", regionId: "europe", lat: 55.6761, lng: 12.5683, presetId: "regional_hub", anglePresetId: "europe nordic" },
+  { name: "Tehran", regionId: "mena", lat: 35.6892, lng: 51.389, presetId: "major_hub", anglePresetId: "mena levant/iran" },
+  { name: "Abu Dhabi", regionId: "mena", lat: 24.4539, lng: 54.3773, presetId: "gateway_hub", anglePresetId: "mena gulf" },
+  { name: "Doha", regionId: "mena", lat: 25.2854, lng: 51.531, presetId: "gateway_hub", anglePresetId: "mena gulf" },
+  { name: "Jeddah", regionId: "mena", lat: 21.4858, lng: 39.1925, presetId: "gateway_hub", anglePresetId: "mena gulf" },
+  { name: "Kuwait City", regionId: "mena", lat: 29.3759, lng: 47.9774, presetId: "gateway_hub", anglePresetId: "mena gulf" },
+  { name: "Algiers", regionId: "mena", lat: 36.7538, lng: 3.0588, presetId: "major_hub", anglePresetId: "mena maghreb" },
+  { name: "Kinshasa", regionId: "africa", lat: -4.4419, lng: 15.2663, presetId: "major_hub", anglePresetId: "africa south/central" },
+  { name: "Dar es Salaam", regionId: "africa", lat: -6.7924, lng: 39.2083, presetId: "major_hub", anglePresetId: "africa east" },
+  { name: "Accra", regionId: "africa", lat: 5.6037, lng: -0.187, presetId: "major_hub", anglePresetId: "africa west" },
+  { name: "Dakar", regionId: "africa", lat: 14.7167, lng: -17.4677, presetId: "regional_hub", anglePresetId: "africa west" },
+  { name: "Lahore", regionId: "south-asia", lat: 31.5204, lng: 74.3587, presetId: "major_hub", anglePresetId: "south-asia north/east" },
+  { name: "Ahmedabad", regionId: "south-asia", lat: 23.0225, lng: 72.5714, presetId: "major_hub", anglePresetId: "south-asia west" },
+  { name: "Pune", regionId: "south-asia", lat: 18.5204, lng: 73.8567, presetId: "major_hub", anglePresetId: "south-asia west" },
+  { name: "Surat", regionId: "south-asia", lat: 21.1702, lng: 72.8311, presetId: "regional_hub", anglePresetId: "south-asia west" },
+  { name: "Guangzhou", regionId: "east-asia", lat: 23.1291, lng: 113.2644, presetId: "major_hub", anglePresetId: "east-asia coastal" },
+  { name: "Chengdu", regionId: "east-asia", lat: 30.5728, lng: 104.0668, presetId: "major_hub", anglePresetId: "east-asia inland" },
+  { name: "Chongqing", regionId: "east-asia", lat: 29.563, lng: 106.5516, presetId: "major_hub", anglePresetId: "east-asia inland" },
+  { name: "Wuhan", regionId: "east-asia", lat: 30.5928, lng: 114.3055, presetId: "major_hub", anglePresetId: "east-asia inland" },
+  { name: "Hangzhou", regionId: "east-asia", lat: 30.2741, lng: 120.1551, presetId: "major_hub", anglePresetId: "east-asia coastal" },
+  { name: "Tianjin", regionId: "east-asia", lat: 39.0842, lng: 117.2, presetId: "regional_hub", anglePresetId: "east-asia north" },
+  { name: "Hanoi", regionId: "southeast-asia", lat: 21.0278, lng: 105.8342, presetId: "major_hub", anglePresetId: "southeast-asia mainland" },
+  { name: "Surabaya", regionId: "southeast-asia", lat: -7.2575, lng: 112.7521, presetId: "major_hub", anglePresetId: "southeast-asia archipelago" },
+  { name: "Yangon", regionId: "southeast-asia", lat: 16.8661, lng: 96.1951, presetId: "regional_hub", anglePresetId: "southeast-asia mainland" },
+  { name: "Brisbane", regionId: "oceania", lat: -27.4698, lng: 153.0251, presetId: "major_hub", anglePresetId: "oceania east" },
+  { name: "Adelaide", regionId: "oceania", lat: -34.9285, lng: 138.6007, presetId: "regional_hub", anglePresetId: "oceania south/west" },
+  { name: "Honolulu", regionId: "north-america", lat: 21.3069, lng: -157.8583, presetId: "micro_hub", anglePresetId: "north-america west" },
+  { name: "McMurdo Station", regionId: "antarctica", lat: -77.8419, lng: 166.6863, presetId: "micro_hub", anglePresetId: "oceania south/west" },
+];
+
 const REMOTE_FIELDS: RemoteField[] = [
   { id: "great-plains", regionId: "north-america", lat: 38.0, lng: -98.0, strength: 0.28, radiusDeg: 7.0, elongation: 1.6, angleDeg: -10 },
   { id: "andes-spill", regionId: "latin-america", lat: -10.0, lng: -72.0, strength: 0.22, radiusDeg: 6.2, elongation: 1.8, angleDeg: -26 },
@@ -106,7 +288,7 @@ const REMOTE_FIELDS: RemoteField[] = [
   { id: "australian-interior", regionId: "oceania", lat: -26.0, lng: 134.0, strength: 0.12, radiusDeg: 6.0, elongation: 1.8, angleDeg: 4 },
 ];
 
-const CROSS_REGION_LANES: Array<[string, string, number, number, number]> = [
+const CROSS_REGION_LANES: RawCrossRegionLane[] = [
   ["New York", "London", 0.96, 0.42, 0.38],
   ["Boston", "London", 0.58, 0.34, 0.28],
   ["Washington", "Paris", 0.58, 0.34, 0.28],
@@ -140,22 +322,59 @@ const CROSS_REGION_LANES: Array<[string, string, number, number, number]> = [
   ["Johannesburg", "Mumbai", 0.4, 0.26, 0.22],
 ];
 
+const PRESET_CROSS_REGION_LANES: PresetCrossRegionLane[] = [
+  ["Chicago", "London", "transatlantic_major"],
+  ["Toronto", "London", "transatlantic_major"],
+  ["Montreal", "Paris", "transatlantic_major"],
+  ["Philadelphia", "London", "transatlantic_major"],
+  ["New York", "Frankfurt", "transatlantic_major"],
+  ["Boston", "Amsterdam", "transatlantic_major"],
+  ["Miami", "Panama City", "americas_link"],
+  ["Miami", "Sao Paulo", "americas_link"],
+  ["Atlanta", "Bogota", "americas_link"],
+  ["Houston", "Bogota", "americas_link"],
+  ["Mexico City", "Lima", "americas_link"],
+  ["Guadalajara", "Los Angeles", "americas_link"],
+  ["Madrid", "Bogota", "euro_africa_mena"],
+  ["Madrid", "Mexico City", "euro_africa_mena"],
+  ["Paris", "Algiers", "euro_africa_mena"],
+  ["Paris", "Dakar", "euro_africa_mena"],
+  ["London", "Johannesburg", "euro_africa_mena"],
+  ["Frankfurt", "Tehran", "euro_africa_mena"],
+  ["Istanbul", "Dubai", "euro_africa_mena"],
+  ["Rome", "Cairo", "euro_africa_mena"],
+  ["Lisbon", "Sao Paulo", "euro_africa_mena"],
+  ["Casablanca", "Dakar", "euro_africa_mena"],
+  ["Dubai", "Delhi", "gulf_southasia"],
+  ["Abu Dhabi", "Mumbai", "gulf_southasia"],
+  ["Doha", "Karachi", "gulf_southasia"],
+  ["Jeddah", "Cairo", "gulf_southasia"],
+  ["Nairobi", "Doha", "gulf_southasia"],
+  ["Riyadh", "Lahore", "gulf_southasia"],
+  ["Kolkata", "Bangkok", "southasia_sea"],
+  ["Dhaka", "Singapore", "southasia_sea"],
+  ["Chennai", "Kuala Lumpur", "southasia_sea"],
+  ["Mumbai", "Jakarta", "southasia_sea"],
+  ["Bengaluru", "Singapore", "southasia_sea"],
+  ["Delhi", "Bangkok", "southasia_sea"],
+  ["Guangzhou", "Singapore", "eastasia_pacific"],
+  ["Shanghai", "Seoul", "eastasia_pacific"],
+  ["Shenzhen", "Manila", "eastasia_pacific"],
+  ["Taipei", "Manila", "eastasia_pacific"],
+  ["Tokyo", "Sydney", "eastasia_pacific"],
+  ["Seoul", "Los Angeles", "eastasia_pacific"],
+  ["Shanghai", "San Francisco Bay", "eastasia_pacific"],
+  ["Tokyo", "Singapore", "eastasia_pacific"],
+  ["Melbourne", "Singapore", "eastasia_pacific"],
+];
+
 export const WORLD_GRAPH = createWorldGraph();
 
 function createWorldGraph(): MeshWorldGraph {
-  const hotspots = HOTSPOT_DATA.map(([name, regionId, lat, lng, strength, radiusDeg, elongation, angleDeg, clusterBias, bridgeBias]) => ({
-    id: slugify(name),
-    name,
-    lat,
-    lng,
-    regionId,
-    strength,
-    radiusDeg,
-    elongation,
-    angleDeg,
-    clusterBias,
-    bridgeBias,
-  }));
+  const hotspots = [
+    ...LEGACY_HOTSPOT_DATA.map(createLegacyHotspot),
+    ...EXPANDED_HOTSPOT_DATA.map(createPresetHotspot),
+  ];
 
   const hotspotById = new Map<string, Hotspot>();
   const hotspotsByRegion = new Map<WorldRegionId, Hotspot[]>();
@@ -177,20 +396,12 @@ function createWorldGraph(): MeshWorldGraph {
   }
 
   for (const [fromName, toName, strength, curvature, thicknessDeg] of CROSS_REGION_LANES) {
-    const fromHotspot = hotspotById.get(slugify(fromName));
-    const toHotspot = hotspotById.get(slugify(toName));
-    if (!fromHotspot || !toHotspot) {
-      continue;
-    }
+    addCuratedLane(bridgeLaneMap, hotspotById, fromName, toName, strength, curvature, thicknessDeg);
+  }
 
-    addBridgeLane(bridgeLaneMap, {
-      id: getLaneId(fromHotspot.id, toHotspot.id),
-      fromHotspotId: fromHotspot.id,
-      toHotspotId: toHotspot.id,
-      strength,
-      curvature,
-      thicknessDeg,
-    });
+  for (const [fromName, toName, presetId] of PRESET_CROSS_REGION_LANES) {
+    const preset = CORRIDOR_PRESETS[presetId];
+    addCuratedLane(bridgeLaneMap, hotspotById, fromName, toName, preset.strength, preset.curvature, preset.thicknessDeg);
   }
 
   const bridgeLanes = [...bridgeLaneMap.values()];
@@ -211,8 +422,52 @@ function createWorldGraph(): MeshWorldGraph {
   };
 }
 
+function createLegacyHotspot([
+  name,
+  regionId,
+  lat,
+  lng,
+  strength,
+  radiusDeg,
+  elongation,
+  angleDeg,
+  clusterBias,
+  bridgeBias,
+]: RawHotspot): Hotspot {
+  return {
+    id: slugify(name),
+    name,
+    lat,
+    lng,
+    regionId,
+    strength,
+    radiusDeg,
+    elongation,
+    angleDeg,
+    clusterBias,
+    bridgeBias,
+  };
+}
+
+function createPresetHotspot(seed: PresetHotspotSeed): Hotspot {
+  const preset = HOTSPOT_PRESETS[seed.presetId];
+  return {
+    id: slugify(seed.name),
+    name: seed.name,
+    lat: seed.lat,
+    lng: seed.lng,
+    regionId: seed.regionId,
+    strength: preset.strength,
+    radiusDeg: preset.radiusDeg,
+    elongation: preset.elongation,
+    angleDeg: ANGLE_PRESETS[seed.anglePresetId],
+    clusterBias: preset.clusterBias,
+    bridgeBias: preset.bridgeBias,
+  };
+}
+
 function addRegionalBridgeLanes(hotspots: Hotspot[], bridgeLaneMap: Map<string, BridgeLane>): void {
-  const neighborCount = hotspots.length >= 8 ? 3 : 2;
+  const neighborCount = getRegionalNeighborCount(hotspots.length);
 
   for (const hotspot of hotspots) {
     const neighbors = hotspots
@@ -239,6 +494,41 @@ function addRegionalBridgeLanes(hotspots: Hotspot[], bridgeLaneMap: Map<string, 
       });
     }
   }
+}
+
+function getRegionalNeighborCount(hotspotCount: number): number {
+  for (const tier of NEIGHBOR_COUNT_BY_REGION_SIZE) {
+    if (hotspotCount >= tier.min) {
+      return tier.count;
+    }
+  }
+
+  return 2;
+}
+
+function addCuratedLane(
+  bridgeLaneMap: Map<string, BridgeLane>,
+  hotspotById: Map<string, Hotspot>,
+  fromName: string,
+  toName: string,
+  strength: number,
+  curvature: number,
+  thicknessDeg: number,
+): void {
+  const fromHotspot = hotspotById.get(slugify(fromName));
+  const toHotspot = hotspotById.get(slugify(toName));
+  if (!fromHotspot || !toHotspot) {
+    return;
+  }
+
+  addBridgeLane(bridgeLaneMap, {
+    id: getLaneId(fromHotspot.id, toHotspot.id),
+    fromHotspotId: fromHotspot.id,
+    toHotspotId: toHotspot.id,
+    strength,
+    curvature,
+    thicknessDeg,
+  });
 }
 
 function addBridgeLane(bridgeLaneMap: Map<string, BridgeLane>, lane: BridgeLane): void {
