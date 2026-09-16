@@ -1,9 +1,6 @@
-import GlobeCanvas from "@/lib/three/GlobeCanvas";
+import FrontPage from "@/components/frontpage/FrontPage";
+import { EDITION_A } from "@/components/frontpage/editions";
 
 export default function Home() {
-  return (
-    <main className="relative h-screen w-full overflow-hidden bg-black text-white">
-      <GlobeCanvas />
-    </main>
-  );
+  return <FrontPage edition={EDITION_A} />;
 }

@@ -15,7 +15,6 @@ import { HybridCamera } from "./HybridCamera";
 const GLOBE_CONFIG = {
   radius: 2,
   segments: 128,
-  backgroundColor: 0x050505,
   autoSpinSpeed: 0.002, // Radians per frame once idle spin has ramped back up.
   spinResumeDelayMs: 1000, // Idle time after a drag before auto-spin ramps back in.
   spinRampUp: 0.01, // Lerp factor toward full auto-spin.
@@ -77,17 +76,31 @@ const HUD_CONFIG = {
   projectionWeight: 0.33,
 } as const;
 
-export default function GlobeCanvas() {
+interface GlobeCanvasProps {
+  /**
+   * "engage" — the globe ignores the wheel and the space bar until the reader
+   * clicks it, and releases them when the pointer leaves. Necessary once the
+   * globe sits inside a scrolling page, or it swallows the reader's scroll.
+   * "always" — takes both immediately, for a full-screen presentation.
+   */
+  interaction?: "engage" | "always";
+}
+
+export default function GlobeCanvas({
+  interaction = "engage",
+}: GlobeCanvasProps = {}) {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const hudRef = useRef<HTMLDivElement | null>(null);
+  const hintRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const host = hostRef.current;
     if (!host) return;
 
     // --- Scene ---
+    // No scene.background: the renderer has alpha, so the globe composites
+    // onto whatever the page puts behind it.
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(GLOBE_CONFIG.backgroundColor);
 
     const camera = new HybridCamera({
       fov: HYBRID_CAMERA_CONFIG.fov,
@@ -193,7 +206,24 @@ export default function GlobeCanvas() {
       lastInteractionTime = performance.now();
     });
 
+    let isEngaged = interaction === "always";
+
+    const setEngaged = (next: boolean) => {
+      if (isEngaged === next) return;
+      isEngaged = next;
+      if (hintRef.current) {
+        hintRef.current.style.opacity = next ? "0" : "1";
+      }
+    };
+
+    const handlePointerDown = () => setEngaged(true);
+    const handlePointerLeave = () => {
+      if (interaction !== "always") setEngaged(false);
+    };
+
     const handleWheel = (event: WheelEvent) => {
+      // Not engaged: let the wheel through so the page scrolls normally.
+      if (!isEngaged) return;
       event.preventDefault();
 
       if (event.ctrlKey) {
@@ -215,6 +245,7 @@ export default function GlobeCanvas() {
     };
 
     const handleKeyDown = (event: KeyboardEvent) => {
+      if (!isEngaged) return;
       if (event.code !== "Space" || event.repeat) return;
 
       const target = event.target;
@@ -241,17 +272,21 @@ export default function GlobeCanvas() {
     };
 
     host.addEventListener("wheel", handleWheel, { passive: false });
+    host.addEventListener("pointerdown", handlePointerDown);
+    host.addEventListener("pointerleave", handlePointerLeave);
     window.addEventListener("keydown", handleKeyDown);
 
     const resize = () => {
       const w = host.clientWidth;
       const h = host.clientHeight;
+      if (w === 0 || h === 0) return;
       camera.setSize(w, h);
       renderer.setSize(w, h);
     };
 
     resize();
-    window.addEventListener("resize", resize);
+    const resizeObserver = new ResizeObserver(resize);
+    resizeObserver.observe(host);
 
     // --- Render loop ---
     const tickManager = new TickManager();
@@ -369,8 +404,10 @@ export default function GlobeCanvas() {
 
     return () => {
       host.removeEventListener("wheel", handleWheel);
+      host.removeEventListener("pointerdown", handlePointerDown);
+      host.removeEventListener("pointerleave", handlePointerLeave);
       window.removeEventListener("keydown", handleKeyDown);
-      window.removeEventListener("resize", resize);
+      resizeObserver.disconnect();
       tickManager.stopLoop();
       controls.dispose();
       networkLayer.dispose();
@@ -380,7 +417,7 @@ export default function GlobeCanvas() {
       renderer.dispose();
       host.removeChild(renderer.domElement);
     };
-  }, []);
+  }, [interaction]);
 
   return (
     <div className="relative h-full w-full overflow-hidden">
@@ -390,6 +427,13 @@ export default function GlobeCanvas() {
         className="pointer-events-none absolute left-3 top-3 z-10 select-none border border-white/20 bg-black/60 px-2 py-1.5 font-mono text-[11px] uppercase tracking-[0.06em] text-white/90"
       >
         Zoom 0.000 Dist 0.00 Proj 0.000
+      </div>
+      <div
+        ref={hintRef}
+        className="pointer-events-none absolute bottom-3 left-1/2 z-10 -translate-x-1/2 select-none whitespace-nowrap border border-white/15 bg-black/55 px-2 py-1 font-mono-ui text-[9px] uppercase tracking-[0.22em] text-white/55 transition-opacity duration-300"
+        style={{ opacity: interaction === "always" ? 0 : 1 }}
+      >
+        Click to engage · scroll bends projection · space halts spin
       </div>
     </div>
   );
