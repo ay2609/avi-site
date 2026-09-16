@@ -1,7 +1,10 @@
 varying vec2 vUv;
 
-uniform sampler2D uLandTexture;
-uniform sampler2D uHeightTexture;
+// Single packed field texture, baked offline from the source elevation + water maps:
+//   R = height, with the 5-tap cross blur already applied (wrapped at the seam)
+//   G = land mask (1 = land), pre-inverted
+//   B = unused
+uniform sampler2D uFieldTexture;
 uniform float opacity;
 uniform float uTime;
 uniform float uIntervalCount;
@@ -48,21 +51,9 @@ float noiseVal(vec3 x) {
   return 0.5 * (noise3(x) + noise3(x + 11.5));
 }
 
-float getLandMask(vec2 uv) {
-  // The existing map is white ocean / black land.
-  return clamp(1.0 - texture2D(uLandTexture, uv).r, 0.0, 1.0);
-}
-
-float getHeightField(vec2 uv) {
-  vec2 stepUv = vec2(0.0012, 0.0012);
-
-  float c = texture2D(uHeightTexture, uv).r;
-  float n = texture2D(uHeightTexture, uv + vec2(0.0, stepUv.y)).r;
-  float s = texture2D(uHeightTexture, uv - vec2(0.0, stepUv.y)).r;
-  float e = texture2D(uHeightTexture, uv + vec2(stepUv.x, 0.0)).r;
-  float w = texture2D(uHeightTexture, uv - vec2(stepUv.x, 0.0)).r;
-
-  return c * 0.48 + (n + s + e + w) * 0.13;
+vec2 sampleField(vec2 uv) {
+  // One fetch replaces the old six: the height blur is baked into R.
+  return texture2D(uFieldTexture, uv).rg;
 }
 
 float getPeriodicLineMask(float coord, float lineCount, float widthMul, float widthBias) {
@@ -74,8 +65,9 @@ float getPeriodicLineMask(float coord, float lineCount, float widthMul, float wi
 }
 
 void main() {
-  float landMask = getLandMask(vUv);
-  float heightField = getHeightField(vUv);
+  vec2 field = sampleField(vUv);
+  float heightField = field.r;
+  float landMask = clamp(field.g, 0.0, 1.0);
 
   // Slight animated perturbation so lines feel organic without losing elevation structure.
   vec2 U = vUv * 9.0;
