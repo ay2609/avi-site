@@ -15,7 +15,15 @@
  * renders as a circle on screen rather than an ellipse.
  */
 
-export type AsciiFieldId = "terrain" | "flow" | "sphere" | "lattice";
+export type AsciiFieldId =
+  | "terrain"
+  | "flow"
+  | "sphere"
+  | "lattice"
+  | "ripple"
+  | "spiral"
+  | "weave"
+  | "scan";
 
 /** x, y are in [0, 1] over the square inscribed in the panel; t is seconds. */
 export type AsciiField = (x: number, y: number, t: number) => number;
@@ -79,11 +87,13 @@ const terrain: AsciiField = (x, y, t) => {
  * the panel stays roughly a third ink rather than filling in.
  */
 const flow: AsciiField = (x, y, t) => {
-  const warp = fbm(x * 1.7 + t * 0.045, y * 1.7 - t * 0.028);
-  const a = Math.sin((x * 2.0 + warp * 2.8) * TAU + t * 0.3);
-  const b = Math.sin((y * 1.5 - warp * 2.1) * TAU - t * 0.22);
+  // Frequencies kept low: this one sits in a rail, where the grid is only
+  // about thirty columns wide and finer lobes break up into speckle.
+  const warp = fbm(x * 1.15 + t * 0.045, y * 1.15 - t * 0.028);
+  const a = Math.sin((x * 1.35 + warp * 1.9) * TAU + t * 0.3);
+  const b = Math.sin((y * 1.0 - warp * 1.45) * TAU - t * 0.22);
   const lobes = a * b;
-  return lobes <= 0 ? 0 : Math.pow(lobes, 1.7);
+  return lobes <= 0 ? 0 : Math.pow(lobes, 1.5);
 };
 
 /**
@@ -125,11 +135,57 @@ const lattice: AsciiField = (x, y, t) => {
   return Math.min(1, (Math.max(barX, barY) * 0.62 + node * 0.95) * pulse);
 };
 
+/** Two wave sources interfering — concentric rings crossing each other. */
+const ripple: AsciiField = (x, y, t) => {
+  const d1 = Math.hypot(x - 0.32, y - 0.44);
+  const d2 = Math.hypot(x - 0.72, y - 0.6);
+  const wave = Math.sin(d1 * 21 - t * 1.05) + Math.sin(d2 * 18 - t * 0.82);
+  const lobe = Math.max(0, wave * 0.5);
+  return Math.pow(lobe, 1.35);
+};
+
+/** Rotating arms falling off toward the edge of the frame. */
+const spiral: AsciiField = (x, y, t) => {
+  const dx = x - 0.5;
+  const dy = y - 0.5;
+  const r = Math.hypot(dx, dy);
+  const angle = Math.atan2(dy, dx);
+  const arms = Math.sin(angle * 3 + r * 17 - t * 1.1);
+  const falloff = Math.max(0, 1 - r * 1.85);
+  return Math.max(0, arms) * falloff;
+};
+
+/** Over-under basket weave; alternating cells carry the warp or the weft. */
+const weave: AsciiField = (x, y, t) => {
+  const scale = 7;
+  const u = x * scale + Math.sin(t * 0.2) * 0.2;
+  const v = y * scale - Math.cos(t * 0.17) * 0.2;
+  // u and v can go negative once aspect correction widens the range, so the
+  // parity test has to survive a negative remainder.
+  const isWarp = Math.abs((Math.floor(u) + Math.floor(v)) % 2) === 0;
+  const bar = isWarp
+    ? 1 - Math.abs(fract(u) - 0.5) * 2.4
+    : 1 - Math.abs(fract(v) - 0.5) * 2.4;
+  const pulse = 0.58 + 0.42 * Math.sin(t * 0.45 + (x - y) * 4.5);
+  return Math.max(0, bar) * pulse;
+};
+
+/** Wavy horizontal bands — a printing artefact rather than a picture. */
+const scan: AsciiField = (x, y, t) => {
+  const band = Math.sin(y * 19 + Math.sin(x * 2.6 + t * 0.4) * 1.5 - t * 0.66);
+  const envelope = 0.5 + 0.5 * Math.sin(x * 3.4 - t * 0.22);
+  return Math.max(0, band) * (0.3 + envelope * 0.8);
+};
+
 export const ASCII_FIELDS: Record<AsciiFieldId, AsciiField> = {
   terrain,
   flow,
   sphere,
   lattice,
+  ripple,
+  spiral,
+  weave,
+  scan,
 };
 
 /** Sparse-to-dense character ramps. Index 0 renders as empty space. */
@@ -138,4 +194,8 @@ export const ASCII_RAMPS: Record<AsciiFieldId, string> = {
   flow: " .:-=+*#",
   sphere: " .:-=+*#%@",
   lattice: " .:-=+*#",
+  ripple: " .:-=+*#",
+  spiral: " .:-=+*#%",
+  weave: " .:-=+*#",
+  scan: " .:-=+*#",
 };

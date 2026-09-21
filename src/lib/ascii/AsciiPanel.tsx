@@ -4,27 +4,20 @@ import { useEffect, useRef } from "react";
 
 import { ASCII_FIELDS, ASCII_RAMPS, type AsciiFieldId } from "./fields";
 
-/**
- * Width of a monospace character relative to its line box, at the panel's
- * font-size and leading. Used to hand the fields a square coordinate space so
- * a circle renders as a circle rather than an ellipse.
- */
-const CHAR_ASPECT = 0.55;
-
 interface AsciiPanelProps {
   field: AsciiFieldId;
-  /** Character grid. Kept small — these are texture, not detail. */
-  cols?: number;
-  rows?: number;
   /** Refresh rate. Well below display refresh; the globe needs the frames. */
   fps?: number;
   className?: string;
 }
 
+/**
+ * Renders a field as ASCII that fills whatever box it is given. The character
+ * grid is derived from the measured cell size, so the art bleeds to the edges
+ * of its section instead of sitting inside one at a fixed size.
+ */
 export default function AsciiPanel({
   field,
-  cols = 34,
-  rows = 20,
   fps = 18,
   className = "",
 }: AsciiPanelProps) {
@@ -39,19 +32,55 @@ export default function AsciiPanel({
     const maxIndex = ramp.length - 1;
     const frameInterval = 1000 / fps;
 
-    // Reused across frames so a panel allocates one array, not one per frame.
-    const line: string[] = new Array(cols);
-    const out: string[] = new Array(rows);
+    let cols = 0;
+    let rows = 0;
+    let scaleX = 1;
+    let scaleY = 1;
+    let line: string[] = [];
+    let out: string[] = [];
 
-    // Map the character grid onto a square field space: the shorter visual
-    // axis spans exactly [0, 1], the longer one overflows symmetrically.
-    const visualWidth = cols * CHAR_ASPECT;
-    const visualHeight = rows;
-    const shorter = Math.min(visualWidth, visualHeight);
-    const scaleX = visualWidth / shorter;
-    const scaleY = visualHeight / shorter;
+    /**
+     * Measure a real glyph rather than assuming an aspect ratio: the ratio
+     * differs per font and is what keeps a circle circular.
+     */
+    const measure = (): boolean => {
+      const probe = document.createElement("span");
+      probe.textContent = "0".repeat(40);
+      probe.style.position = "absolute";
+      probe.style.visibility = "hidden";
+      probe.style.whiteSpace = "pre";
+      el.appendChild(probe);
+      const charWidth = probe.getBoundingClientRect().width / 40;
+      probe.remove();
+
+      const styles = getComputedStyle(el);
+      const lineHeight =
+        parseFloat(styles.lineHeight) || parseFloat(styles.fontSize) * 1.15;
+      const width = el.clientWidth;
+      const height = el.clientHeight;
+      if (!charWidth || !lineHeight || !width || !height) return false;
+
+      const nextCols = Math.max(8, Math.floor(width / charWidth));
+      const nextRows = Math.max(4, Math.floor(height / lineHeight));
+      if (nextCols === cols && nextRows === rows) return false;
+
+      cols = nextCols;
+      rows = nextRows;
+
+      // Hand the field a square coordinate space so circles stay circular.
+      const visualWidth = cols * charWidth;
+      const visualHeight = rows * lineHeight;
+      const shorter = Math.min(visualWidth, visualHeight);
+      scaleX = visualWidth / shorter;
+      scaleY = visualHeight / shorter;
+
+      line = new Array(cols);
+      out = new Array(rows);
+      return true;
+    };
 
     const draw = (seconds: number) => {
+      if (!cols || !rows) return;
       for (let y = 0; y < rows; y += 1) {
         const v = (y / (rows - 1) - 0.5) * scaleY + 0.5;
         for (let x = 0; x < cols; x += 1) {
@@ -65,13 +94,22 @@ export default function AsciiPanel({
       el.textContent = out.join("\n");
     };
 
-    const reduceMotion =
-      typeof window !== "undefined" &&
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    measure();
+
+    let lastSeconds = 0;
+
+    const resizeObserver = new ResizeObserver(() => {
+      if (measure()) draw(lastSeconds);
+    });
+    resizeObserver.observe(el);
+
+    const reduceMotion = window.matchMedia(
+      "(prefers-reduced-motion: reduce)"
+    ).matches;
 
     if (reduceMotion) {
       draw(0);
-      return;
+      return () => resizeObserver.disconnect();
     }
 
     let raf = 0;
@@ -82,18 +120,23 @@ export default function AsciiPanel({
       raf = requestAnimationFrame(loop);
       if (now - lastFrame < frameInterval) return;
       lastFrame = now;
-      draw((now - start) * 0.001);
+      lastSeconds = (now - start) * 0.001;
+      draw(lastSeconds);
     };
 
     raf = requestAnimationFrame(loop);
-    return () => cancelAnimationFrame(raf);
-  }, [field, cols, rows, fps]);
+
+    return () => {
+      cancelAnimationFrame(raf);
+      resizeObserver.disconnect();
+    };
+  }, [field, fps]);
 
   return (
     <pre
       ref={preRef}
       aria-hidden="true"
-      className={`font-mono-ui select-none overflow-hidden whitespace-pre text-[9px] leading-[1.06] tracking-[0.06em] text-paper-dim ${className}`}
+      className={`font-mono-ui block h-full w-full select-none overflow-hidden whitespace-pre text-[10px] leading-[1.15] text-ascii ${className}`}
     />
   );
 }

@@ -21,19 +21,20 @@ const GLOBE_CONFIG = {
   spinRampDown: 0.05, // Lerp factor toward zero right after interaction.
 } as const;
 
+/** Cells in the HUD's blend bar. */
+const HUD_BARS = 16;
+
 /**
  * Camera that blends continuously between perspective and orthographic.
- * Wheel drives the blend; pinch (ctrl+wheel) drives dolly distance.
+ * Wheel drives the blend. There is no zoom: the viewing distance is fixed.
  */
 const HYBRID_CAMERA_CONFIG = {
   fov: 60,
   near: 0.001,
   far: 1000,
   zoom: 1,
-  minDistance: 2.2,
-  maxDistance: 12.0,
-  pinchZoomSensitivity: 0.0030,
-  pinchZoomSmoothing: 14,
+  /** Fixed viewing distance — the globe does not zoom. */
+  distance: 5,
   initialProjectionBlend: 0.0,
   minProjectionBlend: 0.0,
   maxProjectionBlend: 1.0,
@@ -70,28 +71,26 @@ const FIELD_TEXTURE = {
   resolution: 2048 as 2048 | 4096,
 } as const;
 
-/** Weighting used for the single 0..1 "zoom" figure in the HUD readout. */
-const HUD_CONFIG = {
-  distanceWeight: 0.67,
-  projectionWeight: 0.33,
-} as const;
-
 interface GlobeCanvasProps {
   /**
-   * "engage" — the globe ignores the wheel and the space bar until the reader
-   * clicks it, and releases them when the pointer leaves. Necessary once the
-   * globe sits inside a scrolling page, or it swallows the reader's scroll.
-   * "always" — takes both immediately, for a full-screen presentation.
+   * "hover" — the globe takes the wheel and the space bar whenever the cursor
+   * is over it, and hands them back the moment it leaves. Note the trade-off:
+   * while the cursor is over the globe the wheel bends the projection instead
+   * of scrolling the page.
+   * "always" — takes both unconditionally, for a full-screen presentation.
    */
-  interaction?: "engage" | "always";
+  interaction?: "hover" | "always";
 }
 
 export default function GlobeCanvas({
-  interaction = "engage",
+  interaction = "hover",
 }: GlobeCanvasProps = {}) {
   const hostRef = useRef<HTMLDivElement | null>(null);
-  const hudRef = useRef<HTMLDivElement | null>(null);
-  const hintRef = useRef<HTMLDivElement | null>(null);
+  const bendRef = useRef<HTMLDivElement | null>(null);
+  const barRef = useRef<HTMLDivElement | null>(null);
+  const cursorRef = useRef<HTMLDivElement | null>(null);
+  const timeRef = useRef<HTMLDivElement | null>(null);
+  const pctRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const host = hostRef.current;
@@ -111,7 +110,7 @@ export default function GlobeCanvas({
       focusDistance: 4,
       projectionBlend: HYBRID_CAMERA_CONFIG.initialProjectionBlend,
     });
-    camera.position.set(0, 0, 5);
+    camera.position.set(0, 2, 4);
     camera.lookAt(0, 0, 0);
     camera.setSize(host.clientWidth, host.clientHeight);
 
@@ -183,15 +182,14 @@ export default function GlobeCanvas({
     controls.dampingFactor = 0.05;
     controls.rotateSpeed = 0.5;
     controls.enableZoom = false; // Wheel is reserved for the projection blend.
+    // OrbitControls treats shift/ctrl/meta + drag (and right-drag, and a
+    // two-finger drag) as a pan, which slides the globe off its own frame.
+    // The globe only orbits.
+    controls.enablePan = false;
 
     // --- Interaction state ---
     let projectionBlendTarget: number = HYBRID_CAMERA_CONFIG.initialProjectionBlend;
     let projectionBlendCurrent: number = projectionBlendTarget;
-    let cameraDistanceTarget: number = THREE.MathUtils.clamp(
-      camera.position.distanceTo(controls.target),
-      HYBRID_CAMERA_CONFIG.minDistance,
-      HYBRID_CAMERA_CONFIG.maxDistance
-    );
     let currentSpinSpeed: number = GLOBE_CONFIG.autoSpinSpeed;
     let isAutoSpinPaused = false;
     let isUserInteracting = false;
@@ -211,31 +209,29 @@ export default function GlobeCanvas({
     const setEngaged = (next: boolean) => {
       if (isEngaged === next) return;
       isEngaged = next;
-      if (hintRef.current) {
-        hintRef.current.style.opacity = next ? "0" : "1";
-      }
     };
 
-    const handlePointerDown = () => setEngaged(true);
+    const handlePointerEnter = () => setEngaged(true);
+
+    // HUD cursor readout: position within the frame, 00-99 on each axis.
+    let cursorLabel = "\u2014";
+    const handlePointerMove = (event: PointerEvent) => {
+      const rect = host.getBoundingClientRect();
+      if (!rect.width || !rect.height) return;
+      const x = Math.min(99, Math.max(0, Math.round(((event.clientX - rect.left) / rect.width) * 99)));
+      const y = Math.min(99, Math.max(0, Math.round(((event.clientY - rect.top) / rect.height) * 99)));
+      cursorLabel = `${String(x).padStart(2, "0")} ${String(y).padStart(2, "0")}`;
+    };
+
     const handlePointerLeave = () => {
+      cursorLabel = "\u2014";
       if (interaction !== "always") setEngaged(false);
     };
 
     const handleWheel = (event: WheelEvent) => {
-      // Not engaged: let the wheel through so the page scrolls normally.
+      // Cursor is elsewhere: let the wheel through so the page scrolls.
       if (!isEngaged) return;
       event.preventDefault();
-
-      if (event.ctrlKey) {
-        // Trackpad pinch commonly arrives as ctrl+wheel events.
-        cameraDistanceTarget = THREE.MathUtils.clamp(
-          cameraDistanceTarget *
-            Math.exp(event.deltaY * HYBRID_CAMERA_CONFIG.pinchZoomSensitivity),
-          HYBRID_CAMERA_CONFIG.minDistance,
-          HYBRID_CAMERA_CONFIG.maxDistance
-        );
-        return;
-      }
 
       projectionBlendTarget = THREE.MathUtils.clamp(
         projectionBlendTarget + event.deltaY * HYBRID_CAMERA_CONFIG.wheelSensitivity,
@@ -272,7 +268,8 @@ export default function GlobeCanvas({
     };
 
     host.addEventListener("wheel", handleWheel, { passive: false });
-    host.addEventListener("pointerdown", handlePointerDown);
+    host.addEventListener("pointerenter", handlePointerEnter);
+    host.addEventListener("pointermove", handlePointerMove);
     host.addEventListener("pointerleave", handlePointerLeave);
     window.addEventListener("keydown", handleKeyDown);
 
@@ -289,6 +286,7 @@ export default function GlobeCanvas({
     resizeObserver.observe(host);
 
     // --- Render loop ---
+    let lastHudSecond = -1;
     const tickManager = new TickManager();
 
     const render = (data: TickData) => {
@@ -326,19 +324,6 @@ export default function GlobeCanvas({
 
       controls.update();
 
-      // Smooth the dolly distance toward its target along the current view ray.
-      const offsetFromTarget = camera.position.clone().sub(controls.target);
-      const currentDistance = Math.max(offsetFromTarget.length(), 1e-6);
-      const zoomAlpha =
-        1.0 - Math.exp(-HYBRID_CAMERA_CONFIG.pinchZoomSmoothing * deltaSeconds);
-      const smoothedDistance = THREE.MathUtils.lerp(
-        currentDistance,
-        cameraDistanceTarget,
-        zoomAlpha
-      );
-      offsetFromTarget.normalize().multiplyScalar(smoothedDistance);
-      camera.position.copy(controls.target).add(offsetFromTarget);
-
       // Match the orthographic framing to the globe's projected silhouette, not
       // just the center target plane. Using the tangent depth keeps the globe's
       // on-screen radius stable while blending between perspective and ortho.
@@ -363,28 +348,31 @@ export default function GlobeCanvas({
         0,
         1
       );
-      const normalizedDistanceZoom = THREE.MathUtils.clamp(
-        1 -
-          (cameraTargetDistance - HYBRID_CAMERA_CONFIG.minDistance) /
-            Math.max(
-              1e-4,
-              HYBRID_CAMERA_CONFIG.maxDistance - HYBRID_CAMERA_CONFIG.minDistance
-            ),
-        0,
-        1
-      );
-      const hudZoomLevel = THREE.MathUtils.clamp(
-        normalizedDistanceZoom * HUD_CONFIG.distanceWeight +
-          normalizedProjectionBlend * HUD_CONFIG.projectionWeight,
-        0,
-        1
-      );
-
-      if (hudRef.current) {
-        hudRef.current.textContent =
-          `Zoom ${hudZoomLevel.toFixed(3)}  ` +
-          `Dist ${cameraTargetDistance.toFixed(2)}  ` +
-          `Proj ${normalizedProjectionBlend.toFixed(3)}`;
+      // HUD. The globe has no dolly — the wheel bends the projection between
+      // perspective and orthographic — so the readout tracks that blend
+      // rather than a camera distance that never changes.
+      if (bendRef.current) {
+        bendRef.current.textContent = `BEND  ${normalizedProjectionBlend.toFixed(2)}`;
+      }
+      if (barRef.current) {
+        const filled = Math.round(normalizedProjectionBlend * HUD_BARS);
+        barRef.current.textContent =
+          "|".repeat(filled) + ".".repeat(HUD_BARS - filled);
+      }
+      if (pctRef.current) {
+        pctRef.current.textContent = `${Math.round(normalizedProjectionBlend * 100)} %`;
+      }
+      if (cursorRef.current) {
+        cursorRef.current.textContent = `CUR  ${cursorLabel}`;
+      }
+      if (timeRef.current) {
+        const seconds = Math.floor(now * 0.001);
+        if (seconds !== lastHudSecond) {
+          lastHudSecond = seconds;
+          timeRef.current.textContent = new Date().toLocaleTimeString("en-GB", {
+            hour12: false,
+          });
+        }
       }
 
       networkLayer.update(
@@ -404,7 +392,8 @@ export default function GlobeCanvas({
 
     return () => {
       host.removeEventListener("wheel", handleWheel);
-      host.removeEventListener("pointerdown", handlePointerDown);
+      host.removeEventListener("pointerenter", handlePointerEnter);
+      host.removeEventListener("pointermove", handlePointerMove);
       host.removeEventListener("pointerleave", handlePointerLeave);
       window.removeEventListener("keydown", handleKeyDown);
       resizeObserver.disconnect();
@@ -420,20 +409,30 @@ export default function GlobeCanvas({
   }, [interaction]);
 
   return (
-    <div className="relative h-full w-full overflow-hidden">
+    <div className="relative h-full w-full select-none overflow-hidden [cursor:crosshair]">
       <div ref={hostRef} className="h-full w-full" />
-      <div
-        ref={hudRef}
-        className="pointer-events-none absolute left-3 top-3 z-10 select-none border border-white/20 bg-black/60 px-2 py-1.5 font-mono text-[11px] uppercase tracking-[0.06em] text-white/90"
-      >
-        Zoom 0.000 Dist 0.00 Proj 0.000
-      </div>
-      <div
-        ref={hintRef}
-        className="pointer-events-none absolute bottom-3 left-1/2 z-10 -translate-x-1/2 select-none whitespace-nowrap border border-white/15 bg-black/55 px-2 py-1 font-mono-ui text-[9px] uppercase tracking-[0.22em] text-white/55 transition-opacity duration-300"
-        style={{ opacity: interaction === "always" ? 0 : 1 }}
-      >
-        Click to engage · scroll bends projection · space halts spin
+
+      {/* HUD. Updated imperatively from the render loop — none of it is
+          React state, so the page does not re-render sixty times a second. */}
+      <div className="font-mono-ui pointer-events-none absolute inset-0 z-10 text-[11px] leading-[1.7] tracking-[0.08em]">
+        <div className="absolute left-[14px] top-[12px]">
+          <div ref={bendRef} className="text-bone">
+            BEND  0.00
+          </div>
+          <div ref={barRef} className="text-dim">
+            ................
+          </div>
+        </div>
+        <div className="absolute right-[14px] top-[12px] text-right text-dim">
+          <div ref={cursorRef}>CUR  &mdash;</div>
+          <div ref={timeRef}>--:--:--</div>
+        </div>
+        <div className="absolute bottom-[12px] left-[14px] text-dim">
+          GLOBE &mdash; 2026
+        </div>
+        <div ref={pctRef} className="absolute bottom-[12px] right-[14px] text-dim">
+          0 %
+        </div>
       </div>
     </div>
   );

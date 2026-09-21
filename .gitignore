@@ -39,3 +39,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# raw font download; the woff2 lives in src/app/fonts/
+/Zipper
