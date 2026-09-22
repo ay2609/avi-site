@@ -1,8 +1,11 @@
-import type { CSSProperties, ReactNode } from "react";
+"use client";
+
+import type { CSSProperties, ReactNode, Ref } from "react";
 
 import AsciiPanel from "@/lib/ascii/AsciiPanel";
-import GlobeCanvas from "@/lib/three/GlobeCanvas";
 import Clock from "@/components/Clock";
+import { LABEL } from "@/components/furniture";
+import type { Variant } from "@/lib/stage/motion";
 
 /**
  * Size text to span its container.
@@ -30,9 +33,6 @@ function fillSize(text: string, max: string, min = "1rem"): string {
   );
   return `clamp(${min}, ${((0.92 * 100) / advance).toFixed(1)}cqw, ${max})`;
 }
-
-const LABEL =
-  "font-mono-ui text-[10px] uppercase tracking-[0.18em] text-dim";
 
 /** A headline set to span its box, above art that bleeds to the edges. */
 function Article({
@@ -98,14 +98,41 @@ const ARCHIVE = [
 
 const SOCIALS = ["Instagram", "Are.na", "Github"];
 
-export default function Home() {
+interface NewspaperProps {
+  /** The <main> element, so the stage can recede it. */
+  mainRef: Ref<HTMLElement>;
+  /**
+   * The empty square the globe appears to sit in. The globe itself is a
+   * document-level layer positioned over this slot (see GlobeLayer), which is
+   * what lets it fly to full screen without leaving the newspaper's flow.
+   */
+  slotRef: Ref<HTMLDivElement>;
+  /** Open the lead article. */
+  onOpenGlobe: () => void;
+  /** Which transition variant is active (prototype). */
+  fx: Variant;
+  onToggleFx: () => void;
+}
+
+/** The front page as printed: the newspaper, minus the globe. */
+export default function Newspaper({
+  mainRef,
+  slotRef,
+  onOpenGlobe,
+  fx,
+  onToggleFx,
+}: NewspaperProps) {
   return (
     <main
+      ref={mainRef}
       className="mx-auto min-h-screen border-x border-rule"
       style={{ width: "clamp(320px, 70vw, 1400px)" }}
     >
       {/* 1 — Masthead */}
-      <header className="fit border-b border-dashed border-rule px-4 pb-[18px] pt-[44px]">
+      <header
+        data-push="up"
+        className="fit border-b border-dashed border-rule px-4 pb-[18px] pt-[44px]"
+      >
         <div className={`${LABEL} flex items-baseline justify-between gap-4`}>
           <span>Vol. I · No. 001</span>
           <Clock className="text-bone" />
@@ -118,17 +145,11 @@ export default function Home() {
         </h1>
       </header>
 
-      {/* 2 — Kicker */}
+      {/* 2 — Ticker */}
       <div
-        className={`${LABEL} flex items-center justify-between gap-4 border-b border-dashed border-rule px-4 py-3`}
+        data-push="up"
+        className="flex h-[30px] items-center overflow-hidden border-b border-dashed border-rule"
       >
-        <span>Interactive</span>
-        <span>Graphics</span>
-        <span>Software</span>
-      </div>
-
-      {/* 3 — Ticker */}
-      <div className="flex h-[30px] items-center overflow-hidden border-b border-dashed border-rule">
         <div
           className="ticker-strip font-mono-ui flex w-max whitespace-nowrap text-[10px] leading-none tracking-[0.18em]"
           style={{ "--ticker-speed": `${TICKER_SECONDS}s` } as CSSProperties}
@@ -138,25 +159,41 @@ export default function Home() {
         </div>
       </div>
 
-      {/* 4 — The well */}
+      {/* 3 — The well */}
       <div className="flex flex-wrap">
         {/* Lead */}
         <section className="flex flex-[17_1_380px] flex-col border-b border-r border-dashed border-rule">
-          <div className={`${LABEL} flex items-baseline justify-between gap-4 px-4 pb-3 pt-4`}>
-            <span>/Lead — Three.js / GLSL</span>
-            <span>Scroll to bend</span>
+          <div
+            data-push="up"
+            className={`${LABEL} flex items-baseline justify-end gap-4 px-4 pb-3 pt-4`}
+          >
+            <button
+              type="button"
+              onClick={onOpenGlobe}
+              className="cursor-pointer uppercase text-bone transition-colors hover:text-dim"
+            >
+              Open — /globe ↗
+            </button>
           </div>
-          <div className="aspect-square w-full overflow-hidden border-t border-dashed border-rule">
-            <GlobeCanvas />
-          </div>
-          <div className={`${LABEL} flex flex-wrap items-baseline justify-between gap-4 border-t border-dashed border-rule px-4 py-3`}>
+          <div
+            ref={slotRef}
+            data-globe-slot
+            className="aspect-square w-full border-t border-dashed border-rule"
+          />
+          <div
+            data-push="down"
+            className={`${LABEL} flex flex-wrap items-baseline justify-between gap-4 border-t border-dashed border-rule px-4 py-3`}
+          >
             <span>Fig. 1 — An interactive globe, built to be wandered.</span>
             <span>Labels mark the work</span>
           </div>
           {/* Absorbs the height difference so the lead ends level with the
               rail — now carrying two panels rather than a striped blank. The
               min-height keeps them legible if the slack ever runs short. */}
-          <div className="flex min-h-[180px] flex-1 border-t border-dashed border-rule">
+          <div
+            data-push="down"
+            className="flex min-h-[180px] flex-1 border-t border-dashed border-rule"
+          >
             <div className="flex-1 overflow-hidden border-r border-dashed border-rule">
               <AsciiPanel field="ripple" />
             </div>
@@ -167,7 +204,7 @@ export default function Home() {
         </section>
 
         {/* Rail */}
-        <div className="flex flex-[10_1_220px] flex-col">
+        <div data-push="right" className="flex flex-[10_1_220px] flex-col">
           <Article label="/Terraced" title="Relief" ratio="aspect-[4/3]">
             <AsciiPanel field="terrain" />
           </Article>
@@ -186,8 +223,8 @@ export default function Home() {
         </div>
       </div>
 
-      {/* 5 — Work + Archive */}
-      <div className="flex flex-wrap border-b border-dashed border-rule">
+      {/* 4 — Work + Archive */}
+      <div data-push="down" className="flex flex-wrap border-b border-dashed border-rule">
         <section className="flex-[17_1_380px] border-r border-dashed border-rule px-4 pb-7 pt-4">
           <p className={LABEL}>/Selected work (04)</p>
           <ul className="mt-4">
@@ -229,8 +266,11 @@ export default function Home() {
         </section>
       </div>
 
-      {/* 6 — Contact */}
-      <section className="flex flex-wrap items-end justify-between gap-6 border-b border-dashed border-rule px-4 pb-9 pt-8">
+      {/* 5 — Contact */}
+      <section
+        data-push="down"
+        className="flex flex-wrap items-end justify-between gap-6 border-b border-dashed border-rule px-4 pb-9 pt-8"
+      >
         <div>
           <p className={LABEL}>/Contact</p>
           <a
@@ -254,9 +294,21 @@ export default function Home() {
         </nav>
       </section>
 
-      {/* 7 — Footer */}
-      <footer className={`${LABEL} flex items-center justify-between gap-4 px-4 py-[18px]`}>
+      {/* 6 — Footer */}
+      <footer
+        data-push="down"
+        className={`${LABEL} flex items-center justify-between gap-4 px-4 py-[18px]`}
+      >
         <span>Avi Yadava</span>
+        {/* Prototype switch — compare the two transition variants. */}
+        <button
+          type="button"
+          onClick={onToggleFx}
+          className="cursor-pointer uppercase transition-colors hover:text-bone"
+        >
+          FX — <span className={fx === "iris" ? "text-bone" : ""}>Iris</span> /{" "}
+          <span className={fx === "rule" ? "text-bone" : ""}>Rule cut</span>
+        </button>
         <Clock format="date" />
       </footer>
     </main>

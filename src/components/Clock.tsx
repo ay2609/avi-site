@@ -34,9 +34,11 @@ function render(format: ClockFormat, now: Date): string {
 export default function Clock({
   format = "stamp",
   className = "",
+  ...rest
 }: {
   format?: ClockFormat;
   className?: string;
+  [dataAttr: `data-${string}`]: string | undefined;
 }) {
   const ref = useRef<HTMLSpanElement | null>(null);
 
@@ -55,7 +57,7 @@ export default function Clock({
   }, [format]);
 
   return (
-    <span ref={ref} className={className}>
+    <span ref={ref} className={className} {...rest}>
       {"—"}
     </span>
   );
