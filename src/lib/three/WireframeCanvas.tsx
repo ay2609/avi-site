@@ -7,7 +7,7 @@ import { TickManager, type TickData } from "@/lib/render/tick-manager";
 
 const VIEW = {
   /** Orthographic half-height. The model is normalised to a longest axis of 1. */
-  frustum: 0.62,
+  frustum: 0.54,
   /** Fixed tilt, so the part reads as a solid rather than a flat outline. */
   tiltX: -0.62,
   /** Turntable speed, radians per second. */

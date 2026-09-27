@@ -3,6 +3,7 @@
 import type { CSSProperties, ReactNode, Ref } from "react";
 
 import AsciiPanel from "@/lib/ascii/AsciiPanel";
+import WireframeCanvas from "@/lib/three/WireframeCanvas";
 import Clock from "@/components/Clock";
 import { LABEL } from "@/components/furniture";
 import type { Variant } from "@/lib/stage/motion";
@@ -82,13 +83,13 @@ function TickerRun() {
 const WORK = [
   ["01", "Globe", "Three.js · 2026"],
   ["02", "Fractals", "GLSL · 2025"],
-  ["03", "Board", "KiCad / STEP · 2025"],
+  ["03", "Watch", "ESP32 / KiCad · 2025"],
   ["04", "Body", "Lambert · 2024"],
 ];
 
 const ARCHIVE = [
   ["012", "Globe", "26.09"],
-  ["011", "Board", "26.04"],
+  ["011", "Watch", "26.04"],
   ["010", "Drift", "25.11"],
   ["009", "Relief", "25.08"],
   ["008", "Lattice", "25.05"],
@@ -205,8 +206,10 @@ export default function Newspaper({
 
         {/* Rail */}
         <div data-push="right" className="flex flex-[10_1_220px] flex-col">
-          <Article label="/Terraced" title="Relief" ratio="aspect-[4/3]">
-            <AsciiPanel field="terrain" />
+          <Article label="/Project — ESP32 / KiCad" title="Watch" ratio="aspect-[4/3]">
+            {/* The watch's PCB, traced from the KiCad STEP export (see
+                scripts/step-to-wireframe.py), on a turntable. */}
+            <WireframeCanvas src="/watch-esp.bin" />
           </Article>
 
           <Article label="/Project — 2025" title="Fractals" ratio="aspect-square">

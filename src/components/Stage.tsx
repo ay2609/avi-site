@@ -363,12 +363,20 @@ export default function Stage() {
       <div
         ref={layerRef}
         data-globe-layer
-        className="invisible absolute z-30"
+        data-open={expanded}
+        className="group invisible absolute z-30"
         onDoubleClick={() => {
           if (!expandedRef.current) open();
         }}
       >
         <GlobeCanvas />
+        {/* Hover ring: a solid bone hairline that fades in over the section's
+            dashed rules. Bled 1px so it sits exactly on the rules around the
+            slot; hidden on the stage, whose rules are elsewhere. */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -inset-x-px top-0 -bottom-px border border-bone opacity-0 transition-opacity duration-300 ease-out group-hover:opacity-100 group-data-[open=true]:hidden"
+        />
       </div>
     </div>
   );
