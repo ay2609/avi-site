@@ -213,13 +213,6 @@ function decodePalettes(): Uint8Array {
   return data;
 }
 
-/** Palette rows as CSS rgb() colours, for the 2D overlays (the dot grid's pixels). */
-export function paletteColor(id: PaletteId, t: number): string {
-  const bytes = atob(PALETTES[PALETTE_ROW[id]].data);
-  const i = Math.round(Math.min(Math.max(t, 0), 1) * 255) * 3;
-  return `rgb(${bytes.charCodeAt(i)}, ${bytes.charCodeAt(i + 1)}, ${bytes.charCodeAt(i + 2)})`;
-}
-
 export class FractalRenderer {
   readonly canvas: HTMLCanvasElement;
   private gl: WebGL2RenderingContext;

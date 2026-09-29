@@ -2,7 +2,7 @@
 
 import { type CSSProperties, useEffect, useRef } from "react";
 
-import { ASCII_FIELDS, ASCII_RAMPS, type AsciiFieldId } from "./fields";
+import { ASCII_FIELDS, ASCII_RAMPS, ASCII_TINTS, type AsciiFieldId } from "./fields";
 
 interface AsciiPanelProps {
   field: AsciiFieldId;
@@ -17,6 +17,10 @@ interface AsciiPanelProps {
  * Renders a field as ASCII that fills whatever box it is given. The character
  * grid is derived from the measured cell size, so the art bleeds to the edges
  * of its section instead of sitting inside one at a fixed size.
+ *
+ * A field with a tint is coloured cell by cell: the tint is painted once per
+ * grid into a one-pixel-per-cell image behind the text, clipped to the glyphs
+ * (`background-clip: text`), so the frames stay plain text.
  */
 export default function AsciiPanel({
   field,
@@ -32,6 +36,7 @@ export default function AsciiPanel({
 
     const fn = ASCII_FIELDS[field];
     const ramp = ASCII_RAMPS[field];
+    const tint = ASCII_TINTS[field];
     const maxIndex = ramp.length - 1;
     const frameInterval = 1000 / fps;
 
@@ -79,16 +84,51 @@ export default function AsciiPanel({
 
       line = new Array(cols);
       out = new Array(rows);
+      if (tint) paintTint(lineHeight);
       return true;
+    };
+
+    // Cell → field coordinates (the square inscribed in the grid).
+    const u = (x: number) => (x / (cols - 1) - 0.5) * scaleX + 0.5;
+    const v = (y: number) => (y / (rows - 1) - 0.5) * scaleY + 0.5;
+
+    const paintTint = (lineHeight: number) => {
+      if (!tint) return;
+      const canvas = document.createElement("canvas");
+      canvas.width = cols;
+      canvas.height = rows;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
+      const img = ctx.createImageData(cols, rows);
+      for (let y = 0; y < rows; y += 1) {
+        for (let x = 0; x < cols; x += 1) {
+          const rgb = tint(u(x), v(y));
+          if (!rgb) continue;
+          const i = (y * cols + x) * 4;
+          img.data[i] = rgb[0];
+          img.data[i + 1] = rgb[1];
+          img.data[i + 2] = rgb[2];
+          img.data[i + 3] = 255;
+        }
+      }
+      ctx.putImageData(img, 0, 0);
+      // `ch` is the monospace advance, so the image stays on the glyphs even if the font
+      // swaps in after measuring; pixelated keeps one flat colour per character.
+      el.style.setProperty("background-image", `url(${canvas.toDataURL()})`);
+      el.style.setProperty("background-size", `${cols}ch ${rows * lineHeight}px`);
+      el.style.setProperty("background-repeat", "no-repeat");
+      el.style.setProperty("image-rendering", "pixelated");
+      el.style.setProperty("-webkit-background-clip", "text");
+      el.style.setProperty("background-clip", "text");
+      el.style.setProperty("color", "transparent");
     };
 
     const draw = (seconds: number) => {
       if (!cols || !rows) return;
       for (let y = 0; y < rows; y += 1) {
-        const v = (y / (rows - 1) - 0.5) * scaleY + 0.5;
+        const vy = v(y);
         for (let x = 0; x < cols; x += 1) {
-          const u = (x / (cols - 1) - 0.5) * scaleX + 0.5;
-          const value = fn(u, v, seconds);
+          const value = fn(u(x), vy, seconds);
           const clamped = value < 0 ? 0 : value > 1 ? 1 : value;
           line[x] = ramp[Math.round(clamped * maxIndex)];
         }

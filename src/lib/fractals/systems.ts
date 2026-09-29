@@ -7,55 +7,6 @@
 export type Vec2 = [number, number];
 export type Vec3 = [number, number, number];
 
-// --- Complex arithmetic (enough for z² + c) -----------------------------------
-
-export const csq = ([x, y]: Vec2): Vec2 => [x * x - y * y, 2 * x * y];
-export const cadd = (a: Vec2, b: Vec2): Vec2 => [a[0] + b[0], a[1] + b[1]];
-export const cabs = ([x, y]: Vec2) => Math.hypot(x, y);
-
-/** z₁ … z_n of z → z² + c from z₀ = 0. Non-finite values stay non-finite ("inf"). */
-export function orbit(c: Vec2, n: number): Vec2[] {
-  const out: Vec2[] = [];
-  let z: Vec2 = [0, 0];
-  for (let i = 0; i < n; i++) {
-    z = cadd(csq(z), c);
-    out.push(z);
-  }
-  return out;
-}
-
-function num(v: number): string {
-  if (!Number.isFinite(v)) return "inf";
-  const a = Math.abs(v);
-  if (a !== 0 && (a >= 1e6 || a < 1e-4)) return v.toExponential(2).replace("e+", "e");
-  return v.toFixed(4);
-}
-
-/**
- * A complex number as the video wrote it: "−16.3281 + 12.1875i", and
- * "inf + inf i" once it has blown up (numpy's overflow, which is where the
- * video's ticker ends).
- */
-export function formatComplex([x, y]: Vec2): string {
-  if (!Number.isFinite(x) || !Number.isFinite(y) || Math.abs(x) > 1e300 || Math.abs(y) > 1e300) return "inf + inf i";
-  const re = num(x).replace("-", "−");
-  const im = num(Math.abs(y));
-  return `${re} ${y < 0 ? "−" : "+"} ${im}i`;
-}
-
-// --- The dot grid (the video's Chapter 2) -------------------------------------
-
-/** His 9×9 grid: linspace(−1.5, 1.5, 9) on both axes, each dot starting at its own c. */
-export function dotGrid(n = 9, range = 1.5): Vec2[] {
-  const pts: Vec2[] = [];
-  for (let j = 0; j < n; j++) {
-    for (let i = 0; i < n; i++) {
-      pts.push([-range + (2 * range * i) / (n - 1), range - (2 * range * j) / (n - 1)]);
-    }
-  }
-  return pts;
-}
-
 // --- Chaotic flows, and their "Fraotic" basins ---------------------------------
 
 export interface Flow {

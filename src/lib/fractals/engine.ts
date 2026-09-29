@@ -1,38 +1,23 @@
 /**
  * The fractals walkthrough's scenes: what the shader draws in each chapter,
- * what the 2D overlay draws over it (the dot grid, the attractor, the
- * Lissajous table), what the figures read, and how one chapter hands over to
- * the next — the picture re-resolves from a coarse grid, the article's motif.
+ * what the 2D overlay draws over it (the attractor, the Lissajous table), and
+ * how one chapter hands over to the next — the picture re-resolves from a
+ * coarse grid, the article's motif.
  *
  * Input is the walkthrough's usual: one scroll gesture is one chapter
  * (WheelGesture). In Julia and Fraotic a drag moves the one thing that chapter
  * is about — c, or the slice.
  */
 import { CHAPTERS, LAST_CHAPTER, type Preset } from "./chapters";
-import { FractalRenderer, paletteColor, type FractalParams } from "./renderer";
+import { COVER } from "./cover";
+import { FractalRenderer, type FractalParams } from "./renderer";
 import { WheelGesture } from "@/lib/stage/wheel";
-import {
-  FLOWS,
-  LISSAJOUS,
-  dotGrid,
-  formatComplex,
-  orbit,
-  traceFlow,
-  type Flow,
-  type Vec2,
-} from "./systems";
-
-export interface Readout {
-  rows: { key: string; value: string; lit?: boolean }[];
-  note?: string;
-}
+import { FLOWS, LISSAJOUS, traceFlow, type Flow, type Vec2 } from "./systems";
 
 export interface EngineCallbacks {
   /** 0…LAST_CHAPTER, eased — the index marker follows it. */
   onProgress: (progress: number) => void;
   onChapter: (chapter: number) => void;
-  /** Live figures for the chapter on stage (null = use the chapter's fixed ones). */
-  onReadout: (readout: Readout | null) => void;
   onPreset: (index: number) => void;
 }
 
@@ -49,28 +34,16 @@ export const TUNE = {
   flightCells: 48,
   /** Drag previews render at this fraction of the pixels. */
   dragScale: 0.45,
-  /** The cover's slow zoom into seahorse valley and back, s per round trip. */
-  coverPeriod: 48,
-  coverTarget: [-0.7453, 0.1127] as Vec2,
-  coverDeepest: 0.05,
-  /** ITERATE: seconds per step of z → z² + c, and how many steps a round runs. */
-  iterateStep: 0.75,
-  iterateSteps: 12,
-  /** RESOLVE: seconds per setting, and on the last one before it starts over. */
-  resolveHold: 1.9,
-  resolveLast: 4.5,
+  /** Steps the front page's ASCII reaches at most — the still shown while the article flies. */
+  flightIters: 30,
   maxDpr: 1.5,
 } as const;
 
-const INK = "#0a0a0b";
 const BONE = "#e6e4df";
 const DIM = "#8a8987";
-const RULE = "#2a2a2c";
 
 const clamp = (v: number, a: number, b: number) => Math.min(Math.max(v, a), b);
 const easeInOut = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
-const pad = (n: number) => String(n).padStart(2, "0");
-const sub = (n: number) => String(n).replace(/\d/g, (d) => "₀₁₂₃₄₅₆₇₈₉"[Number(d)]);
 
 type Mode = "page" | "flying" | "stage";
 
@@ -97,7 +70,6 @@ export class FractalEngine {
   private dirtyGL = true;
   private raf = 0;
   private gesture = new WheelGesture();
-  private readoutKey = "";
   private orbits = new Map<Flow["id"], Float64Array>();
   private reduce: boolean;
   private disposed = false;
@@ -153,11 +125,14 @@ export class FractalEngine {
     }
   }
 
-  /** The cover as it looks the moment the page's ASCII hands over: its grid, its view. */
+  /**
+   * The cover as it looks the moment the page's ASCII hands over: its grid, its
+   * view, its steps — and its colours, which the ASCII already wears (same max).
+   */
   private drawCoverStill(): void {
     const r = this.renderer;
     if (!r) return;
-    r.render({ ...this.coverParams(0), cells: TUNE.flightCells, iters: 30, max: 30 });
+    r.render({ ...COVER, cells: TUNE.flightCells, iters: TUNE.flightIters });
     this.ctx?.clearRect(0, 0, this.overlay.width, this.overlay.height);
   }
 
@@ -223,9 +198,6 @@ export class FractalEngine {
     this.resolve =
       instant || this.reduce ? null : { cells: TUNE.resolveCells, step: TUNE.resolveStep, start: performance.now() };
     this.dirtyGL = true;
-    // Now, not a frame later: React renders the new chapter and its figures together.
-    this.readoutKey = "";
-    this.emitReadout(0);
   }
 
   private get id() {
@@ -251,9 +223,7 @@ export class FractalEngine {
     this.angle = 0;
     this.resolve = this.reduce ? null : { cells: TUNE.resolveCells, step: TUNE.resolveStep, start: performance.now() };
     this.dirtyGL = true;
-    this.readoutKey = "";
     this.cb.onPreset(next);
-    this.emitReadout((performance.now() - this.sceneStart) / 1000);
     this.start();
   }
 
@@ -296,49 +266,10 @@ export class FractalEngine {
 
   // --- Scenes -------------------------------------------------------------------
 
-  private coverParams(t: number): FractalParams {
-    const s = this.reduce ? 0 : 0.5 - 0.5 * Math.cos((2 * Math.PI * t) / TUNE.coverPeriod);
-    const half = 1.5 * Math.pow(TUNE.coverDeepest / 1.5, s);
-    const k = half / 1.5;
-    const [px, py] = TUNE.coverTarget;
-    // Zoom toward the target where it sits on screen: centre = P + (C₀ − P)·k.
-    const center: Vec2 = [px + (-0.75 - px) * k, py + (0 - py) * k];
-    const iters = Math.round(300 + 300 * s);
-    return { mode: "escape", center, half, iters, max: iters, gamma: 3.2, palette: "site" };
-  }
-
-  private resolveStep(): number {
-    const st = TUNE.resolveHold;
-    const total = st * 4 + TUNE.resolveLast;
-    const t = ((performance.now() - this.sceneStart) / 1000) % total;
-    return this.reduce ? 4 : Math.min(4, Math.floor(t / st));
-  }
-
-  private static readonly RESOLVE_STEPS = [
-    { cells: 9, center: [0, 0] as Vec2, iters: 10, lit: "" },
-    { cells: 27, center: [0, 0] as Vec2, iters: 10, lit: "Resolution" },
-    { cells: 0, center: [0, 0] as Vec2, iters: 10, lit: "Resolution" },
-    { cells: 0, center: [-0.75, 0] as Vec2, iters: 10, lit: "Centre" },
-    { cells: 0, center: [-0.75, 0] as Vec2, iters: 1000, lit: "Iterations" },
-  ];
-
-  private sceneParams(t: number): FractalParams | null {
+  private sceneParams(): FractalParams | null {
     switch (this.id) {
       case "fractals":
-        return this.coverParams(t);
-      case "resolve": {
-        const s = FractalEngine.RESOLVE_STEPS[this.resolveStep()];
-        return {
-          mode: "escape",
-          center: s.center,
-          half: 1.5,
-          iters: s.iters,
-          max: s.iters,
-          gamma: 3.2,
-          palette: "site",
-          cells: s.cells,
-        };
-      }
+        return COVER; // still: it changes only when it re-resolves
       case "julia": {
         const p = this.preset()!;
         return { ...p.params, c: this.juliaC ?? p.params.c };
@@ -351,11 +282,6 @@ export class FractalEngine {
       default:
         return null;
     }
-  }
-
-  /** Does this chapter's picture change by itself every frame? */
-  private get animatedGL(): boolean {
-    return this.id === "fractals" && !this.reduce;
   }
 
   // --- The frame -----------------------------------------------------------------
@@ -384,37 +310,20 @@ export class FractalEngine {
 
     // Picture
     const r = this.renderer;
-    const params = this.sceneParams(t);
-    if (this.id === "resolve") {
-      const step = this.resolveStep();
-      if (step !== this.lastResolveStep) {
-        this.lastResolveStep = step;
-        this.dirtyGL = true;
-      }
-    }
-    if (r && (this.dirtyGL || this.animatedGL)) {
+    const params = this.sceneParams();
+    if (r && this.dirtyGL) {
       if (!params) r.clear();
       else if (cells) r.render({ ...params, cells: params.cells ? Math.min(params.cells, cells) : cells });
       else r.render(params, this.dragging ? TUNE.dragScale : 1);
       this.dirtyGL = false;
     }
 
-    // Overlay and figures
+    // Overlay
     this.drawOverlay(t);
-    this.emitReadout(t);
 
-    const busy =
-      this.animatedGL ||
-      !!this.resolve ||
-      tt < 1 ||
-      this.dragging ||
-      this.id === "iterate" ||
-      this.id === "resolve" ||
-      this.id === "lissajous";
+    const busy = !!this.resolve || tt < 1 || this.dragging || this.id === "lissajous";
     if (busy) this.start();
   };
-
-  private lastResolveStep = -1;
 
   // --- Overlay drawing ------------------------------------------------------------
 
@@ -434,90 +343,8 @@ export class FractalEngine {
     if (!ctx) return;
     const [w, h, dpr] = this.fitOverlay();
     ctx.clearRect(0, 0, w, h);
-    if (this.id === "iterate") this.drawIterate(ctx, w, h, dpr, t);
-    else if (this.id === "fraotic") this.drawAttractor(ctx, w, h, dpr);
+    if (this.id === "fraotic") this.drawAttractor(ctx, w, h, dpr);
     else if (this.id === "lissajous") this.drawLissajous(ctx, w, h, dpr, t);
-  }
-
-  // ITERATE — the video's dot grid: 81 points of c, each one hopping to z² + c.
-  private grid = dotGrid(9, 1.5);
-  private gridOrbits = this.grid.map((c) => orbit(c, TUNE.iterateSteps));
-  private fateA = orbit([1.25, 1.25], TUNE.iterateSteps);
-  private fateB = orbit([-1.15, 0.23], TUNE.iterateSteps);
-
-  /** Where the round is: step index (0 = z₁ = c) and the fraction of the hop to the next. */
-  private iterateClock(t: number): { n: number; f: number; round: number; phase: "hop" | "pixels" } {
-    const steps = TUNE.iterateSteps;
-    const hops = (steps - 1) * TUNE.iterateStep;
-    const round = 0.8 + hops + 4.5;
-    const tr = this.reduce ? round - 1 : t % round;
-    if (tr < 0.8) return { n: 0, f: 0, round: tr, phase: "hop" };
-    const hopT = tr - 0.8;
-    if (hopT >= hops) return { n: steps - 1, f: 0, round: tr, phase: "pixels" };
-    const n = Math.floor(hopT / TUNE.iterateStep);
-    const f = clamp((hopT - n * TUNE.iterateStep) / (TUNE.iterateStep * 0.6), 0, 1);
-    return { n, f: easeInOut(f), round: tr, phase: "hop" };
-  }
-
-  private drawIterate(ctx: CanvasRenderingContext2D, w: number, h: number, dpr: number, t: number): void {
-    const half = 2.25; // the plane shown: |z| = 2 fits with room
-    const s = Math.min(w, h) / (2 * half);
-    const X = (x: number) => w / 2 + x * s;
-    const Y = (y: number) => h / 2 - y * s;
-    const clock = this.iterateClock(t);
-    const fadeIn = clamp(clock.round / 0.5, 0, 1);
-
-    // |z| = 2
-    ctx.save();
-    ctx.globalAlpha = 0.6 * fadeIn;
-    ctx.strokeStyle = DIM;
-    ctx.lineWidth = dpr;
-    ctx.setLineDash([4 * dpr, 4 * dpr]);
-    ctx.beginPath();
-    ctx.arc(X(0), Y(0), 2 * s, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.restore();
-
-    const cell = 0.375 * s; // grid spacing: 3 / 8
-    const dot = Math.max(3 * dpr, Math.round(Math.min(w, h) * 0.0065));
-    this.grid.forEach((c, i) => {
-      const zs = this.gridOrbits[i];
-      const esc = zs.findIndex((z) => !(Math.hypot(z[0], z[1]) <= 2));
-      const escaped = esc !== -1 && esc <= clock.n;
-
-      if (clock.phase === "pixels") {
-        // The survivors are the set; the rest are coloured by the step they left on.
-        const a = clamp((clock.round - (0.8 + (TUNE.iterateSteps - 1) * TUNE.iterateStep)) / 0.6, 0, 1);
-        ctx.globalAlpha = a;
-        ctx.fillStyle = esc === -1 ? INK : paletteColor("site", Math.pow((esc + 1) / TUNE.iterateSteps, 1 / 3.2));
-        ctx.fillRect(X(c[0]) - cell / 2, Y(c[1]) - cell / 2, cell + 0.5, cell + 0.5);
-        if (esc === -1) {
-          ctx.strokeStyle = RULE;
-          ctx.lineWidth = dpr;
-          ctx.strokeRect(X(c[0]) - cell / 2, Y(c[1]) - cell / 2, cell, cell);
-        }
-        return;
-      }
-
-      // The c marker stays where the dot began; it goes when its dot escapes.
-      ctx.globalAlpha = fadeIn * (escaped ? 0.15 : 0.55);
-      ctx.fillStyle = DIM;
-      ctx.fillRect(X(c[0]) - dot / 2, Y(c[1]) - dot / 2, dot, dot);
-
-      // The dot: hopping from zₙ to zₙ₊₁.
-      if (esc !== -1 && esc < clock.n) return;
-      const a = zs[clock.n];
-      const b = zs[Math.min(clock.n + 1, zs.length - 1)];
-      const leaving = esc === clock.n + 1;
-      const f = clock.f;
-      const lerp = (u: number, v: number) => (Number.isFinite(v) ? u + (v - u) * f : u);
-      const x = lerp(a[0], b[0]);
-      const y = lerp(a[1], b[1]);
-      ctx.globalAlpha = fadeIn * (esc === clock.n ? 0 : leaving ? 1 - f : 1);
-      ctx.fillStyle = BONE;
-      ctx.fillRect(X(x) - dot / 2, Y(y) - dot / 2, dot, dot);
-    });
-    ctx.globalAlpha = 1;
   }
 
   // FRAOTIC — the attractor, drawn faintly over its own basin, as lorenz.py does.
@@ -560,7 +387,7 @@ export class FractalEngine {
     const R = 1.15;
     const span = { x0: -R * 1.5, x1: columns.length * 3 + R * 1.5, y0: -(rows.length - 1) * 3 - R * 1.5, y1: 3 + R * 1.5 };
     // Leave the headline's band above and the caption's below.
-    const area = { top: h * 0.24, bottom: h * 0.74, left: w * 0.05, right: w * 0.95 };
+    const area = { top: h * 0.22, bottom: h * 0.84, left: w * 0.05, right: w * 0.95 };
     const s = Math.min((area.right - area.left) / (span.x1 - span.x0), (area.bottom - area.top) / (span.y1 - span.y0));
     const ox = (area.left + area.right) / 2 - ((span.x0 + span.x1) / 2) * s;
     const oy = (area.top + area.bottom) / 2 + ((span.y0 + span.y1) / 2) * s;
@@ -632,77 +459,5 @@ export class FractalEngine {
     columns.forEach((r, j) => dotAt(colX(j, time), 3 + R * Math.sin(phi(r, time))));
     rows.forEach((r, i) => dotAt(R * Math.cos(phi(r, time)), rowY(i, time)));
     ctx.restore();
-  }
-
-  // --- Figures ---------------------------------------------------------------------
-
-  private emitReadout(t: number): void {
-    const r = this.readout(t);
-    const key = JSON.stringify(r);
-    if (key === this.readoutKey) return;
-    this.readoutKey = key;
-    this.cb.onReadout(r);
-  }
-
-  private readout(t: number): Readout | null {
-    switch (this.id) {
-      case "iterate": {
-        const { n, phase } = this.iterateClock(t);
-        const step = phase === "pixels" ? TUNE.iterateSteps : n + 1;
-        const left = this.gridOrbits.filter((zs) => zs.slice(0, step).every((z) => Math.hypot(z[0], z[1]) <= 2)).length;
-        return {
-          rows: [
-            { key: "STEP", value: `z${sub(step)} OF z${sub(TUNE.iterateSteps)}` },
-            { key: "c = 1.25 + 1.25i", value: formatComplex(this.fateA[step - 1]) },
-            { key: "c = −1.15 + 0.23i", value: formatComplex(this.fateB[step - 1]) },
-            { key: "LEFT", value: `${pad(left)} / 81`, lit: phase === "pixels" },
-          ],
-        };
-      }
-      case "resolve": {
-        const i = this.resolveStep();
-        const s = FractalEngine.RESOLVE_STEPS[i];
-        const px = Math.round(this.glCanvas.clientWidth * Math.min(window.devicePixelRatio || 1, TUNE.maxDpr));
-        return {
-          rows: [
-            { key: "RESOLUTION", value: s.cells ? `${s.cells} × ${s.cells}` : `${px} × ${px}`, lit: s.lit === "Resolution" },
-            { key: "CENTRE", value: s.center[0] ? "−0.75 + 0i" : "0 + 0i", lit: s.lit === "Centre" },
-            { key: "ITERATIONS", value: String(s.iters), lit: s.lit === "Iterations" },
-          ],
-        };
-      }
-      case "julia": {
-        const p = this.preset()!;
-        const c = this.juliaC ?? p.params.c ?? [0, 0];
-        const thorn = p.params.mode === "thorn";
-        return {
-          rows: [
-            thorn
-              ? { key: "cx, cy", value: `${c[0].toFixed(3)}, ${c[1].toFixed(3)}`, lit: !!this.juliaC }
-              : { key: "c", value: formatComplex(c).replace(/(\d\.\d{3})\d/g, "$1"), lit: !!this.juliaC },
-            { key: thorn ? "MAP" : "ITERATE", value: thorn ? "X / cos Y,  Y / sin X" : "z² + c" },
-            { key: "ITERATIONS", value: String(p.params.iters) },
-            { key: "COLOUR", value: p.params.pygame ? "RGB, BY HAND" : p.params.palette.toUpperCase() },
-          ],
-          note: p.note,
-        };
-      }
-      case "fraotic": {
-        const p = this.preset()!;
-        const flow = FLOWS[p.params.mode === "lorenz" ? "lorenz" : "thomas"];
-        const deg = ((((this.angle * 180) / Math.PI) % 360) + 360) % 360;
-        return {
-          rows: [
-            { key: "SYSTEM", value: flow.id === "thomas" ? "THOMAS · b 0.208186" : "LORENZ · 10, 28, 2.667" },
-            { key: "STEP", value: `EULER · dt ${flow.dt}` },
-            { key: "SLICE", value: `${Math.round(deg)}° ABOUT z`, lit: this.angle !== 0 },
-            { key: "TARGET", value: `r ${flow.target.radius.toFixed(2)} AT THE MEAN` },
-          ],
-          note: p.note,
-        };
-      }
-      default:
-        return null;
-    }
   }
 }

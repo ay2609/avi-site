@@ -13,7 +13,12 @@
  *
  * Panel coordinates arrive aspect-corrected, so a unit circle in field space
  * renders as a circle on screen rather than an ellipse.
+ *
+ * A field may also have a tint (ASCII_TINTS): a colour per cell, fixed in time,
+ * that the panel paints its characters with instead of the one text colour.
  */
+
+import { COVER, COVER_VIEW, coverRGB, escapeStep } from "@/lib/fractals/cover";
 
 export type AsciiFieldId =
   | "terrain"
@@ -29,6 +34,9 @@ export type AsciiFieldId =
 
 /** x, y are in [0, 1] over the square inscribed in the panel; t is seconds. */
 export type AsciiField = (x: number, y: number, t: number) => number;
+
+/** A cell's colour (0–255 RGB), or null to leave it uncoloured. Same x, y as the field. */
+export type AsciiTint = (x: number, y: number) => [number, number, number] | null;
 
 const TAU = Math.PI * 2;
 
@@ -199,27 +207,27 @@ const crate: AsciiField = (x, y, t) => {
  * page. Its iteration count rises and falls, so the set condenses out of a
  * disc and melts back (the video's "iterations 10 → 1000", in miniature).
  * Shaded as Avi's code does it: escape step over the maximum, ^(1/3.2).
- * Opened, the stage picks up from this grid and resolves it into pixels.
+ * The view is the article's cover (src/lib/fractals/cover.ts), and each
+ * character takes the colour its cell has there (the tint), so opening the
+ * article resolves this grid into the same picture in pixels.
  */
-export const MANDEL_VIEW = { center: [-0.75, 0], half: 1.5 } as const;
+export const MANDEL_VIEW = COVER_VIEW;
 export const mandelIterations = (t: number): number =>
   Math.round(3 + 27 * (0.5 - 0.5 * Math.cos((TAU * t) / 16)));
 
+const mandelC = (x: number, y: number): [number, number] => [
+  MANDEL_VIEW.center[0] + (x * 2 - 1) * MANDEL_VIEW.half,
+  MANDEL_VIEW.center[1] + (1 - y * 2) * MANDEL_VIEW.half,
+];
+
 const mandel: AsciiField = (x, y, t) => {
-  const n = mandelIterations(t);
-  const cr = MANDEL_VIEW.center[0] + (x * 2 - 1) * MANDEL_VIEW.half;
-  const ci = MANDEL_VIEW.center[1] + (1 - y * 2) * MANDEL_VIEW.half;
-  let zr = 0;
-  let zi = 0;
-  for (let k = 1; k <= n; k++) {
-    const r = zr * zr - zi * zi + cr;
-    zi = 2 * zr * zi + ci;
-    zr = r;
-    // Over the most it ever runs, not this frame's: far points stay sparse however few steps there are.
-    if (zr * zr + zi * zi > 4) return Math.pow(k / 30, 1 / 3.2);
-  }
-  return 0;
+  const k = escapeStep(...mandelC(x, y), mandelIterations(t));
+  // Over the most it ever runs, not this frame's: far points stay sparse however few steps there are.
+  return k ? Math.pow(k / 30, 1 / 3.2) : 0;
 };
+
+/** A cell's escape step doesn't depend on how many steps run, so its colour is the cover's, fixed. */
+const mandelTint: AsciiTint = (x, y) => coverRGB(escapeStep(...mandelC(x, y), COVER.iters));
 
 export const ASCII_FIELDS: Record<AsciiFieldId, AsciiField> = {
   terrain,
@@ -246,4 +254,8 @@ export const ASCII_RAMPS: Record<AsciiFieldId, string> = {
   scan: " .:-=+*#",
   crate: " .:-=+*#%@",
   mandel: " .:-=+*#%@",
+};
+
+export const ASCII_TINTS: Partial<Record<AsciiFieldId, AsciiTint>> = {
+  mandel: mandelTint,
 };

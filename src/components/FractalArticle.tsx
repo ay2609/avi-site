@@ -1,11 +1,11 @@
 "use client";
 
-import { Fragment, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import { LABEL } from "@/components/furniture";
 import AsciiPanel from "@/lib/ascii/AsciiPanel";
 import { CHAPTERS, LAST_CHAPTER } from "@/lib/fractals/chapters";
-import { FractalEngine, type Readout } from "@/lib/fractals/engine";
+import { FractalEngine } from "@/lib/fractals/engine";
 import { gsap, prefersReducedMotion, SplitText } from "@/lib/stage/motion";
 
 /** Height of one row of the chapter index, px — the marker moves in these. */
@@ -16,17 +16,15 @@ const SWIPE = 40;
 const DECIDE = 8;
 /** Box width below which the furniture moves outside the box (as the watch). */
 const COMPACT_BELOW = 560;
-/** Below this the code starts folded to its file line, so it doesn't cover the picture. */
-const CODE_OPEN_FROM = 700;
 
 const pad = (n: number) => String(n).padStart(2, "0");
 
 /**
  * Fractals as an article. On the front page it is the Mandelbrot set in ASCII,
- * its iterations rising and falling; opened, the characters give way to pixels
- * and a walkthrough in six chapters (src/lib/fractals/chapters.ts) — each
- * scroll or swipe is one, and each shows a piece of Avi's code beside a live
- * port of it.
+ * its iterations rising and falling, each character in the colour its cell has
+ * in the cover; opened, the characters give way to that picture in pixels and a
+ * walkthrough in four chapters (src/lib/fractals/chapters.ts) — each scroll or
+ * swipe is one, each a live port of Avi's own code.
  */
 export default function FractalArticle({ open, landed }: { open: boolean; landed: boolean }) {
   const hostRef = useRef<HTMLDivElement>(null);
@@ -38,8 +36,6 @@ export default function FractalArticle({ open, landed }: { open: boolean; landed
 
   const [chapter, setChapter] = useState(0);
   const [preset, setPreset] = useState(0);
-  const [readout, setReadout] = useState<Readout | null>(null);
-  const [codeOpen, setCodeOpen] = useState(true);
   const compactRef = useRef(false);
 
   const chapterRef = useRef(0);
@@ -66,7 +62,6 @@ export default function FractalArticle({ open, landed }: { open: boolean; landed
       },
       onChapter: setChapter,
       onPreset: setPreset,
-      onReadout: setReadout,
     });
     engine.setOpen(stateRef.current.open, stateRef.current.landed);
     engineRef.current = engine;
@@ -85,15 +80,9 @@ export default function FractalArticle({ open, landed }: { open: boolean; landed
   useEffect(() => {
     const el = overlayRef.current;
     if (!el) return;
-    let wasWide: boolean | null = null;
     const check = () => {
       const w = el.clientWidth;
       compactRef.current = w > 0 && w < COMPACT_BELOW;
-      const wide = w >= CODE_OPEN_FROM;
-      if (w > 0 && wide !== wasWide) {
-        wasWide = wide;
-        setCodeOpen(wide);
-      }
     };
     check();
     const ro = new ResizeObserver(check);
@@ -221,12 +210,9 @@ export default function FractalArticle({ open, landed }: { open: boolean; landed
   const type = useCallback((root: Element | null, seconds: number, skip?: string) => {
     if (!root) return () => {};
     const selector = skip ? `[data-typed]:not(${skip})` : "[data-typed]";
+    // Words as well as chars, so a wrapping line still breaks between words.
     const splits = [...root.querySelectorAll<HTMLElement>(selector)].map((el) =>
-      // Code keeps its line breaks and indents; everything else splits into words as well as
-      // chars, so a wrapping line still breaks between words.
-      el.tagName === "PRE"
-        ? SplitText.create(el, { type: "chars", reduceWhiteSpace: false })
-        : SplitText.create(el, { type: "words,chars" })
+      SplitText.create(el, { type: "words,chars" })
     );
     const chars = splits.flatMap((s) => s.chars);
     if (prefersReducedMotion() || !chars.length) return () => splits.forEach((s) => s.revert());
@@ -253,7 +239,6 @@ export default function FractalArticle({ open, landed }: { open: boolean; landed
 
   const c = CHAPTERS[chapter];
   const p = c.presets?.[preset];
-  const excerpt = p?.excerpt ?? c.excerpt;
   const go = (k: number) => engineRef.current?.go(k);
   const draggable = visible && (c.id === "julia" || c.id === "fraotic");
 
@@ -289,7 +274,7 @@ export default function FractalArticle({ open, landed }: { open: boolean; landed
       >
         {/* Scrims: the pictures run to the edges; the type needs a little ink behind it. */}
         <div className="absolute inset-x-0 top-0 h-[28%] bg-gradient-to-b from-ink/60 to-transparent @max-[560px]:hidden" />
-        <div className="absolute inset-x-0 bottom-0 h-[36%] bg-gradient-to-t from-ink/70 to-transparent @max-[560px]:hidden" />
+        <div className="absolute inset-x-0 bottom-0 h-[20%] bg-gradient-to-t from-ink/70 to-transparent @max-[560px]:hidden" />
 
         <div data-chapter-copy key={`${c.id}-${preset}`} className="contents">
           {/* Headline, top left; the presets below it. */}
@@ -338,59 +323,13 @@ export default function FractalArticle({ open, landed }: { open: boolean; landed
             )}
           </div>
 
-          {/* Bottom left: his code, then the caption. */}
-          <div className="absolute bottom-4 left-4 flex max-w-[calc(100%-32px)] flex-col items-start gap-3 @max-[560px]:bottom-auto @max-[560px]:top-[calc(100%+16px)]">
-            {excerpt && (
-              <figure className="max-w-full border border-rule bg-ink/85 px-3 py-2 @max-[560px]:hidden">
-                {/* The file line folds and unfolds the code. */}
-                <figcaption>
-                  <button
-                    type="button"
-                    tabIndex={visible ? 0 : -1}
-                    aria-expanded={codeOpen}
-                    onClick={() => setCodeOpen((o) => !o)}
-                    className={`${LABEL} pointer-events-auto cursor-pointer text-left uppercase transition-colors hover:text-bone`}
-                  >
-                    {/* The sign changes without a retype, so it sits outside the typed text. */}
-                    <span className="inline-block w-3">{codeOpen ? "−" : "+"}</span>
-                    <span data-typed>
-                      {excerpt.file} · {excerpt.year}
-                    </span>
-                  </button>
-                </figcaption>
-                {codeOpen && (
-                  <pre
-                    data-typed
-                    className="font-mono-ui mt-2 overflow-hidden whitespace-pre leading-[1.55] text-bone"
-                    style={{ fontSize: "clamp(9px, 1.3cqw, 11px)" }}
-                  >
-                    {excerpt.code}
-                  </pre>
-                )}
-              </figure>
-            )}
-            <p data-typed className={`${LABEL} max-w-[78cqw] @max-[560px]:max-w-none`}>
-              {c.caption}
-            </p>
-          </div>
-
-          {/* Figures, under the index — live where the chapter has something moving. Keys and
-              values are set as written (math stays lower case), so no text-transform here.
-              Phones have no room for them beside the caption and the stage's clock. */}
-          <dl
-            className="font-mono-ui absolute right-4 grid grid-cols-[auto_auto] gap-x-4 text-right text-[11px] leading-[1.7] tracking-[0.08em] @max-[560px]:hidden"
-            style={{ top: 16 + INDEX_ROW * CHAPTERS.length + 20 }}
+          {/* Bottom left: the caption. */}
+          <p
+            data-typed
+            className={`${LABEL} absolute bottom-4 left-4 max-w-[78cqw] @max-[560px]:bottom-auto @max-[560px]:top-[calc(100%+16px)] @max-[560px]:max-w-[calc(100%-32px)]`}
           >
-            {(readout?.rows ?? c.figures.map(([key, value]) => ({ key, value, lit: false }))).map((r) => (
-              <Fragment key={r.key}>
-                <dt data-typed className={r.lit ? "text-bone" : "text-dim"}>
-                  {r.key}
-                </dt>
-                {/* Values change while the chapter runs, so they are not typed (SplitText would freeze them). */}
-                <dd className="whitespace-nowrap normal-case text-bone">{r.value}</dd>
-              </Fragment>
-            ))}
-          </dl>
+            {c.caption}
+          </p>
         </div>
 
         {/* Index, top right: the chapters, with a marker that travels. */}
