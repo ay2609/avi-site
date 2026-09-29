@@ -58,6 +58,8 @@ export const T = {
 
 /** Gutter between the expanded globe and the viewport edge — the label bands live here. */
 export const STAGE_GUTTER = 64;
+/** Below this viewport width the side gutters shrink to the site's inset; the spines hide. */
+export const NARROW = 640;
 
 export function prefersReducedMotion(): boolean {
   return (
@@ -85,7 +87,8 @@ export const box = (r: DOMRect): Box => ({
  * (width / height) that fits inside the gutters, centred.
  */
 export function stageBox(aspect = 1): Box {
-  const maxW = Math.max(120, window.innerWidth - STAGE_GUTTER * 2);
+  const gutterX = window.innerWidth < NARROW ? 16 : STAGE_GUTTER;
+  const maxW = Math.max(120, window.innerWidth - gutterX * 2);
   const maxH = Math.max(120, window.innerHeight - STAGE_GUTTER * 2);
   const width = Math.min(maxW, maxH * aspect);
   const height = width / aspect;

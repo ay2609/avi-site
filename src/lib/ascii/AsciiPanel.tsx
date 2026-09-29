@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { type CSSProperties, useEffect, useRef } from "react";
 
 import { ASCII_FIELDS, ASCII_RAMPS, type AsciiFieldId } from "./fields";
 
@@ -9,6 +9,8 @@ interface AsciiPanelProps {
   /** Refresh rate. Well below display refresh; the globe needs the frames. */
   fps?: number;
   className?: string;
+  /** Overrides for the text (font size, line height, colour) — inline, so they win. */
+  style?: CSSProperties;
 }
 
 /**
@@ -20,6 +22,7 @@ export default function AsciiPanel({
   field,
   fps = 18,
   className = "",
+  style,
 }: AsciiPanelProps) {
   const preRef = useRef<HTMLPreElement | null>(null);
 
@@ -119,6 +122,8 @@ export default function AsciiPanel({
     const loop = (now: number) => {
       raf = requestAnimationFrame(loop);
       if (now - lastFrame < frameInterval) return;
+      // Hidden (e.g. the stage's backdrop while no article is open): skip the work.
+      if (el.checkVisibility && !el.checkVisibility({ visibilityProperty: true, opacityProperty: true, checkVisibilityCSS: true })) return;
       lastFrame = now;
       lastSeconds = (now - start) * 0.001;
       draw(lastSeconds);
@@ -137,6 +142,7 @@ export default function AsciiPanel({
       ref={preRef}
       aria-hidden="true"
       className={`font-mono-ui block h-full w-full select-none overflow-hidden whitespace-pre text-[10px] leading-[1.15] text-ascii ${className}`}
+      style={style}
     />
   );
 }

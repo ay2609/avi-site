@@ -82,6 +82,7 @@ function Article({
           )}
         </div>
         <h2
+          data-headline={slot?.id}
           className="font-serif-ui mt-1.5 whitespace-nowrap uppercase leading-[0.86] tracking-[-0.02em] text-bone"
           style={{ fontSize: fillSize(title, "4.5rem") }}
         >
@@ -239,13 +240,12 @@ export default function Newspaper({
             slot={{ id: "watch", ref: slotRefs.watch, onOpen: () => onOpen("watch") }}
           />
 
-          <Article label="/Project — 2025" title="Fractals" ratio="aspect-square">
-            <div className="hatch relative h-full w-full">
-              <span className={`${LABEL} absolute bottom-3 left-4`}>
-                Project still — 1:1
-              </span>
-            </div>
-          </Article>
+          <Article
+            label="/Project — Python / NumPy"
+            title="Fractals"
+            ratio="aspect-square"
+            slot={{ id: "fractals", ref: slotRefs.fractals, onOpen: () => onOpen("fractals") }}
+          />
 
           <Article label="/Advected" title="Drift" ratio="aspect-[4/3]">
             <AsciiPanel field="flow" />

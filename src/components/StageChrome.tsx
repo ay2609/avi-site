@@ -6,6 +6,7 @@ import Clock from "@/components/Clock";
 import { LABEL } from "@/components/furniture";
 import type { Article } from "@/lib/stage/articles";
 
+
 /**
  * The periphery of an expanded article: the newspaper's grid, grown to the
  * viewport. The article's box is `--sx --sy --sw --sh` (set by the stage);
@@ -52,7 +53,8 @@ export default function StageChrome({
             onClick={onClose}
             className="cursor-pointer whitespace-nowrap uppercase text-bone transition-colors hover:text-dim"
           >
-            Esc — Back to the front page
+            <span className="max-sm:hidden">Esc — Back to the front page</span>
+            <span className="sm:hidden">Esc — Back</span>
           </button>
         </div>
 
@@ -66,38 +68,42 @@ export default function StageChrome({
             bottom: 0,
           }}
         >
-          <span data-typed className="whitespace-nowrap">
+          <span data-typed className={`sm:whitespace-nowrap ${article.phoneCaption === false ? "max-sm:hidden" : ""}`}>
             {article.caption}
           </span>
-          <Clock data-land className="whitespace-nowrap text-bone" />
+          <Clock data-land className="ml-auto whitespace-nowrap text-bone" />
         </div>
 
         {/* Side bands — vertical furniture, read bottom-to-top like a spine. */}
-        <div
-          className={`${band} items-center justify-center`}
-          style={{ left: 0, width: "var(--sx)", top: "var(--sy)", height: "var(--sh)" }}
-        >
-          <span
-            data-typed
-            className="whitespace-nowrap"
-            style={{ writingMode: "vertical-rl", transform: "rotate(180deg)" }}
-          >
-            Vol. I · No. 001
-          </span>
-        </div>
-        <div
-          className={`${band} items-center justify-center`}
-          style={{
-            left: "calc(var(--sx) + var(--sw))",
-            right: 0,
-            top: "var(--sy)",
-            height: "var(--sh)",
-          }}
-        >
-          <span data-typed className="whitespace-nowrap" style={{ writingMode: "vertical-rl" }}>
-            {article.controls}
-          </span>
-        </div>
+        {article.spines !== false && (
+          <>
+            <div
+              className={`${band} items-center justify-center`}
+              style={{ left: 0, width: "var(--sx)", top: "var(--sy)", height: "var(--sh)" }}
+            >
+              <span
+                data-typed
+                className="whitespace-nowrap max-sm:hidden"
+                style={{ writingMode: "vertical-rl", transform: "rotate(180deg)" }}
+              >
+                Vol. I · No. 001
+              </span>
+            </div>
+            <div
+              className={`${band} items-center justify-center`}
+              style={{
+                left: "calc(var(--sx) + var(--sw))",
+                right: 0,
+                top: "var(--sy)",
+                height: "var(--sh)",
+              }}
+            >
+              <span data-typed className="whitespace-nowrap max-sm:hidden" style={{ writingMode: "vertical-rl" }}>
+                {article.controls}
+              </span>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

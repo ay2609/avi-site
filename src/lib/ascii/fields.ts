@@ -23,7 +23,9 @@ export type AsciiFieldId =
   | "ripple"
   | "spiral"
   | "weave"
-  | "scan";
+  | "scan"
+  | "crate"
+  | "mandel";
 
 /** x, y are in [0, 1] over the square inscribed in the panel; t is seconds. */
 export type AsciiField = (x: number, y: number, t: number) => number;
@@ -177,6 +179,48 @@ const scan: AsciiField = (x, y, t) => {
   return Math.max(0, band) * (0.3 + envelope * 0.8);
 };
 
+/**
+ * An egg-crate interference — sin·sin on two axes that slowly turn — after the
+ * backdrop on caponier.io. Soft lobes, no lines, so it survives any grid size;
+ * the stage uses it large and nearly invisible behind the globe.
+ */
+const crate: AsciiField = (x, y, t) => {
+  const u = x * 2 - 1;
+  const v = y * 2 - 1;
+  const a = t * 0.08;
+  const c = Math.cos(a);
+  const s = Math.sin(a);
+  const k = 7;
+  return (Math.sin(k * (u * c - v * s)) * Math.sin(k * (u * s + v * c)) + 1) / 2;
+};
+
+/**
+ * The Mandelbrot set at ASCII resolution — the fractals article on the front
+ * page. Its iteration count rises and falls, so the set condenses out of a
+ * disc and melts back (the video's "iterations 10 → 1000", in miniature).
+ * Shaded as Avi's code does it: escape step over the maximum, ^(1/3.2).
+ * Opened, the stage picks up from this grid and resolves it into pixels.
+ */
+export const MANDEL_VIEW = { center: [-0.75, 0], half: 1.5 } as const;
+export const mandelIterations = (t: number): number =>
+  Math.round(3 + 27 * (0.5 - 0.5 * Math.cos((TAU * t) / 16)));
+
+const mandel: AsciiField = (x, y, t) => {
+  const n = mandelIterations(t);
+  const cr = MANDEL_VIEW.center[0] + (x * 2 - 1) * MANDEL_VIEW.half;
+  const ci = MANDEL_VIEW.center[1] + (1 - y * 2) * MANDEL_VIEW.half;
+  let zr = 0;
+  let zi = 0;
+  for (let k = 1; k <= n; k++) {
+    const r = zr * zr - zi * zi + cr;
+    zi = 2 * zr * zi + ci;
+    zr = r;
+    // Over the most it ever runs, not this frame's: far points stay sparse however few steps there are.
+    if (zr * zr + zi * zi > 4) return Math.pow(k / 30, 1 / 3.2);
+  }
+  return 0;
+};
+
 export const ASCII_FIELDS: Record<AsciiFieldId, AsciiField> = {
   terrain,
   flow,
@@ -186,6 +230,8 @@ export const ASCII_FIELDS: Record<AsciiFieldId, AsciiField> = {
   spiral,
   weave,
   scan,
+  crate,
+  mandel,
 };
 
 /** Sparse-to-dense character ramps. Index 0 renders as empty space. */
@@ -198,4 +244,6 @@ export const ASCII_RAMPS: Record<AsciiFieldId, string> = {
   spiral: " .:-=+*#%",
   weave: " .:-=+*#",
   scan: " .:-=+*#",
+  crate: " .:-=+*#%@",
+  mandel: " .:-=+*#%@",
 };
