@@ -21,7 +21,7 @@ Top to bottom (`src/components/Newspaper.tsx`):
      ASCII strip that levels the lead with the rail.
    - Rail: **Watch** (the PCB, 4:3), **Fractals** (hatch placeholder),
      **Drift** (`flow` ASCII field, 4:3).
-4. **Contact** — email, phone, LinkedIn, GitHub.
+4. **Contact** — LinkedIn, GitHub (no email or phone until there's an address on halcyn.dev).
 5. **Footer** — name, the `FX — IRIS / RULE CUT` prototype switch, date.
 
 ## Design

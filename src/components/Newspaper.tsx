@@ -115,15 +115,18 @@ function TickerRun() {
   );
 }
 
-/** From the résumé. Phone is a tel: link; the rest open in a new tab. */
-const CONTACT = {
-  email: "avi.y2609@gmail.com",
-  phone: "703-559-4730",
+/**
+ * Links open in a new tab. No email or phone for now (Sep 29): the address
+ * comes back once there's one on halcyn.dev — set `email` and the serif line
+ * returns.
+ */
+const CONTACT: { email: string | null; links: readonly (readonly [string, string])[] } = {
+  email: null,
   links: [
     ["LinkedIn", "https://www.linkedin.com/in/ay2609/"],
     ["GitHub", "https://github.com/ay2609"],
   ],
-} as const;
+};
 
 interface NewspaperProps {
   /** The <main> element, so the stage can recede it. */
@@ -260,21 +263,17 @@ export default function Newspaper({
       >
         <div>
           <p className={LABEL}>/Contact</p>
-          <a
-            href={`mailto:${CONTACT.email}`}
-            className="font-serif-ui mt-2 block tracking-[-0.015em] text-bone transition-colors hover:text-dim"
-            style={{ fontSize: "clamp(28px, 4.5vw, 56px)" }}
-          >
-            {CONTACT.email}
-          </a>
+          {CONTACT.email && (
+            <a
+              href={`mailto:${CONTACT.email}`}
+              className="font-serif-ui mt-2 block tracking-[-0.015em] text-bone transition-colors hover:text-dim"
+              style={{ fontSize: "clamp(28px, 4.5vw, 56px)" }}
+            >
+              {CONTACT.email}
+            </a>
+          )}
         </div>
         <nav className="flex flex-wrap gap-7">
-          <a
-            href={`tel:+1${CONTACT.phone.replace(/-/g, "")}`}
-            className="font-mono-ui text-[10px] uppercase tracking-[0.18em] text-bone transition-colors hover:text-dim"
-          >
-            {CONTACT.phone}
-          </a>
           {CONTACT.links.map(([name, href]) => (
             <a
               key={name}
