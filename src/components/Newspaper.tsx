@@ -197,7 +197,7 @@ export default function Newspaper({
             tabIndex={0}
             aria-label="Open the globe"
             onKeyDown={openGlobe.onKeyDown}
-            className="aspect-square w-full outline-none focus-visible:outline focus-visible:outline-1 focus-visible:outline-bone"
+            className="aspect-square w-full outline-none focus-visible:outline-solid focus-visible:outline-1 focus-visible:outline-bone"
           />
           <div
             data-push="down"
