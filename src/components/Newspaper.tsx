@@ -6,6 +6,7 @@ import AsciiPanel from "@/lib/ascii/AsciiPanel";
 import Clock from "@/components/Clock";
 import { LABEL } from "@/components/furniture";
 import type { ArticleId } from "@/lib/stage/articles";
+import { useOpenOnClick } from "@/lib/stage/click";
 import type { Variant } from "@/lib/stage/motion";
 
 /**
@@ -38,7 +39,8 @@ function fillSize(text: string, max: string, min = "1rem"): string {
 /**
  * A headline set to span its box, above art that bleeds to the edges.
  * With `slot`, the art area is an empty box a document-level layer sits
- * over (see Stage), and the label row gains an open control.
+ * over (see Stage), and the whole article opens on a single click — the
+ * headline and label here, the art through its layer.
  */
 function Article({
   label,
@@ -53,34 +55,26 @@ function Article({
   children?: ReactNode;
   slot?: { id: ArticleId; ref: Ref<HTMLDivElement>; onOpen: () => void };
 }) {
+  const click = useOpenOnClick(slot?.onOpen);
   return (
     <section
       data-article={slot?.id}
-      className="group fit relative border-b border-dashed border-rule"
+      className={`group fit relative border-b border-dashed border-rule ${slot ? "cursor-pointer outline-none" : ""}`}
+      {...(slot && { role: "link", tabIndex: 0, "aria-label": `Open ${title}`, ...click })}
     >
       {slot && (
         /* Hover ring over the whole article — headline and art. A solid bone
            hairline that fades in over the section's dashed rules, bled 1px so
            it sits exactly on them. The art's layer sits above this section and
-           takes the pointer there, so it mirrors its hover onto `data-hover`. */
+           takes the pointer there, so it mirrors its hover onto `data-hover`.
+           Keyboard focus shows it too. */
         <div
           aria-hidden
-          className="pointer-events-none absolute -inset-x-px -top-px -bottom-px z-10 border border-bone opacity-0 transition-opacity duration-300 ease-out group-hover:opacity-100 group-data-[hover]:opacity-100"
+          className="pointer-events-none absolute -inset-x-px -top-px -bottom-px z-10 border border-bone opacity-0 transition-opacity duration-300 ease-out group-hover:opacity-100 group-focus-visible:opacity-100 group-data-[hover]:opacity-100"
         />
       )}
       <div className="px-4 pb-2 pt-4">
-        <div className={`${LABEL} flex items-baseline justify-between gap-4`}>
-          <span>{label}</span>
-          {slot && (
-            <button
-              type="button"
-              onClick={slot.onOpen}
-              className="cursor-pointer uppercase text-bone transition-colors hover:text-dim"
-            >
-              Open — /{slot.id} ↗
-            </button>
-          )}
-        </div>
+        <div className={LABEL}>{label}</div>
         <h2
           data-headline={slot?.id}
           className="font-serif-ui mt-1.5 whitespace-nowrap uppercase leading-[0.86] tracking-[-0.02em] text-bone"
@@ -116,12 +110,11 @@ function TickerRun() {
 }
 
 /**
- * Links open in a new tab. No email or phone for now (Sep 29): the address
- * comes back once there's one on halcyn.dev — set `email` and the serif line
- * returns.
+ * The address is on the domain (Cloudflare Email Routing forwards it, Sep 29);
+ * `null` hides the serif line. Links open in a new tab. No phone.
  */
 const CONTACT: { email: string | null; links: readonly (readonly [string, string])[] } = {
-  email: null,
+  email: "avi@halcyn.dev",
   links: [
     ["LinkedIn", "https://www.linkedin.com/in/ay2609/"],
     ["GitHub", "https://github.com/ay2609"],
@@ -152,6 +145,7 @@ export default function Newspaper({
   fx,
   onToggleFx,
 }: NewspaperProps) {
+  const openGlobe = useOpenOnClick(() => onOpen("globe"));
   return (
     <main
       ref={mainRef}
@@ -194,22 +188,16 @@ export default function Newspaper({
       <div className="grid grid-cols-1 md:grid-cols-[17fr_10fr]">
         {/* Lead */}
         <section className="flex min-w-0 flex-col border-b border-dashed border-rule md:border-r">
-          <div
-            data-push="up"
-            className={`${LABEL} flex items-baseline justify-end gap-4 px-4 pb-3 pt-4`}
-          >
-            <button
-              type="button"
-              onClick={() => onOpen("globe")}
-              className="cursor-pointer uppercase text-bone transition-colors hover:text-dim"
-            >
-              Open — /globe ↗
-            </button>
-          </div>
+          {/* The globe's layer covers this box and takes the pointer (a
+              click opens it); the box itself only takes keyboard focus. */}
           <div
             ref={slotRefs.globe}
             data-slot="globe"
-            className="aspect-square w-full border-t border-dashed border-rule"
+            role="link"
+            tabIndex={0}
+            aria-label="Open the globe"
+            onKeyDown={openGlobe.onKeyDown}
+            className="aspect-square w-full outline-none focus-visible:outline focus-visible:outline-1 focus-visible:outline-bone"
           />
           <div
             data-push="down"

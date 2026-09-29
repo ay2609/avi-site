@@ -19,9 +19,9 @@ Top to bottom (`src/components/Newspaper.tsx`):
 3. **The well** — a fixed 17:10 grid, one column below 768px.
    - Lead: the globe (square), its caption, and a two-up `ripple` / `lattice`
      ASCII strip that levels the lead with the rail.
-   - Rail: **Watch** (the PCB, 4:3), **Fractals** (hatch placeholder),
+   - Rail: **Watch** (the PCB, 4:3), **Fractals** (the Mandelbrot set in ASCII, 1:1),
      **Drift** (`flow` ASCII field, 4:3).
-4. **Contact** — LinkedIn, GitHub (no email or phone until there's an address on halcyn.dev).
+4. **Contact** — `avi@halcyn.dev` (Cloudflare Email Routing → Gmail), LinkedIn, GitHub.
 5. **Footer** — name, the `FX — IRIS / RULE CUT` prototype switch, date.
 
 ## Design
@@ -117,7 +117,7 @@ Two variants, switchable from the footer (stored in `localStorage["avi-site:fx"]
 | Drag the globe | Orbit (pauses auto-spin, which ramps back after ~1s) |
 | Wheel over the globe | Bend the camera between perspective and orthographic; elsewhere the page scrolls |
 | Space, cursor over the globe | Toggle auto-spin |
-| `OPEN — /<id> ↗`, or double-click the art | Open the article |
+| Click the article (a drag on the globe orbits instead); Enter when focused | Open the article |
 | Esc, `ESC — BACK`, or browser back | Close it |
 
 ## Assets and scripts

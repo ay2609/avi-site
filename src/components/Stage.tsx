@@ -18,6 +18,7 @@ import FractalArticle from "@/components/FractalArticle";
 import WatchArticle from "@/components/WatchArticle";
 import GlobeCanvas from "@/lib/three/GlobeCanvas";
 import { ARTICLES, ARTICLE_IDS, type ArticleId, articleForPath } from "@/lib/stage/articles";
+import { useOpenOnClick } from "@/lib/stage/click";
 import {
   type Box,
   type Variant,
@@ -40,17 +41,17 @@ import {
 const FX_KEY = "avi-site:fx";
 type PushDir = "up" | "right" | "down";
 
-/**
- * An article's art, at document level. Sits over its slot in the newspaper
- * (absolute, scrolls with the page) or fixed to the stage. Double-click opens
- * it — a single click belongs to the art's own interaction, and a drag never
- * produces a dblclick, so the two don't compete.
- */
 /** A backdrop sits under every art layer on the page, over the chrome on the stage. */
 function raiseBackdrop(el: HTMLElement, staged: boolean) {
   gsap.set(el, staged ? { zIndex: 25 } : { clearProps: "zIndex" });
 }
 
+/**
+ * An article's art, at document level. Sits over its slot in the newspaper
+ * (absolute, scrolls with the page) or fixed to the stage. On the page a
+ * single click opens it — not the end of a drag (the globe orbits there), and
+ * nothing while it's on the stage or flying (see useOpenOnClick).
+ */
 function Layer({
   id,
   layerRef,
@@ -78,6 +79,7 @@ function Layer({
   onHover?: (on: boolean) => void;
   children: ReactNode;
 }) {
+  const click = useOpenOnClick(staged ? undefined : onOpen);
   const mirror = (on: boolean) => {
     const section = document.querySelector<HTMLElement>(`[data-article="${id}"]`);
     if (!section) return;
@@ -89,10 +91,9 @@ function Layer({
       ref={layerRef}
       data-layer={id}
       data-open={open}
-      className={`group invisible absolute ${staged ? "z-30" : "z-10"}`}
-      onDoubleClick={() => {
-        if (!open) onOpen();
-      }}
+      className={`group invisible absolute ${staged ? "z-30" : "z-10 cursor-pointer"}`}
+      onPointerDownCapture={click.onPointerDownCapture}
+      onClick={click.onClick}
       onPointerEnter={() => {
         mirror(true);
         onHover?.(true);
@@ -106,10 +107,11 @@ function Layer({
       {ring && (
         /* Hover ring: a solid bone hairline that fades in over the section's
            dashed rules. Bled 1px so it sits exactly on the rules around the
-           slot; hidden on the stage, whose rules are elsewhere. */
+           slot (the ticker's above the globe); hidden on the stage, whose
+           rules are elsewhere. */
         <div
           aria-hidden
-          className="pointer-events-none absolute -inset-x-px top-0 -bottom-px border border-bone opacity-0 transition-opacity duration-300 ease-out group-hover:opacity-100 group-data-[open=true]:hidden"
+          className="pointer-events-none absolute -inset-px border border-bone opacity-0 transition-opacity duration-300 ease-out group-hover:opacity-100 group-data-[open=true]:hidden"
         />
       )}
     </div>
