@@ -49,8 +49,9 @@ function raiseBackdrop(el: HTMLElement, staged: boolean) {
 /**
  * An article's art, at document level. Sits over its slot in the newspaper
  * (absolute, scrolls with the page) or fixed to the stage. On the page a
- * single click opens it — not the end of a drag (the globe orbits there), and
- * nothing while it's on the stage or flying (see useOpenOnClick).
+ * single click opens it — not the end of a drag (the globe orbits there); on
+ * the stage clicks belong to the art (see useOpenOnClick, and `open` in Stage
+ * for clicks mid-flight).
  */
 function Layer({
   id,
@@ -79,7 +80,7 @@ function Layer({
   onHover?: (on: boolean) => void;
   children: ReactNode;
 }) {
-  const click = useOpenOnClick(staged ? undefined : onOpen);
+  const click = useOpenOnClick(open ? undefined : onOpen);
   const mirror = (on: boolean) => {
     const section = document.querySelector<HTMLElement>(`[data-article="${id}"]`);
     if (!section) return;
@@ -91,7 +92,7 @@ function Layer({
       ref={layerRef}
       data-layer={id}
       data-open={open}
-      className={`group invisible absolute ${staged ? "z-30" : "z-10 cursor-pointer"}`}
+      className={`group invisible absolute ${staged ? "z-30" : "z-10"} ${open ? "" : "cursor-pointer"}`}
       onPointerDownCapture={click.onPointerDownCapture}
       onClick={click.onClick}
       onPointerEnter={() => {
@@ -562,6 +563,8 @@ export default function Stage() {
 
   const open = useCallback(
     (id: ArticleId) => {
+      // A click on the art as it flies home would turn it around mid-flight.
+      if (tlRef.current?.isActive()) return;
       openedFromHome.current = true;
       document.querySelector(`[data-article="${id}"]`)?.removeAttribute("data-hover");
       router.push(ARTICLES[id].route);
