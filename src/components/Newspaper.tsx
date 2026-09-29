@@ -3,9 +3,9 @@
 import type { CSSProperties, ReactNode, Ref } from "react";
 
 import AsciiPanel from "@/lib/ascii/AsciiPanel";
-import WireframeCanvas from "@/lib/three/WireframeCanvas";
 import Clock from "@/components/Clock";
 import { LABEL } from "@/components/furniture";
+import type { ArticleId } from "@/lib/stage/articles";
 import type { Variant } from "@/lib/stage/motion";
 
 /**
@@ -35,22 +35,52 @@ function fillSize(text: string, max: string, min = "1rem"): string {
   return `clamp(${min}, ${((0.92 * 100) / advance).toFixed(1)}cqw, ${max})`;
 }
 
-/** A headline set to span its box, above art that bleeds to the edges. */
+/**
+ * A headline set to span its box, above art that bleeds to the edges.
+ * With `slot`, the art area is an empty box a document-level layer sits
+ * over (see Stage), and the label row gains an open control.
+ */
 function Article({
   label,
   title,
   ratio,
   children,
+  slot,
 }: {
   label: string;
   title: string;
   ratio: string;
-  children: ReactNode;
+  children?: ReactNode;
+  slot?: { id: ArticleId; ref: Ref<HTMLDivElement>; onOpen: () => void };
 }) {
   return (
-    <section className="fit border-b border-dashed border-rule">
+    <section
+      data-article={slot?.id}
+      className="group fit relative border-b border-dashed border-rule"
+    >
+      {slot && (
+        /* Hover ring over the whole article — headline and art. A solid bone
+           hairline that fades in over the section's dashed rules, bled 1px so
+           it sits exactly on them. The art's layer sits above this section and
+           takes the pointer there, so it mirrors its hover onto `data-hover`. */
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -inset-x-px -top-px -bottom-px z-10 border border-bone opacity-0 transition-opacity duration-300 ease-out group-hover:opacity-100 group-data-[hover]:opacity-100"
+        />
+      )}
       <div className="px-4 pb-2 pt-4">
-        <p className={LABEL}>{label}</p>
+        <div className={`${LABEL} flex items-baseline justify-between gap-4`}>
+          <span>{label}</span>
+          {slot && (
+            <button
+              type="button"
+              onClick={slot.onOpen}
+              className="cursor-pointer uppercase text-bone transition-colors hover:text-dim"
+            >
+              Open — /{slot.id} ↗
+            </button>
+          )}
+        </div>
         <h2
           className="font-serif-ui mt-1.5 whitespace-nowrap uppercase leading-[0.86] tracking-[-0.02em] text-bone"
           style={{ fontSize: fillSize(title, "4.5rem") }}
@@ -58,7 +88,11 @@ function Article({
           {title}
         </h2>
       </div>
-      <div className={`${ratio} w-full overflow-hidden`}>{children}</div>
+      {slot ? (
+        <div ref={slot.ref} data-slot={slot.id} className={`${ratio} w-full`} />
+      ) : (
+        <div className={`${ratio} w-full overflow-hidden`}>{children}</div>
+      )}
     </section>
   );
 }
@@ -80,36 +114,27 @@ function TickerRun() {
   );
 }
 
-const WORK = [
-  ["01", "Globe", "Three.js · 2026"],
-  ["02", "Fractals", "GLSL · 2025"],
-  ["03", "Watch", "ESP32 / KiCad · 2025"],
-  ["04", "Body", "Lambert · 2024"],
-];
-
-const ARCHIVE = [
-  ["012", "Globe", "26.09"],
-  ["011", "Watch", "26.04"],
-  ["010", "Drift", "25.11"],
-  ["009", "Relief", "25.08"],
-  ["008", "Lattice", "25.05"],
-  ["007", "Scan", "25.02"],
-  ["006", "Weave", "24.10"],
-];
-
-const SOCIALS = ["Instagram", "Are.na", "Github"];
+/** From the résumé. Phone is a tel: link; the rest open in a new tab. */
+const CONTACT = {
+  email: "avi.y2609@gmail.com",
+  phone: "703-559-4730",
+  links: [
+    ["LinkedIn", "https://www.linkedin.com/in/ay2609/"],
+    ["GitHub", "https://github.com/ay2609"],
+  ],
+} as const;
 
 interface NewspaperProps {
   /** The <main> element, so the stage can recede it. */
   mainRef: Ref<HTMLElement>;
   /**
-   * The empty square the globe appears to sit in. The globe itself is a
-   * document-level layer positioned over this slot (see GlobeLayer), which is
-   * what lets it fly to full screen without leaving the newspaper's flow.
+   * The empty boxes the articles appear to sit in. Each article's art is a
+   * document-level layer positioned over its slot (see Stage), which is what
+   * lets it fly to full screen without leaving the newspaper's flow.
    */
-  slotRef: Ref<HTMLDivElement>;
-  /** Open the lead article. */
-  onOpenGlobe: () => void;
+  slotRefs: Record<ArticleId, Ref<HTMLDivElement>>;
+  /** Open an article. */
+  onOpen: (id: ArticleId) => void;
   /** Which transition variant is active (prototype). */
   fx: Variant;
   onToggleFx: () => void;
@@ -118,8 +143,8 @@ interface NewspaperProps {
 /** The front page as printed: the newspaper, minus the globe. */
 export default function Newspaper({
   mainRef,
-  slotRef,
-  onOpenGlobe,
+  slotRefs,
+  onOpen,
   fx,
   onToggleFx,
 }: NewspaperProps) {
@@ -160,25 +185,26 @@ export default function Newspaper({
         </div>
       </div>
 
-      {/* 3 — The well */}
-      <div className="flex flex-wrap">
+      {/* 3 — The well. A fixed 17:10 split so every section keeps its
+          proportion at any width; one column only on small screens. */}
+      <div className="grid grid-cols-1 md:grid-cols-[17fr_10fr]">
         {/* Lead */}
-        <section className="flex flex-[17_1_380px] flex-col border-b border-r border-dashed border-rule">
+        <section className="flex min-w-0 flex-col border-b border-dashed border-rule md:border-r">
           <div
             data-push="up"
             className={`${LABEL} flex items-baseline justify-end gap-4 px-4 pb-3 pt-4`}
           >
             <button
               type="button"
-              onClick={onOpenGlobe}
+              onClick={() => onOpen("globe")}
               className="cursor-pointer uppercase text-bone transition-colors hover:text-dim"
             >
               Open — /globe ↗
             </button>
           </div>
           <div
-            ref={slotRef}
-            data-globe-slot
+            ref={slotRefs.globe}
+            data-slot="globe"
             className="aspect-square w-full border-t border-dashed border-rule"
           />
           <div
@@ -205,12 +231,13 @@ export default function Newspaper({
         </section>
 
         {/* Rail */}
-        <div data-push="right" className="flex flex-[10_1_220px] flex-col">
-          <Article label="/Project — ESP32 / KiCad" title="Watch" ratio="aspect-[4/3]">
-            {/* The watch's PCB, traced from the KiCad STEP export (see
-                scripts/step-to-wireframe.py), on a turntable. */}
-            <WireframeCanvas src="/watch-esp.bin" />
-          </Article>
+        <div data-push="right" className="flex min-w-0 flex-col">
+          <Article
+            label="/Project — ESP32 / KiCad"
+            title="Watch"
+            ratio="aspect-[4/3]"
+            slot={{ id: "watch", ref: slotRefs.watch, onOpen: () => onOpen("watch") }}
+          />
 
           <Article label="/Project — 2025" title="Fractals" ratio="aspect-square">
             <div className="hatch relative h-full w-full">
@@ -226,50 +253,7 @@ export default function Newspaper({
         </div>
       </div>
 
-      {/* 4 — Work + Archive */}
-      <div data-push="down" className="flex flex-wrap border-b border-dashed border-rule">
-        <section className="flex-[17_1_380px] border-r border-dashed border-rule px-4 pb-7 pt-4">
-          <p className={LABEL}>/Selected work (04)</p>
-          <ul className="mt-4">
-            {WORK.map(([index, title, meta], i) => (
-              <li
-                key={index}
-                className={`grid grid-cols-[40px_minmax(0,1fr)_auto] items-baseline gap-4 border-t border-dashed border-rule py-4 text-bone transition-colors hover:text-dim ${
-                  i === WORK.length - 1 ? "border-b" : ""
-                }`}
-              >
-                <span className="font-mono-ui text-[11px] text-dim">{index}</span>
-                <span
-                  className="font-serif-ui tracking-[-0.02em]"
-                  style={{ fontSize: "clamp(28px, 4vw, 56px)" }}
-                >
-                  {title}
-                </span>
-                <span className={LABEL}>{meta}</span>
-              </li>
-            ))}
-          </ul>
-        </section>
-
-        <section className="flex-[10_1_220px] px-4 pb-7 pt-4">
-          <p className={LABEL}>/Archive (12)</p>
-          <ul className="mt-4">
-            {ARCHIVE.map(([index, title, date]) => (
-              <li
-                key={index}
-                className="font-mono-ui grid grid-cols-[34px_1fr_auto] items-baseline gap-[10px] border-t border-dashed border-rule py-[9px] text-[11px]"
-              >
-                <span className="text-dim">{index}</span>
-                <span className="text-bone">{title}</span>
-                <span className="text-dim">{date}</span>
-              </li>
-            ))}
-          </ul>
-          <p className={`${LABEL} mt-[18px]`}>Full index →</p>
-        </section>
-      </div>
-
-      {/* 5 — Contact */}
+      {/* 4 — Contact */}
       <section
         data-push="down"
         className="flex flex-wrap items-end justify-between gap-6 border-b border-dashed border-rule px-4 pb-9 pt-8"
@@ -277,18 +261,26 @@ export default function Newspaper({
         <div>
           <p className={LABEL}>/Contact</p>
           <a
-            href="mailto:hello@aviyadava.com"
+            href={`mailto:${CONTACT.email}`}
             className="font-serif-ui mt-2 block tracking-[-0.015em] text-bone transition-colors hover:text-dim"
             style={{ fontSize: "clamp(28px, 4.5vw, 56px)" }}
           >
-            hello@aviyadava.com
+            {CONTACT.email}
           </a>
         </div>
         <nav className="flex flex-wrap gap-7">
-          {SOCIALS.map((name) => (
+          <a
+            href={`tel:+1${CONTACT.phone.replace(/-/g, "")}`}
+            className="font-mono-ui text-[10px] uppercase tracking-[0.18em] text-bone transition-colors hover:text-dim"
+          >
+            {CONTACT.phone}
+          </a>
+          {CONTACT.links.map(([name, href]) => (
             <a
               key={name}
-              href="#"
+              href={href}
+              target="_blank"
+              rel="noreferrer"
               className="font-mono-ui text-[10px] uppercase tracking-[0.18em] text-bone transition-colors hover:text-dim"
             >
               {name}
@@ -297,7 +289,7 @@ export default function Newspaper({
         </nav>
       </section>
 
-      {/* 6 — Footer */}
+      {/* 5 — Footer */}
       <footer
         data-push="down"
         className={`${LABEL} flex items-center justify-between gap-4 px-4 py-[18px]`}

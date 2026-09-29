@@ -6,10 +6,19 @@ import * as THREE from "three";
 import { TickManager, type TickData } from "@/lib/render/tick-manager";
 
 const VIEW = {
-  /** Orthographic half-height. The model is normalised to a longest axis of 1. */
-  frustum: 0.54,
-  /** Fixed tilt, so the part reads as a solid rather than a flat outline. */
-  tiltX: -0.62,
+  /**
+   * Orthographic half-height. The model is normalised to a longest axis of 1,
+   * so on the diagonal it spans ~1.31; 0.8 leaves it a little air top and bottom.
+   */
+  frustum: 0.8,
+  /** Fixed lean-back, in radians: a slight 8°, enough to read as a solid. */
+  tiltX: -(8 * Math.PI) / 180,
+  /**
+   * Roll the part in its own plane so its diagonal stands vertical — the
+   * top-right corner directly above the bottom-left. The angle is derived
+   * from the part's extents at load; this is just the switch.
+   */
+  diagonal: true,
   /** Turntable speed, radians per second. */
   spin: 0.28,
   color: 0xfafafa,
@@ -108,6 +117,14 @@ export default function WireframeCanvas({ src }: WireframeCanvasProps) {
           new THREE.BufferAttribute(new Float32Array(buffer), 3)
         );
         lines = new THREE.LineSegments(geometry, material);
+        if (VIEW.diagonal) {
+          // For a w × h rectangle, corner (w/2, h/2) lands on x = 0 after a
+          // counter-clockwise roll of atan(w / h).
+          geometry.computeBoundingBox();
+          const size = new THREE.Vector3();
+          geometry.boundingBox!.getSize(size);
+          lines.rotation.z = Math.atan2(size.x, size.y);
+        }
         tilter.add(lines);
         tickManager.startLoop(render);
       })

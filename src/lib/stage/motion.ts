@@ -80,17 +80,20 @@ export const box = (r: DOMRect): Box => ({
   height: r.height,
 });
 
-/** Where the globe sits when expanded: a centred square inside the gutters. */
-export function stageBox(): Box {
-  const side = Math.max(
-    120,
-    Math.min(window.innerWidth, window.innerHeight) - STAGE_GUTTER * 2
-  );
+/**
+ * Where an article sits when expanded: the largest box of the given aspect
+ * (width / height) that fits inside the gutters, centred.
+ */
+export function stageBox(aspect = 1): Box {
+  const maxW = Math.max(120, window.innerWidth - STAGE_GUTTER * 2);
+  const maxH = Math.max(120, window.innerHeight - STAGE_GUTTER * 2);
+  const width = Math.min(maxW, maxH * aspect);
+  const height = width / aspect;
   return {
-    top: (window.innerHeight - side) / 2,
-    left: (window.innerWidth - side) / 2,
-    width: side,
-    height: side,
+    top: (window.innerHeight - height) / 2,
+    left: (window.innerWidth - width) / 2,
+    width,
+    height,
   };
 }
 
