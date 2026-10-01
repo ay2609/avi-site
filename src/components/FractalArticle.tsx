@@ -6,7 +6,7 @@ import { LABEL } from "@/components/furniture";
 import AsciiPanel from "@/lib/ascii/AsciiPanel";
 import { CHAPTERS, dragOf, LAST_CHAPTER, presetRows } from "@/lib/fractals/chapters";
 import { FractalEngine } from "@/lib/fractals/engine";
-import { gsap, prefersReducedMotion, SplitText } from "@/lib/stage/motion";
+import { gsap, prefersReducedMotion, SplitText, stageBox } from "@/lib/stage/motion";
 
 /** Height of one row of the chapter index, px — the marker moves in these. */
 const INDEX_ROW = 16;
@@ -16,6 +16,12 @@ const SWIPE = 40;
 const DECIDE = 8;
 /** Box width below which the furniture moves outside the box (as the watch). */
 const COMPACT_BELOW = 560;
+/**
+ * Side band (stage edge to the box) at and above which the presets and the
+ * index leave the picture for the bands either side of it, where they read in
+ * the page's own contrast. Narrower, they sit over the picture on scrims.
+ */
+const COLUMNS_FROM = 240;
 /** A preset label that is maths: as written, not in the furniture's capitals. */
 const MATH = "normal-case tracking-[0.06em] text-[11px]";
 
@@ -39,6 +45,8 @@ export default function FractalArticle({ open, landed }: { open: boolean; landed
   const [chapter, setChapter] = useState(0);
   const [preset, setPreset] = useState(0);
   const compactRef = useRef(false);
+  /** The presets and index in the side bands rather than over the picture. */
+  const [columns, setColumns] = useState(false);
 
   const chapterRef = useRef(0);
   const presetRef = useRef(0);
@@ -85,6 +93,10 @@ export default function FractalArticle({ open, landed }: { open: boolean; landed
     const check = () => {
       const w = el.clientWidth;
       compactRef.current = w > 0 && w < COMPACT_BELOW;
+      // From the stage box, not this one: on the page the overlay is the slot's size.
+      const b = stageBox(1);
+      el.style.setProperty("--band", `${b.left}px`);
+      setColumns(b.left >= COLUMNS_FROM && b.width >= COMPACT_BELOW);
     };
     check();
     const ro = new ResizeObserver(check);
@@ -286,15 +298,16 @@ export default function FractalArticle({ open, landed }: { open: boolean; landed
       >
         {/* Scrim: the pictures run to the edges; the type needs a little ink behind it. */}
         <div className="absolute inset-x-0 top-0 h-[28%] bg-gradient-to-b from-ink/60 to-transparent @max-[560px]:hidden" />
-        {/* …and the index and the preset list a lot more: some pictures (prism, the sine Julia) are nearly white. */}
+        {/* …and the index and the preset list a lot more, when they sit over the picture: some
+            pictures (prism, the sine Julia) are nearly white. */}
         <div
-          className="absolute right-0 top-0 h-[9rem] max-h-full w-[16rem] max-w-full @max-[560px]:hidden"
+          className={`absolute right-0 top-0 h-[9rem] max-h-full w-[16rem] max-w-full @max-[560px]:hidden ${columns ? "hidden" : ""}`}
           style={{
             background:
               "radial-gradient(farthest-side at 100% 0, color-mix(in srgb, var(--ink) 85%, transparent), color-mix(in srgb, var(--ink) 75%, transparent) 60%, transparent)",
           }}
         />
-        {c.presets && (
+        {c.presets && !columns && (
           <div
             className="absolute left-0 top-0 h-[32rem] max-h-full w-[30rem] max-w-full @max-[560px]:hidden"
             style={{
@@ -305,7 +318,7 @@ export default function FractalArticle({ open, landed }: { open: boolean; landed
         )}
 
         <div data-chapter-copy key={c.id} className="contents">
-          {/* Headline, top left; the presets below it. */}
+          {/* Headline, top left. */}
           <div className="absolute left-4 top-4 @max-[560px]:top-auto @max-[560px]:bottom-[calc(100%+16px)]">
             {/* The newspaper's FRACTALS flies here when the article opens (see Stage). */}
             <h3
@@ -317,64 +330,84 @@ export default function FractalArticle({ open, landed }: { open: boolean; landed
             >
               {c.headline}
             </h3>
-            {c.presets && (
-              <div className="mt-4 @max-[560px]:hidden">
-                {/* One row per preset; a group's variants share a row as chips. */}
-                <ul className={LABEL}>
-                  {rows.map((row) => {
-                    const active = row.items.includes(preset);
-                    return (
-                      <li key={row.items[0]} className="flex items-baseline whitespace-nowrap" style={{ height: INDEX_ROW }}>
-                        <span aria-hidden className={`w-[1.6em] shrink-0 text-bone ${active ? "" : "invisible"}`}>
-                          <span data-typed>▸</span>
-                        </span>
-                        {row.items.length === 1 ? (
-                          <button
-                            type="button"
-                            tabIndex={tab}
-                            aria-current={active || undefined}
-                            onClick={() => pick(row.items[0])}
-                            className={presetClass(row.items[0], row.math)}
-                          >
-                            <span data-typed>{row.label}</span>
-                          </button>
-                        ) : (
-                          <>
-                            <span className={`mr-[1.2em] tracking-[0.18em] ${active ? "text-bone" : ""}`}>
-                              <span data-typed>{row.label}</span>
-                            </span>
-                            {row.items.map((k, j) => (
-                              <Fragment key={k}>
-                                {j > 0 && (
-                                  <span aria-hidden className="px-[0.6em]">
-                                    <span data-typed>·</span>
-                                  </span>
-                                )}
-                                <button
-                                  type="button"
-                                  tabIndex={tab}
-                                  aria-current={k === preset || undefined}
-                                  aria-label={`${row.label} ${list[k].label}`}
-                                  onClick={() => pick(k)}
-                                  className={presetClass(k, list[k].math)}
-                                >
-                                  <span data-typed>{list[k].label}</span>
-                                </button>
-                              </Fragment>
-                            ))}
-                          </>
-                        )}
-                      </li>
-                    );
-                  })}
-                </ul>
-              </div>
-            )}
           </div>
+          {/* The presets: under the headline — or, with room, in the band left of the picture,
+              hard against its rule. One row per preset; a group's variants share a row as chips. */}
+          {c.presets && (
+            <div
+              className={
+                columns
+                  ? "absolute right-[calc(100%+16px)] top-4 @max-[560px]:hidden"
+                  : "absolute left-4 @max-[560px]:hidden"
+              }
+              style={
+                columns
+                  ? { width: "calc(var(--band) - 32px)" }
+                  : { top: "calc(16px + clamp(2.25rem, 7cqw, 4.5rem) * 0.86 + 16px)" }
+              }
+            >
+              <ul className={LABEL}>
+                {rows.map((row) => {
+                  const active = row.items.includes(preset);
+                  return (
+                    <li
+                      key={row.items[0]}
+                      className={`flex items-baseline ${columns ? "flex-wrap" : "whitespace-nowrap"}`}
+                      style={{ minHeight: INDEX_ROW }}
+                    >
+                      <span aria-hidden className={`w-[1.6em] shrink-0 text-bone ${active ? "" : "invisible"}`}>
+                        <span data-typed>▸</span>
+                      </span>
+                      {row.items.length === 1 ? (
+                        <button
+                          type="button"
+                          tabIndex={tab}
+                          aria-current={active || undefined}
+                          onClick={() => pick(row.items[0])}
+                          className={presetClass(row.items[0], row.math)}
+                        >
+                          <span data-typed>{row.label}</span>
+                        </button>
+                      ) : (
+                        <>
+                          <span className={`mr-[1.2em] tracking-[0.18em] ${active ? "text-bone" : ""}`}>
+                            <span data-typed>{row.label}</span>
+                          </span>
+                          {row.items.map((k, j) => (
+                            <Fragment key={k}>
+                              {j > 0 && (
+                                <span aria-hidden className="px-[0.6em]">
+                                  <span data-typed>·</span>
+                                </span>
+                              )}
+                              <button
+                                type="button"
+                                tabIndex={tab}
+                                aria-current={k === preset || undefined}
+                                aria-label={`${row.label} ${list[k].label}`}
+                                onClick={() => pick(k)}
+                                className={presetClass(k, list[k].math)}
+                              >
+                                <span data-typed>{list[k].label}</span>
+                              </button>
+                            </Fragment>
+                          ))}
+                        </>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          )}
         </div>
 
-        {/* Index, top right: the chapters, with a marker that travels. */}
-        <nav className="absolute right-4 top-4 @max-[560px]:top-auto @max-[560px]:bottom-[calc(100%+16px)]">
+        {/* Index, top right — or in the band right of the picture: the chapters, with a marker that travels. */}
+        <nav
+          className={`absolute top-4 @max-[560px]:top-auto @max-[560px]:bottom-[calc(100%+16px)] ${
+            columns ? "left-[calc(100%+16px)] w-max" : "right-4"
+          }`}
+        >
           <div className="relative pl-4">
             <div ref={markerRef} aria-hidden className="absolute left-0 top-[3px] h-[10px] w-px bg-bone" />
             <ol className={LABEL}>
