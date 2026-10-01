@@ -61,25 +61,7 @@ body {
   );
 }
 
-/* Ticker: two identical strips in a row, translated by half their width. */
-@keyframes tick {
-  from {
-    transform: translateX(0);
-  }
-  to {
-    transform: translateX(-50%);
-  }
-}
-
-.ticker-strip {
-  animation: tick var(--ticker-speed, 45s) linear infinite;
-}
-
 @media (prefers-reduced-motion: reduce) {
-  .ticker-strip {
-    animation-play-state: paused;
-  }
-
   *,
   *::before,
   *::after {

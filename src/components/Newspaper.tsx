@@ -1,6 +1,6 @@
 "use client";
 
-import type { CSSProperties, ReactNode, Ref } from "react";
+import type { ReactNode, Ref } from "react";
 
 import AsciiPanel from "@/lib/ascii/AsciiPanel";
 import Clock from "@/components/Clock";
@@ -92,23 +92,6 @@ function Article({
   );
 }
 
-const TICKER_PHRASE = "Complacency is a sin";
-const TICKER_SECONDS = 45;
-
-/** One pass of the ticker; the strip renders two of these back to back. */
-function TickerRun() {
-  return (
-    <>
-      {Array.from({ length: 8 }, (_, i) => (
-        <span key={i} className="px-7">
-          {TICKER_PHRASE.toUpperCase()}
-          <span className="ml-14 text-dim">◆</span>
-        </span>
-      ))}
-    </>
-  );
-}
-
 /**
  * The address is on the domain (Cloudflare Email Routing forwards it, Sep 29);
  * `null` hides the serif line. Links open in a new tab. No phone.
@@ -169,21 +152,7 @@ export default function Newspaper({
         </h1>
       </header>
 
-      {/* 2 — Ticker */}
-      <div
-        data-push="up"
-        className="flex h-[30px] items-center overflow-hidden border-b border-dashed border-rule"
-      >
-        <div
-          className="ticker-strip font-mono-ui flex w-max whitespace-nowrap text-[10px] leading-none tracking-[0.18em]"
-          style={{ "--ticker-speed": `${TICKER_SECONDS}s` } as CSSProperties}
-        >
-          <TickerRun />
-          <TickerRun />
-        </div>
-      </div>
-
-      {/* 3 — The well. A fixed 17:10 split so every section keeps its
+      {/* 2 — The well. A fixed 17:10 split so every section keeps its
           proportion at any width; one column only on small screens. */}
       <div className="grid grid-cols-1 md:grid-cols-[17fr_10fr]">
         {/* Lead */}
@@ -244,7 +213,7 @@ export default function Newspaper({
         </div>
       </div>
 
-      {/* 4 — Contact */}
+      {/* 3 — Contact */}
       <section
         data-push="down"
         className="flex flex-wrap items-end justify-between gap-6 border-b border-dashed border-rule px-4 pb-9 pt-8"
@@ -276,7 +245,7 @@ export default function Newspaper({
         </nav>
       </section>
 
-      {/* 5 — Footer */}
+      {/* 4 — Footer */}
       <footer
         data-push="down"
         className={`${LABEL} flex items-center justify-between gap-4 px-4 py-[18px]`}

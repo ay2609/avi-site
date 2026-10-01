@@ -15,14 +15,13 @@ Top to bottom (`src/components/Newspaper.tsx`):
 
 1. **Masthead** — `VOL. I · NO. 001`, a live clock, and `AVI YADAVA` sized to span
    the column.
-2. **Ticker** — `COMPLACENCY IS A SIN`, 45s per pass.
-3. **The well** — a fixed 17:10 grid, one column below 768px.
+2. **The well** — a fixed 17:10 grid, one column below 768px.
    - Lead: the globe (square), its caption, and a two-up `ripple` / `lattice`
      ASCII strip that levels the lead with the rail.
    - Rail: **Watch** (the PCB, 4:3), **Fractals** (the Mandelbrot set in ASCII, 1:1),
      **Drift** (`flow` ASCII field, 4:3).
-4. **Contact** — `avi@halcyn.dev` (Cloudflare Email Routing → Gmail), LinkedIn, GitHub.
-5. **Footer** — name, the `FX — IRIS / RULE CUT` prototype switch, date.
+3. **Contact** — `avi@halcyn.dev` (Cloudflare Email Routing → Gmail), LinkedIn, GitHub.
+4. **Footer** — name, the `FX — IRIS / RULE CUT` prototype switch, date.
 
 ## Design
 
@@ -164,7 +163,7 @@ public/                   globe field textures, watch mesh
 - Watch turntable: `VIEW` at the top of `SolidCanvas.tsx`
 - Transition timings, easing, stage gutter: `src/lib/stage/motion.ts`
 - Stage copy per article: `src/lib/stage/articles.ts`
-- Page copy, ticker, contact: `src/components/Newspaper.tsx`
+- Page copy, contact: `src/components/Newspaper.tsx`
 
 ## Stack
 

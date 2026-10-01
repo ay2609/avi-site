@@ -108,7 +108,7 @@ function Layer({
       {ring && (
         /* Hover ring: a solid bone hairline that fades in over the section's
            dashed rules. Bled 1px so it sits exactly on the rules around the
-           slot (the ticker's above the globe); hidden on the stage, whose
+           slot (the masthead's above the globe); hidden on the stage, whose
            rules are elsewhere. */
         <div
           aria-hidden
