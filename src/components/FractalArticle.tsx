@@ -238,7 +238,6 @@ export default function FractalArticle({ open, landed }: { open: boolean; landed
   }, [visible, chapter, preset, type]);
 
   const c = CHAPTERS[chapter];
-  const p = c.presets?.[preset];
   const go = (k: number) => engineRef.current?.go(k);
   const draggable = visible && (c.id === "julia" || c.id === "fraotic");
 
@@ -272,23 +271,18 @@ export default function FractalArticle({ open, landed }: { open: boolean; landed
         className="fit pointer-events-none absolute inset-0"
         style={{ visibility: visible ? "visible" : "hidden" }}
       >
-        {/* Scrims: the pictures run to the edges; the type needs a little ink behind it. */}
+        {/* Scrim: the pictures run to the edges; the type needs a little ink behind it. */}
         <div className="absolute inset-x-0 top-0 h-[28%] bg-gradient-to-b from-ink/60 to-transparent @max-[560px]:hidden" />
-        <div className="absolute inset-x-0 bottom-0 h-[20%] bg-gradient-to-t from-ink/70 to-transparent @max-[560px]:hidden" />
 
         <div data-chapter-copy key={`${c.id}-${preset}`} className="contents">
           {/* Headline, top left; the presets below it. */}
           <div className="absolute left-4 top-4 @max-[560px]:top-auto @max-[560px]:bottom-[calc(100%+16px)]">
-            <p data-typed className={LABEL}>
-              Chapter {pad(chapter)} / {pad(LAST_CHAPTER)}
-              {c.kicker ? ` — ${c.kicker}` : ""}
-            </p>
             {/* The newspaper's FRACTALS flies here when the article opens (see Stage). */}
             <h3
               data-typed
               data-flies
               data-stage-headline="fractals"
-              className="font-serif-ui mt-1.5 whitespace-nowrap uppercase leading-[0.86] tracking-[-0.02em] text-bone"
+              className="font-serif-ui whitespace-nowrap uppercase leading-[0.86] tracking-[-0.02em] text-bone"
               style={{ fontSize: "clamp(2.25rem, 7cqw, 4.5rem)" }}
             >
               {c.headline}
@@ -314,22 +308,9 @@ export default function FractalArticle({ open, landed }: { open: boolean; landed
                     </li>
                   ))}
                 </ul>
-                {p?.note && (
-                  <p data-typed className={`${LABEL} mt-3 max-w-[36cqw]`}>
-                    {p.note}
-                  </p>
-                )}
               </div>
             )}
           </div>
-
-          {/* Bottom left: the caption. */}
-          <p
-            data-typed
-            className={`${LABEL} absolute bottom-4 left-4 max-w-[78cqw] @max-[560px]:bottom-auto @max-[560px]:top-[calc(100%+16px)] @max-[560px]:max-w-[calc(100%-32px)]`}
-          >
-            {c.caption}
-          </p>
         </div>
 
         {/* Index, top right: the chapters, with a marker that travels. */}

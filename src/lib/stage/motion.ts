@@ -40,7 +40,6 @@ if (process.env.NODE_ENV !== "production" && typeof window !== "undefined") {
  * rule — the rules travel and the page is pushed off the grid.
  */
 export type Variant = "iris" | "rule";
-export const VARIANTS: Variant[] = ["iris", "rule"];
 
 export const EASE = {
   travel: "expo.inOut",

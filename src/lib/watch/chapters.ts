@@ -1,6 +1,6 @@
 /**
  * The watch walkthrough: five chapters, each a camera, a set of parts lifted
- * off the board, a few labelled parts, and a line of copy.
+ * off the board, and a few labelled parts.
  *
  * Parts are named by reference designator; `sheets` pulls in every part drawn
  * on those schematic sheets (see the parts table in public/watch-parts.bin).
@@ -35,8 +35,6 @@ export interface ChapterView {
 export interface Chapter {
   id: string;
   headline: string;
-  caption: string;
-  figures: [string, string][];
   view: ChapterView;
   /** Parts lifted and drawn at full line weight. */
   focus: { sheets?: string[]; refs?: string[] };
@@ -55,12 +53,6 @@ export const CHAPTERS: Chapter[] = [
   {
     id: "watch",
     headline: "Watch",
-    caption: "Fig. 2.0 — Scroll to take it apart.",
-    figures: [
-      ["Board", "37 × 49 mm"],
-      ["Layers", "2 · 129 vias"],
-      ["Parts", "54"],
-    ],
     view: { yaw: "spin", pitch: -8, roll: "diagonal", zoom: 1, look: [0, 0, 0] },
     focus: {},
     lift: 0,
@@ -71,12 +63,6 @@ export const CHAPTERS: Chapter[] = [
   {
     id: "power",
     headline: "Power",
-    caption: "Fig. 2.1 — USB-C in, one Li-Po cell, one 3.3 V rail.",
-    figures: [
-      ["In", "5 V · USB-C"],
-      ["Cell", "4.2 V · Li-Po"],
-      ["Rail", "3.3 V"],
-    ],
     view: { yaw: 26, pitch: -58, roll: -12, zoom: 1.55 },
     focus: { sheets: ["USB-C", "LiPo Charger", "LiPo Connection", "Voltage Regulator"] },
     lift: 0.16,
@@ -95,12 +81,6 @@ export const CHAPTERS: Chapter[] = [
   {
     id: "brain",
     headline: "Brain",
-    caption: "Fig. 2.2 — Four tasks, two cores; Wi-Fi wakes once to set the clock.",
-    figures: [
-      ["CPU", "2 × LX7 · 160 MHz"],
-      ["Tasks", "4 · FreeRTOS"],
-      ["Radio", "Wi-Fi → SNTP"],
-    ],
     view: { yaw: -24, pitch: -52, roll: 8, zoom: 1.75 },
     focus: { sheets: ["ESP32-S3-WROOM-2", "MCU RST BOOT"] },
     lift: 0.14,
@@ -115,13 +95,6 @@ export const CHAPTERS: Chapter[] = [
   {
     id: "senses",
     headline: "Senses",
-    caption: "Fig. 2.3 — One I²C bus, three chips, taking turns under a mutex.",
-    figures: [
-      ["Bus", "I²C · IO13 / IO14"],
-      ["IMU", "0x69 · 50 Hz"],
-      ["RTC", "0x68"],
-      ["ADC", "0x6E · 16-bit"],
-    ],
     view: { yaw: 18, pitch: -58, roll: -4, zoom: 2.1, shift: [0, -0.04] },
     focus: { sheets: ["gyro", "Clock", "ADC"] },
     lift: 0.14,
@@ -138,12 +111,6 @@ export const CHAPTERS: Chapter[] = [
   {
     id: "face",
     headline: "Face",
-    caption: "Fig. 2.4 — sovereign OS, drawn into a framebuffer and pushed over SPI.",
-    figures: [
-      ["Panel", "240 × 280 IPS"],
-      ["Link", "SPI · 80 MHz"],
-      ["Fonts", "BDF · SPIFFS"],
-    ],
     view: { yaw: -14, pitch: -20, roll: 0, zoom: 1.2 },
     focus: { sheets: ["Buttons"] },
     lift: 0,

@@ -27,7 +27,6 @@ import {
   INSET_NONE,
   SplitText,
   T,
-  VARIANTS,
   box,
   gsap,
   insetTo,
@@ -38,7 +37,8 @@ import {
   useGSAP,
 } from "@/lib/stage/motion";
 
-const FX_KEY = "avi-site:fx";
+/** The transition (see motion.ts): "iris", or "rule" for the rule cut. */
+const FX: Variant = "iris";
 type PushDir = "up" | "right" | "down";
 
 /** A backdrop sits under every art layer on the page, over the chrome on the stage. */
@@ -137,10 +137,8 @@ export default function Stage() {
   const pathname = usePathname();
   const openId = articleForPath(pathname);
 
-  const [fx, setFx] = useState<Variant>("iris");
   /** The article whose flight has finished — its own furniture and input come on then. */
   const [landedId, setLandedId] = useState<ArticleId | null>(null);
-  const fxRef = useRef<Variant>("iris");
 
   const mainRef = useRef<HTMLElement>(null);
   const chromeRef = useRef<HTMLDivElement>(null);
@@ -172,27 +170,6 @@ export default function Stage() {
   const hoveredRef = useRef<ArticleId | null>(null);
   const splitsRef = useRef<{ id: ArticleId; splits: SplitText[] } | null>(null);
 
-  // --- Prototype switch ---------------------------------------------------
-
-  useEffect(() => {
-    try {
-      const saved = window.localStorage.getItem(FX_KEY) as Variant | null;
-      if (saved && VARIANTS.includes(saved)) {
-        setFx(saved);
-        fxRef.current = saved;
-      }
-    } catch {}
-  }, []);
-
-  const toggleFx = useCallback(() => {
-    const next = VARIANTS[(VARIANTS.indexOf(fxRef.current) + 1) % VARIANTS.length];
-    fxRef.current = next;
-    setFx(next);
-    try {
-      window.localStorage.setItem(FX_KEY, next);
-    } catch {}
-  }, []);
-
   // --- Queries -----------------------------------------------------------
 
   const q = useCallback(() => {
@@ -205,7 +182,6 @@ export default function Stage() {
         y1: chrome.querySelector<HTMLElement>('[data-rule="y1"]')!,
       },
       typed: [...chrome.querySelectorAll<HTMLElement>("[data-typed]")],
-      landed: [...chrome.querySelectorAll<HTMLElement>("[data-land]")],
       pushed: [...rootRef.current!.querySelectorAll<HTMLElement>("main [data-push]")],
     };
   }, []);
@@ -394,7 +370,7 @@ export default function Stage() {
       const layer = layerRefs[id].current!;
       const chrome = chromeRef.current!;
       const slot = slotRefs[id].current!;
-      const { rules, landed, pushed } = q();
+      const { rules, pushed } = q();
       const cs = chars();
 
       const slotBox = box(slot.getBoundingClientRect());
@@ -469,7 +445,6 @@ export default function Stage() {
         );
       }
       tl.fromTo(cs, { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.01, stagger: { each: T.type / cs.length } }, "land");
-      tl.fromTo(landed, { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.2 }, "land");
       return tl;
     },
     [layerRefs, slotRefs, q, chars, placeStage, placeRules, headlines, ghostFrom]
@@ -481,7 +456,7 @@ export default function Stage() {
       const layer = layerRefs[id].current!;
       const chrome = chromeRef.current!;
       const slot = slotRefs[id].current!;
-      const { rules, landed, pushed } = q();
+      const { rules, pushed } = q();
       const cs = chars();
       const slotBox = box(slot.getBoundingClientRect());
 
@@ -531,7 +506,6 @@ export default function Stage() {
       tl.timeScale(T.closeSpeed);
       tl.addLabel("lift", 0).addLabel("fly", T.flyAt);
       tl.to(cs, { autoAlpha: 0, duration: 0.01, stagger: { each: 0.15 / cs.length, from: "end" } }, "lift");
-      tl.to(landed, { autoAlpha: 0, duration: 0.15 }, "lift");
       tl.add(Flip.from(state, { duration: T.fly, ease: EASE.travel }), "lift");
       tl.fromTo(chrome, { clipPath: INSET_NONE }, { clipPath: insetTo(slotBox), duration: T.fly }, "lift");
       if (backdrop)
@@ -598,8 +572,8 @@ export default function Stage() {
       if (!main || !chrome) return;
 
       const html = document.documentElement;
-      const variant = fxRef.current;
-      const { pushed, landed } = q();
+      const variant = FX;
+      const { pushed } = q();
 
       tlRef.current?.kill();
       // First paint, reduced motion, or a jump straight from one article to
@@ -630,7 +604,7 @@ export default function Stage() {
             );
           }
           gsap.set(chrome, { clipPath: INSET_NONE });
-          gsap.set([chars(), landed], { autoAlpha: 1 });
+          gsap.set(chars(), { autoAlpha: 1 });
           main.style.visibility = "hidden";
           setLandedId(openId);
           return;
@@ -661,7 +635,7 @@ export default function Stage() {
 
   return (
     <div ref={rootRef} className="contents">
-      <Newspaper mainRef={mainRef} slotRefs={slotRefs} onOpen={open} fx={fx} onToggleFx={toggleFx} />
+      <Newspaper mainRef={mainRef} slotRefs={slotRefs} onOpen={open} />
       <StageChrome chromeRef={chromeRef} article={staged} onClose={close} />
       {ARTICLE_IDS.map((id) => {
         const field = ARTICLES[id].backdrop;

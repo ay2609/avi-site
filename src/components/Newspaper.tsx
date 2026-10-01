@@ -7,7 +7,6 @@ import Clock from "@/components/Clock";
 import { LABEL } from "@/components/furniture";
 import type { ArticleId } from "@/lib/stage/articles";
 import { useOpenOnClick } from "@/lib/stage/click";
-import type { Variant } from "@/lib/stage/motion";
 
 /**
  * Size text to span its container.
@@ -115,9 +114,6 @@ interface NewspaperProps {
   slotRefs: Record<ArticleId, Ref<HTMLDivElement>>;
   /** Open an article. */
   onOpen: (id: ArticleId) => void;
-  /** Which transition variant is active (prototype). */
-  fx: Variant;
-  onToggleFx: () => void;
 }
 
 /** The front page as printed: the newspaper, minus the globe. */
@@ -125,8 +121,6 @@ export default function Newspaper({
   mainRef,
   slotRefs,
   onOpen,
-  fx,
-  onToggleFx,
 }: NewspaperProps) {
   const openGlobe = useOpenOnClick(() => onOpen("globe"));
   return (
@@ -140,8 +134,7 @@ export default function Newspaper({
         data-push="up"
         className="fit border-b border-dashed border-rule px-4 pb-[18px] pt-[44px]"
       >
-        <div className={`${LABEL} flex items-baseline justify-between gap-4`}>
-          <span>Vol. I · No. 001</span>
+        <div className={`${LABEL} flex justify-end`}>
           <Clock className="text-bone" />
         </div>
         <h1
@@ -168,13 +161,6 @@ export default function Newspaper({
             onKeyDown={openGlobe.onKeyDown}
             className="aspect-square w-full outline-none focus-visible:outline-solid focus-visible:outline-1 focus-visible:outline-bone"
           />
-          <div
-            data-push="down"
-            className={`${LABEL} flex flex-wrap items-baseline justify-between gap-4 border-t border-dashed border-rule px-4 py-3`}
-          >
-            <span>Fig. 1 — An interactive globe, built to be wandered.</span>
-            <span>Labels mark the work</span>
-          </div>
           {/* Absorbs the height difference so the lead ends level with the
               rail — now carrying two panels rather than a striped blank. The
               min-height keeps them legible if the slack ever runs short. */}
@@ -207,9 +193,10 @@ export default function Newspaper({
             slot={{ id: "fractals", ref: slotRefs.fractals, onOpen: () => onOpen("fractals") }}
           />
 
-          <Article label="/Advected" title="Drift" ratio="aspect-[4/3]">
+          {/* Texture, not an article: no label, no headline. */}
+          <div className="aspect-[4/3] w-full overflow-hidden border-b border-dashed border-rule">
             <AsciiPanel field="flow" />
-          </Article>
+          </div>
         </div>
       </div>
 
@@ -244,24 +231,6 @@ export default function Newspaper({
           ))}
         </nav>
       </section>
-
-      {/* 4 — Footer */}
-      <footer
-        data-push="down"
-        className={`${LABEL} flex items-center justify-between gap-4 px-4 py-[18px]`}
-      >
-        <span>Avi Yadava</span>
-        {/* Prototype switch — compare the two transition variants. */}
-        <button
-          type="button"
-          onClick={onToggleFx}
-          className="cursor-pointer uppercase transition-colors hover:text-bone"
-        >
-          FX — <span className={fx === "iris" ? "text-bone" : ""}>Iris</span> /{" "}
-          <span className={fx === "rule" ? "text-bone" : ""}>Rule cut</span>
-        </button>
-        <Clock format="date" />
-      </footer>
     </main>
   );
 }

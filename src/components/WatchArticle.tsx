@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, type ReactNode, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import { LABEL } from "@/components/furniture";
 import { gsap, prefersReducedMotion, SplitText } from "@/lib/stage/motion";
@@ -28,7 +28,7 @@ const pad = (n: number) => String(n).padStart(2, "0");
  * The watch as an article: a teardown in five chapters. On the front page it
  * is the turntable; once its stage has landed, each scroll or swipe moves one
  * chapter (see src/lib/watch/chapters.ts) and the furniture inside the box —
- * headline, index, caption, figures, labelled parts — follows along.
+ * headline, index, labelled parts — follows along.
  *
  * Text is typed in when it changes and lines are drawn in; nothing inside the
  * box is shown while the article is flying between the page and the stage.
@@ -40,8 +40,6 @@ export default function WatchArticle({ open, landed }: { open: boolean; landed: 
   const markerRef = useRef<HTMLDivElement>(null);
   const headRef = useRef<HTMLDivElement>(null);
   const indexRef = useRef<HTMLOListElement>(null);
-  const captionRef = useRef<HTMLParagraphElement>(null);
-  const figuresRef = useRef<HTMLDListElement>(null);
   const calloutsRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
   const anchorsRef = useRef<Map<string, Anchor>>(new Map());
@@ -84,10 +82,9 @@ export default function WatchArticle({ open, landed }: { open: boolean; landed: 
     const anchors = anchorsRef.current;
     const box = overlay.getBoundingClientRect();
     const below = (el: HTMLElement | null) => (el ? el.getBoundingClientRect().bottom - box.top + 12 : INSET);
-    const above = (el: HTMLElement | null) => (el ? el.getBoundingClientRect().top - box.top - 12 : H - INSET);
     const bounds = {
-      left: [below(headRef.current), above(captionRef.current)],
-      right: [below(indexRef.current), above(figuresRef.current)],
+      left: [below(headRef.current), H - INSET],
+      right: [below(indexRef.current), H - INSET],
     };
 
     for (const dot of svg.querySelectorAll<SVGRectElement>("[data-dot]")) {
@@ -308,46 +305,17 @@ export default function WatchArticle({ open, landed }: { open: boolean; landed: 
             ref={headRef}
             className="absolute left-4 top-4 @max-[560px]:top-auto @max-[560px]:bottom-[calc(100%+16px)]"
           >
-            <p data-typed className={LABEL}>
-              Chapter {pad(chapter)} / {pad(LAST_CHAPTER)}
-            </p>
             {/* The newspaper's WATCH flies here when the article opens (see Stage). */}
             <h3
               data-typed
               data-flies
               data-stage-headline="watch"
-              className="font-serif-ui mt-1.5 whitespace-nowrap uppercase leading-[0.86] tracking-[-0.02em] text-bone"
+              className="font-serif-ui whitespace-nowrap uppercase leading-[0.86] tracking-[-0.02em] text-bone"
               style={{ fontSize: "clamp(2.25rem, 7cqw, 4.5rem)" }}
             >
               {c.headline}
             </h3>
           </div>
-
-          {/* Caption, bottom left */}
-          <p
-            ref={captionRef}
-            data-typed
-            className={`${LABEL} absolute bottom-4 left-4 max-w-[55%] @max-[560px]:bottom-auto @max-[560px]:top-[calc(100%+16px)] @max-[560px]:max-w-[44%]`}
-          >
-            {c.caption}
-          </p>
-
-          {/* Figures, bottom right — HUD readouts */}
-          <dl
-            ref={figuresRef}
-            className="font-mono-ui absolute bottom-4 right-4 grid grid-cols-[auto_auto] gap-x-4 text-right text-[11px] uppercase leading-[1.7] tracking-[0.08em] @max-[560px]:bottom-auto @max-[560px]:top-[calc(100%+16px)]"
-          >
-            {c.figures.map(([k, v]) => (
-              <Fragment key={k}>
-                <dt data-typed className="text-dim">
-                  {k}
-                </dt>
-                <dd data-typed className="text-bone">
-                  {v}
-                </dd>
-              </Fragment>
-            ))}
-          </dl>
         </div>
 
         {/* Index, top right: the chapters, with a marker that follows the scrub. */}

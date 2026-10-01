@@ -21,8 +21,6 @@ const GLOBE_CONFIG = {
   spinRampDown: 0.05, // Lerp factor toward zero right after interaction.
 } as const;
 
-/** Cells in the HUD's blend bar. */
-const HUD_BARS = 16;
 
 /**
  * Camera that blends continuously between perspective and orthographic.
@@ -38,7 +36,8 @@ const HYBRID_CAMERA_CONFIG = {
   initialProjectionBlend: 0.0,
   minProjectionBlend: 0.0,
   maxProjectionBlend: 1.0,
-  wheelSensitivity: 0.0012,
+  /** Blend per pixel of scroll: ~250px bends it all the way. */
+  wheelSensitivity: 0.004,
   blendSmoothing: 10,
 } as const;
 
@@ -86,11 +85,6 @@ export default function GlobeCanvas({
   interaction = "hover",
 }: GlobeCanvasProps = {}) {
   const hostRef = useRef<HTMLDivElement | null>(null);
-  const bendRef = useRef<HTMLDivElement | null>(null);
-  const barRef = useRef<HTMLDivElement | null>(null);
-  const cursorRef = useRef<HTMLDivElement | null>(null);
-  const timeRef = useRef<HTMLDivElement | null>(null);
-  const pctRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const host = hostRef.current;
@@ -213,18 +207,7 @@ export default function GlobeCanvas({
 
     const handlePointerEnter = () => setEngaged(true);
 
-    // HUD cursor readout: position within the frame, 00-99 on each axis.
-    let cursorLabel = "\u2014";
-    const handlePointerMove = (event: PointerEvent) => {
-      const rect = host.getBoundingClientRect();
-      if (!rect.width || !rect.height) return;
-      const x = Math.min(99, Math.max(0, Math.round(((event.clientX - rect.left) / rect.width) * 99)));
-      const y = Math.min(99, Math.max(0, Math.round(((event.clientY - rect.top) / rect.height) * 99)));
-      cursorLabel = `${String(x).padStart(2, "0")} ${String(y).padStart(2, "0")}`;
-    };
-
     const handlePointerLeave = () => {
-      cursorLabel = "\u2014";
       if (interaction !== "always") setEngaged(false);
     };
 
@@ -233,8 +216,10 @@ export default function GlobeCanvas({
       if (!isEngaged) return;
       event.preventDefault();
 
+      // Lines (Firefox) and pages to pixels, so every browser bends alike.
+      const scale = event.deltaMode === 1 ? 40 : event.deltaMode === 2 ? window.innerHeight : 1;
       projectionBlendTarget = THREE.MathUtils.clamp(
-        projectionBlendTarget + event.deltaY * HYBRID_CAMERA_CONFIG.wheelSensitivity,
+        projectionBlendTarget + event.deltaY * scale * HYBRID_CAMERA_CONFIG.wheelSensitivity,
         HYBRID_CAMERA_CONFIG.minProjectionBlend,
         HYBRID_CAMERA_CONFIG.maxProjectionBlend
       );
@@ -269,7 +254,6 @@ export default function GlobeCanvas({
 
     host.addEventListener("wheel", handleWheel, { passive: false });
     host.addEventListener("pointerenter", handlePointerEnter);
-    host.addEventListener("pointermove", handlePointerMove);
     host.addEventListener("pointerleave", handlePointerLeave);
     window.addEventListener("keydown", handleKeyDown);
 
@@ -286,7 +270,6 @@ export default function GlobeCanvas({
     resizeObserver.observe(host);
 
     // --- Render loop ---
-    let lastHudSecond = -1;
     const tickManager = new TickManager();
 
     const render = (data: TickData) => {
@@ -348,33 +331,6 @@ export default function GlobeCanvas({
         0,
         1
       );
-      // HUD. The globe has no dolly — the wheel bends the projection between
-      // perspective and orthographic — so the readout tracks that blend
-      // rather than a camera distance that never changes.
-      if (bendRef.current) {
-        bendRef.current.textContent = `BEND  ${normalizedProjectionBlend.toFixed(2)}`;
-      }
-      if (barRef.current) {
-        const filled = Math.round(normalizedProjectionBlend * HUD_BARS);
-        barRef.current.textContent =
-          "|".repeat(filled) + ".".repeat(HUD_BARS - filled);
-      }
-      if (pctRef.current) {
-        pctRef.current.textContent = `${Math.round(normalizedProjectionBlend * 100)} %`;
-      }
-      if (cursorRef.current) {
-        cursorRef.current.textContent = `CUR  ${cursorLabel}`;
-      }
-      if (timeRef.current) {
-        const seconds = Math.floor(now * 0.001);
-        if (seconds !== lastHudSecond) {
-          lastHudSecond = seconds;
-          timeRef.current.textContent = new Date().toLocaleTimeString("en-GB", {
-            hour12: false,
-          });
-        }
-      }
-
       networkLayer.update(
         {
           camera,
@@ -393,7 +349,6 @@ export default function GlobeCanvas({
     return () => {
       host.removeEventListener("wheel", handleWheel);
       host.removeEventListener("pointerenter", handlePointerEnter);
-      host.removeEventListener("pointermove", handlePointerMove);
       host.removeEventListener("pointerleave", handlePointerLeave);
       window.removeEventListener("keydown", handleKeyDown);
       resizeObserver.disconnect();
@@ -411,29 +366,6 @@ export default function GlobeCanvas({
   return (
     <div className="relative h-full w-full select-none overflow-hidden [cursor:crosshair]">
       <div ref={hostRef} className="h-full w-full" />
-
-      {/* HUD. Updated imperatively from the render loop — none of it is
-          React state, so the page does not re-render sixty times a second. */}
-      <div className="font-mono-ui pointer-events-none absolute inset-0 z-10 text-[11px] leading-[1.7] tracking-[0.08em]">
-        <div className="absolute left-[14px] top-[12px]">
-          <div ref={bendRef} className="text-bone">
-            BEND  0.00
-          </div>
-          <div ref={barRef} className="text-dim">
-            ................
-          </div>
-        </div>
-        <div className="absolute right-[14px] top-[12px] text-right text-dim">
-          <div ref={cursorRef}>CUR  &mdash;</div>
-          <div ref={timeRef}>--:--:--</div>
-        </div>
-        <div className="absolute bottom-[12px] left-[14px] text-dim">
-          GLOBE &mdash; 2026
-        </div>
-        <div ref={pctRef} className="absolute bottom-[12px] right-[14px] text-dim">
-          0 %
-        </div>
-      </div>
     </div>
   );
 }

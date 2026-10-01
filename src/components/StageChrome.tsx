@@ -2,22 +2,20 @@
 
 import type { Ref } from "react";
 
-import Clock from "@/components/Clock";
 import { LABEL } from "@/components/furniture";
 import type { Article } from "@/lib/stage/articles";
-
 
 /**
  * The periphery of an expanded article: the newspaper's grid, grown to the
  * viewport. The article's box is `--sx --sy --sw --sh` (set by the stage);
  * its four edges extend as dashed hairlines to the screen edges, which
- * leaves four bands around it for furniture.
+ * leaves four bands around it: the kicker and Esc above, the controls below,
+ * and nothing at the sides.
  *
  * Rule geometry is set from JS (see Stage.placeRules) so the rule variant can
  * fly them in from the slot's edges. Text carries `data-typed` and is typed
- * in, character by character, once everything has landed; `data-land` text
- * simply appears then (the clock, whose content changes every second, can't
- * be split). Keyed by article so a change of copy remounts the text nodes.
+ * in, character by character, once everything has landed. Keyed by article
+ * so a change of copy remounts the text nodes.
  */
 export default function StageChrome({
   chromeRef,
@@ -53,14 +51,13 @@ export default function StageChrome({
             onClick={onClose}
             className="cursor-pointer whitespace-nowrap uppercase text-bone transition-colors hover:text-dim"
           >
-            <span className="max-sm:hidden">Esc — Back to the front page</span>
-            <span className="sm:hidden">Esc — Back</span>
+            Esc — Back
           </button>
         </div>
 
-        {/* Bottom band */}
+        {/* Bottom band — how to work the art; phones get their own gestures. */}
         <div
-          className={`${band} items-center justify-between gap-4 px-4`}
+          className={`${band} items-center gap-4 px-4 max-sm:hidden`}
           style={{
             left: "var(--sx)",
             width: "var(--sw)",
@@ -68,42 +65,10 @@ export default function StageChrome({
             bottom: 0,
           }}
         >
-          <span data-typed className={`sm:whitespace-nowrap ${article.phoneCaption === false ? "max-sm:hidden" : ""}`}>
-            {article.caption}
+          <span data-typed className="whitespace-nowrap">
+            {article.controls}
           </span>
-          <Clock data-land className="ml-auto whitespace-nowrap text-bone" />
         </div>
-
-        {/* Side bands — vertical furniture, read bottom-to-top like a spine. */}
-        {article.spines !== false && (
-          <>
-            <div
-              className={`${band} items-center justify-center`}
-              style={{ left: 0, width: "var(--sx)", top: "var(--sy)", height: "var(--sh)" }}
-            >
-              <span
-                data-typed
-                className="whitespace-nowrap max-sm:hidden"
-                style={{ writingMode: "vertical-rl", transform: "rotate(180deg)" }}
-              >
-                Vol. I · No. 001
-              </span>
-            </div>
-            <div
-              className={`${band} items-center justify-center`}
-              style={{
-                left: "calc(var(--sx) + var(--sw))",
-                right: 0,
-                top: "var(--sy)",
-                height: "var(--sh)",
-              }}
-            >
-              <span data-typed className="whitespace-nowrap max-sm:hidden" style={{ writingMode: "vertical-rl" }}>
-                {article.controls}
-              </span>
-            </div>
-          </>
-        )}
       </div>
     </div>
   );
