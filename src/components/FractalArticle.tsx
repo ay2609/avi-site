@@ -286,12 +286,20 @@ export default function FractalArticle({ open, landed }: { open: boolean; landed
       >
         {/* Scrim: the pictures run to the edges; the type needs a little ink behind it. */}
         <div className="absolute inset-x-0 top-0 h-[28%] bg-gradient-to-b from-ink/60 to-transparent @max-[560px]:hidden" />
+        {/* …and the index and the preset list a lot more: some pictures (prism, the sine Julia) are nearly white. */}
+        <div
+          className="absolute right-0 top-0 h-[9rem] max-h-full w-[16rem] max-w-full @max-[560px]:hidden"
+          style={{
+            background:
+              "radial-gradient(farthest-side at 100% 0, color-mix(in srgb, var(--ink) 85%, transparent), color-mix(in srgb, var(--ink) 75%, transparent) 60%, transparent)",
+          }}
+        />
         {c.presets && (
           <div
-            className="absolute left-0 top-0 h-[26rem] max-h-full w-[24rem] max-w-full @max-[560px]:hidden"
+            className="absolute left-0 top-0 h-[32rem] max-h-full w-[30rem] max-w-full @max-[560px]:hidden"
             style={{
               background:
-                "radial-gradient(farthest-side at 0 0, color-mix(in srgb, var(--ink) 55%, transparent), transparent)",
+                "radial-gradient(farthest-side at 0 0, color-mix(in srgb, var(--ink) 85%, transparent), color-mix(in srgb, var(--ink) 75%, transparent) 65%, transparent)",
             }}
           />
         )}
