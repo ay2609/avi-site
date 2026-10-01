@@ -1,180 +1,35 @@
-# avi-site
+# Avi's front page
 
-Personal website of Avi Yadava (halcyn.dev).
+My personal website, live at [halcyn.dev](https://halcyn.dev/).
 
-A dark, single-tone broadsheet front page where the articles are graphics rather than
-prose. Sections are separated only by 1px dashed hairlines; each carries a mono
-slash-label, a serif headline sized to span its box, and art that bleeds to the
-section's edges. A live Three.js globe is the lead; the watch's PCB spins on a
-turntable in the rail; animated ASCII fields fill the rest. The globe and the watch
-open to full screen at their own routes.
+It's laid out like the front page of a newspaper where every article is a picture. Spin the globe and bend its projection, open the watch to take my smartwatch's board apart one chapter at a time, or open Fractals to walk through live ports of the code I wrote in high school, from the Mandelbrot set to chaotic attractors and a Lissajous table. Clicking an article grows it to full screen at its own address, and Esc folds it back into the page. Every article opens from the keyboard too, and motion respects reduced-motion settings.
 
-## The page
+## Development
 
-Top to bottom (`src/components/Newspaper.tsx`):
+Requires Node.js 20.9 or newer.
 
-1. **Masthead** — `VOL. I · NO. 001`, a live clock, and `AVI YADAVA` sized to span
-   the column.
-2. **The well** — a fixed 17:10 grid, one column below 768px.
-   - Lead: the globe (square), its caption, and a two-up `ripple` / `lattice`
-     ASCII strip that levels the lead with the rail.
-   - Rail: **Watch** (the PCB, 4:3), **Fractals** (the Mandelbrot set in ASCII, 1:1),
-     **Drift** (`flow` ASCII field, 4:3).
-3. **Contact** — `avi@halcyn.dev` (Cloudflare Email Routing → Gmail), LinkedIn, GitHub.
-4. **Footer** — name, the `FX — IRIS / RULE CUT` prototype switch, date.
-
-## Design
-
-One tone in four values, two typefaces, hairline rules. No radii, shadows, cards or
-accent colours.
-
-| Token | Value | Use |
-| --- | --- | --- |
-| `--ink` | `#0a0a0b` | the page |
-| `--bone` | `#e6e4df` | text, the hover ring, line art |
-| `--dim` | `#8a8987` | labels, meta, captions |
-| `--rule` | `#2a2a2c` | every hairline |
-| `--ascii` | bone at 50% | ASCII fields |
-| `--stripe` | bone at 10% | the `.hatch` placeholder fill |
-| `--panel` | `#111113` | reserved, unused |
-
-The only colour on the site is the purple of the globe's mesh-network nodes, and it
-lives in the WebGL layer, never in CSS.
-
-- **Instrument Serif 400** — masthead, headlines, the contact address.
-- **IBM Plex Mono 300** — everything else: 10px, uppercase, tracking 0.18em, `--dim`
-  (the `LABEL` class string in `src/components/furniture.ts`).
-- Headlines are sized in `cqw` against a `.fit` container by `fillSize()` in
-  `Newspaper.tsx`, which sums a per-letter advance so one word spans its box at any
-  width.
-- Text is inset 16px; art bleeds to the rules.
-- All motion respects `prefers-reduced-motion`.
-
-Tokens are defined in `src/app/globals.css`; fonts in `src/lib/fonts.ts`.
-
-## Expandable articles
-
-Opening an article is a real router navigation (`/globe`, `/watch`, each with its own
-`<title>`). The art FLIPs from its box on the page to a centred stage box of the same
-aspect, the stage's periphery is revealed by a `clip-path` mask, and the stage labels
-type in once everything has landed. Esc, `ESC — BACK TO THE FRONT PAGE` or browser
-back reverses it at 1.25× speed. A cold load of an article route renders the open
-state with no animation.
-
-Two variants, switchable from the footer (stored in `localStorage["avi-site:fx"]`):
-
-- **Iris** — the frame widens around the art; the newspaper doesn't move.
-- **Rule cut** — the stage's four rules travel out from the slot's edges and push the
-  newspaper's sections off the grid.
-
-### How it's built
-
-- `src/app/(site)/layout.tsx` renders `<Stage />`; every page under it returns `null`.
-  Layouts persist across sibling navigations, so each WebGL canvas is created once.
-  The pathname is the only state.
-- `Stage.tsx` owns the newspaper, the stage chrome and one document-level **layer**
-  per article. A layer sits over its empty slot in the newspaper (absolute, scrolling
-  with the page) or is fixed to the stage when open.
-- Stacking: `<main>` z-0 · `StageChrome` z-20 · the staged article's layer z-30 ·
-  other layers z-10.
-- Every flight is `Flip.getState` → imperative placement → `Flip.from`, on one GSAP
-  timeline with `fly` / `land` labels. Timings and easing are in
-  `src/lib/stage/motion.ts`.
-
-### Adding an article
-
-1. Add an entry to `src/lib/stage/articles.ts`: `id`, `route`, `aspect`, and the
-   stage copy (`kicker`, `caption`, `controls`, `title`).
-2. Add `src/app/(site)/<id>/page.tsx` returning `null` and exporting
-   `metadata.title`.
-3. In `Newspaper.tsx`, give the `Article` a `slot` instead of children.
-4. In `Stage.tsx`, add a `<Layer>` with the art inside, and the id to the `slotRefs` /
-   `layerRefs` maps.
-
-## The art
-
-- **Globe** — `src/lib/three/GlobeCanvas.tsx`. Raw Three.js with a custom GLSL
-  material (`src/lib/shaders/globe/`) that draws animated topographic contours and a
-  graticule from a baked elevation field; a hybrid perspective↔orthographic camera
-  (`HybridCamera.js`); and a mesh-network layer (`src/lib/three/network/`) whose
-  nodes spawn against a world graph of hotspots, link up by role, drift, and are
-  culled to the visible hemisphere. The HUD (bend, cursor, clock, %) is written
-  imperatively.
-- **Watch** — `src/lib/three/SolidCanvas.tsx`. The watch PCB with its components,
-  drawn as a technical illustration: ink-filled faces that occlude, bone feature
-  edges on top, orthographic camera, on a turntable.
-- **ASCII fields** — `src/lib/ascii/`. `AsciiPanel` measures its box and fills it
-  with a character grid; `fields.ts` holds the scalar fields (`flow`, `ripple`,
-  `lattice` in use; `terrain`, `sphere`, `spiral`, `weave`, `scan` available).
-  Fields are built from areas, not thin lines, so they survive the coarse grid.
-- `src/lib/render/tick-manager.ts` is the shared `requestAnimationFrame` loop.
-
-## Controls
-
-| Input | Effect |
-| --- | --- |
-| Drag the globe | Orbit (pauses auto-spin, which ramps back after ~1s) |
-| Wheel over the globe | Bend the camera between perspective and orthographic; elsewhere the page scrolls |
-| Space, cursor over the globe | Toggle auto-spin |
-| Click the article (a drag on the globe orbits instead); Enter when focused | Open the article |
-| Esc, `ESC — BACK`, or browser back | Close it |
-
-## Assets and scripts
-
-| Output | Built by | From |
-| --- | --- | --- |
-| `public/globe-field-2048.webp`, `-4096.webp` | `scripts/bake-globe-field.py` | the original elevation + water maps (in git history up to `7b8cce6`) |
-| `public/watch-esp.mesh` | `scripts/stl-to-mesh.py` | `WatchESP.stl` |
-| `public/watch-esp.bin` | `scripts/step-to-wireframe.py` | `WatchESP.step` (older wireframe; its renderer, `WireframeCanvas.tsx`, is currently unused) |
-
-The globe texture packs pre-blurred height into R and a land mask into G; 2048 is the
-default, 4096 is available via `FIELD_TEXTURE.resolution`. The `.mesh` format
-("AVIM") is quantised int16 positions plus indices, exactly deduplicated so edges can
-be found in the browser.
-
-```bash
-python3 scripts/stl-to-mesh.py WatchESP.stl public/watch-esp.mesh
-```
-
-`design_handoff_edition_a/` holds the Edition A design the front page was built from
-(Edition B is reference only).
-
-## Layout
-
-```
-src/app/                  root layout, globals.css
-src/app/(site)/           the front page and the article routes (all render null)
-src/components/           Stage, StageChrome, Newspaper, Clock, furniture
-src/lib/stage/            article registry, GSAP motion helpers
-src/lib/three/            GlobeCanvas, HybridCamera, SolidCanvas, WireframeCanvas
-src/lib/three/network/    mesh-network sim: world graph, spawn, links, tuning
-src/lib/shaders/globe/    globe vertex + fragment shaders (loaded as raw strings)
-src/lib/ascii/            AsciiPanel and its fields
-src/lib/render/           frame tick manager
-scripts/                  offline asset pipelines
-public/                   globe field textures, watch mesh
-```
-
-## Where the knobs live
-
-- Globe: `GLOBE_CONFIG`, `HYBRID_CAMERA_CONFIG`, `TOPOGRAPHY_CONFIG`, `FIELD_TEXTURE`,
-  `HUD_BARS` at the top of `GlobeCanvas.tsx`
-- Mesh network: `src/lib/three/network/tuning.ts`
-- Watch turntable: `VIEW` at the top of `SolidCanvas.tsx`
-- Transition timings, easing, stage gutter: `src/lib/stage/motion.ts`
-- Stage copy per article: `src/lib/stage/articles.ts`
-- Page copy, contact: `src/components/Newspaper.tsx`
-
-## Stack
-
-Next.js 16, React 19, TypeScript, Tailwind CSS 4, Three.js, GSAP 3.15 (Flip,
-SplitText, CustomEase) with `@gsap/react`. Fonts via `next/font/google`.
-
-## Getting started
-
-```bash
-npm install
+```sh
+npm ci
 npm run dev
 ```
 
-Open http://localhost:3000.
+Open http://localhost:3000/. Run `npm run lint` and `npx tsc --noEmit` before pushing; there's no test suite.
+
+The site is a Next.js app exported as plain static files (`output: "export"`, built to `out/`). The routes' pages are empty: the stage in the shared layout draws the articles in the browser and moves between them, so there's no server code. `public/` holds the globe's baked elevation texture and the watch's parts, and `scripts/` has the Python pipelines that produce those and the generated tables in `src/lib`.
+
+## Publishing
+
+Cloudflare deploys `main` automatically after a push: Workers Builds runs `npm clean-install`, `npm run build` and `npx wrangler deploy`, and `wrangler.jsonc` serves `out/` as static assets with `404.html` for missing pages. halcyn.dev and www.halcyn.dev are custom domains on the `avi-site` Worker. Other branches don't build, so a push to `main` is a release. Mail to avi@halcyn.dev is forwarded by Cloudflare Email Routing.
+
+## Main files
+
+- `src/components/Newspaper.tsx`: the front page — masthead, articles, contact and footer.
+- `src/components/Stage.tsx`, `StageChrome.tsx` and `src/lib/stage/`: opening and closing articles — the article registry and routes, the GSAP transitions, click-to-open, and the one-scroll-one-chapter gesture.
+- `src/lib/three/GlobeCanvas.tsx`, `src/lib/shaders/globe/` and `src/lib/three/network/`: the globe's contour shader, perspective-to-orthographic camera and mesh network.
+- `src/components/Backdrop.tsx`: the faint ASCII field behind the open globe.
+- `src/components/WatchArticle.tsx` and `src/lib/watch/`: the watch teardown — five chapters, part callouts, and a re-creation of the watch face my firmware draws.
+- `src/components/FractalArticle.tsx` and `src/lib/fractals/`: the fractals walkthrough — one WebGL shader porting my Python, the Mandelbrot cover, the Julia and Fraotic presets, and the Lissajous table.
+- `src/lib/ascii/`: the animated ASCII fields on the page.
+- `scripts/`: offline pipelines for the globe texture, the watch parts, the firmware's glyphs and the fractal palettes.
+
+The watch's board comes from my KiCad project and its face from my ESP32 firmware. The fractal colours are matplotlib's and CMasher's colormaps, the ones my original code used. Fonts are Instrument Serif and IBM Plex Mono, both under the OFL, loaded with `next/font`.
