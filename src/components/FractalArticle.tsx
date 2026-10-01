@@ -1,10 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import { LABEL } from "@/components/furniture";
 import AsciiPanel from "@/lib/ascii/AsciiPanel";
-import { CHAPTERS, LAST_CHAPTER } from "@/lib/fractals/chapters";
+import { CHAPTERS, dragOf, LAST_CHAPTER, presetRows } from "@/lib/fractals/chapters";
 import { FractalEngine } from "@/lib/fractals/engine";
 import { gsap, prefersReducedMotion, SplitText } from "@/lib/stage/motion";
 
@@ -16,6 +16,8 @@ const SWIPE = 40;
 const DECIDE = 8;
 /** Box width below which the furniture moves outside the box (as the watch). */
 const COMPACT_BELOW = 560;
+/** A preset label that is maths: as written, not in the furniture's capitals. */
+const MATH = "normal-case tracking-[0.06em] text-[11px]";
 
 const pad = (n: number) => String(n).padStart(2, "0");
 
@@ -229,6 +231,8 @@ export default function FractalArticle({ open, landed }: { open: boolean; landed
   }, []);
 
   // On landing the headline is already in place — it flew there — so only the rest is typed.
+  // A new chapter types in again; a new preset only moves the marker (the typed text
+  // itself never changes while it is split into characters).
   const wasVisible = useRef(false);
   useLayoutEffect(() => {
     const landing = visible && !wasVisible.current;
@@ -236,11 +240,19 @@ export default function FractalArticle({ open, landed }: { open: boolean; landed
     if (!visible) return;
     const copy = overlayRef.current?.querySelector("[data-chapter-copy]") ?? null;
     return type(copy, 0.45, landing ? "[data-flies]" : undefined);
-  }, [visible, chapter, preset, type]);
+  }, [visible, chapter, type]);
 
   const c = CHAPTERS[chapter];
   const go = (k: number) => engineRef.current?.go(k);
-  const draggable = visible && (c.id === "julia" || c.id === "fraotic");
+  const pick = (k: number) => engineRef.current?.setPreset(k);
+  const draggable = visible && dragOf(c.presets?.[preset]) !== null;
+  const list = c.presets ?? [];
+  const rows = presetRows(list);
+  const tab = visible ? 0 : -1;
+  const presetClass = (k: number, math?: boolean) =>
+    `pointer-events-auto cursor-pointer transition-colors ${math ? MATH : "uppercase tracking-[0.18em]"} ${
+      k === preset ? "text-bone" : "hover:text-bone"
+    }`;
 
   return (
     <div className="relative h-full w-full">
@@ -274,8 +286,17 @@ export default function FractalArticle({ open, landed }: { open: boolean; landed
       >
         {/* Scrim: the pictures run to the edges; the type needs a little ink behind it. */}
         <div className="absolute inset-x-0 top-0 h-[28%] bg-gradient-to-b from-ink/60 to-transparent @max-[560px]:hidden" />
+        {c.presets && (
+          <div
+            className="absolute left-0 top-0 h-[26rem] max-h-full w-[24rem] max-w-full @max-[560px]:hidden"
+            style={{
+              background:
+                "radial-gradient(farthest-side at 0 0, color-mix(in srgb, var(--ink) 55%, transparent), transparent)",
+            }}
+          />
+        )}
 
-        <div data-chapter-copy key={`${c.id}-${preset}`} className="contents">
+        <div data-chapter-copy key={c.id} className="contents">
           {/* Headline, top left; the presets below it. */}
           <div className="absolute left-4 top-4 @max-[560px]:top-auto @max-[560px]:bottom-[calc(100%+16px)]">
             {/* The newspaper's FRACTALS flies here when the article opens (see Stage). */}
@@ -290,24 +311,54 @@ export default function FractalArticle({ open, landed }: { open: boolean; landed
             </h3>
             {c.presets && (
               <div className="mt-4 @max-[560px]:hidden">
+                {/* One row per preset; a group's variants share a row as chips. */}
                 <ul className={LABEL}>
-                  {c.presets.map((q, k) => (
-                    <li key={q.id} style={{ height: INDEX_ROW }}>
-                      <button
-                        type="button"
-                        tabIndex={visible ? 0 : -1}
-                        onClick={() => engineRef.current?.setPreset(k)}
-                        className={`pointer-events-auto cursor-pointer uppercase tracking-[0.18em] transition-colors ${
-                          k === preset ? "text-bone" : "hover:text-bone"
-                        }`}
-                      >
-                        <span data-typed>
-                          {k === preset ? "▸ " : "  "}
-                          {q.label}
+                  {rows.map((row) => {
+                    const active = row.items.includes(preset);
+                    return (
+                      <li key={row.items[0]} className="flex items-baseline whitespace-nowrap" style={{ height: INDEX_ROW }}>
+                        <span aria-hidden className={`w-[1.6em] shrink-0 text-bone ${active ? "" : "invisible"}`}>
+                          <span data-typed>▸</span>
                         </span>
-                      </button>
-                    </li>
-                  ))}
+                        {row.items.length === 1 ? (
+                          <button
+                            type="button"
+                            tabIndex={tab}
+                            aria-current={active || undefined}
+                            onClick={() => pick(row.items[0])}
+                            className={presetClass(row.items[0], row.math)}
+                          >
+                            <span data-typed>{row.label}</span>
+                          </button>
+                        ) : (
+                          <>
+                            <span className={`mr-[1.2em] tracking-[0.18em] ${active ? "text-bone" : ""}`}>
+                              <span data-typed>{row.label}</span>
+                            </span>
+                            {row.items.map((k, j) => (
+                              <Fragment key={k}>
+                                {j > 0 && (
+                                  <span aria-hidden className="px-[0.6em]">
+                                    <span data-typed>·</span>
+                                  </span>
+                                )}
+                                <button
+                                  type="button"
+                                  tabIndex={tab}
+                                  aria-current={k === preset || undefined}
+                                  aria-label={`${row.label} ${list[k].label}`}
+                                  onClick={() => pick(k)}
+                                  className={presetClass(k, list[k].math)}
+                                >
+                                  <span data-typed>{list[k].label}</span>
+                                </button>
+                              </Fragment>
+                            ))}
+                          </>
+                        )}
+                      </li>
+                    );
+                  })}
                 </ul>
               </div>
             )}

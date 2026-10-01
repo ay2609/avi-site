@@ -5,14 +5,24 @@
  * coarse grid, the article's motif.
  *
  * Input is the walkthrough's usual: one scroll gesture is one chapter
- * (WheelGesture). In Julia and Fraotic a drag moves the one thing that chapter
- * is about — c, or the slice.
+ * (WheelGesture). A drag moves the one thing a picture is about — a Julia's c,
+ * or a basin's slice — where it has one (dragOf in chapters.ts).
  */
-import { CHAPTERS, LAST_CHAPTER, type Preset } from "./chapters";
+import { CHAPTERS, dragOf, LAST_CHAPTER, type Preset } from "./chapters";
 import { COVER } from "./cover";
 import { FractalRenderer, type FractalParams } from "./renderer";
 import { WheelGesture } from "@/lib/stage/wheel";
-import { FLOWS, LISSAJOUS, traceFlow, type Flow, type Vec2 } from "./systems";
+import {
+  CLIFFORDS,
+  FLOWS,
+  LISSAJOUS,
+  traceClifford,
+  traceFlow,
+  type Clifford,
+  type Flow,
+  type Vec2,
+  type Vec3,
+} from "./systems";
 
 export interface EngineCallbacks {
   /** 0…LAST_CHAPTER, eased — the index marker follows it. */
@@ -70,7 +80,9 @@ export class FractalEngine {
   private dirtyGL = true;
   private raf = 0;
   private gesture = new WheelGesture();
-  private orbits = new Map<Flow["id"], Float64Array>();
+  private orbits = new Map<string, Float64Array>();
+  /** The Clifford orbit, plotted once per map and canvas size. */
+  private scatter: { key: string; canvas: HTMLCanvasElement } | null = null;
   private reduce: boolean;
   private disposed = false;
 
@@ -229,9 +241,9 @@ export class FractalEngine {
 
   // --- Dragging (Julia's c, Fraotic's slice) -----------------------------------------
 
-  /** Does the chapter on stage take a drag? */
+  /** Does the picture on stage take a drag? */
   get draggable(): boolean {
-    return this.mode === "stage" && (this.id === "julia" || this.id === "fraotic");
+    return this.mode === "stage" && dragOf(this.preset() ?? undefined) !== null;
   }
 
   dragStart(): void {
@@ -244,13 +256,15 @@ export class FractalEngine {
     if (!this.dragging) return;
     const w = this.glCanvas.clientWidth || 1;
     const p = this.preset();
-    if (!p) return;
-    if (this.id === "julia") {
+    const kind = dragOf(p ?? undefined);
+    if (!p || !kind) return;
+    if (kind === "c") {
       const c = this.juliaC ?? [...(p.params.c ?? [0, 0])];
       // A tenth of the view per box width: c is a fine control.
       const k = ((p.params.half ?? 1.5) * 2 * 0.1) / w;
       this.juliaC = [c[0] + dx * k, c[1] - dy * k];
     } else {
+      // Half a turn per box width, about the slice's up axis.
       this.angle += (dx / w) * Math.PI;
     }
     this.dirtyGL = true;
@@ -272,16 +286,41 @@ export class FractalEngine {
         return COVER; // still: it changes only when it re-resolves
       case "julia": {
         const p = this.preset()!;
-        return { ...p.params, c: this.juliaC ?? p.params.c };
+        return this.juliaC ? { ...p.params, c: this.juliaC } : p.params;
       }
-      case "fraotic": {
-        const p = this.preset()!;
-        const flow = FLOWS[p.params.mode === "lorenz" ? "lorenz" : "thomas"];
-        return { ...p.params, target: flow.target, dt: flow.dt, bounds: flow.bounds, angle: this.angle };
-      }
+      case "fraotic":
+        return this.basinParams(this.preset()!);
       default:
         return null;
     }
+  }
+
+  /** A Fraotic preset with its system filled in: the flow's field, step, slice and target, or the map's. */
+  private basinParams(p: Preset): FractalParams {
+    if (p.flow) {
+      const f = FLOWS[p.flow];
+      return {
+        field: f.field,
+        constants: f.constants,
+        dt: f.dt,
+        rk4: f.rk4,
+        slice: f.slice,
+        bounds: f.bounds,
+        target: f.target,
+        ...p.params,
+        angle: (p.params.angle ?? 0) + this.angle,
+      };
+    }
+    if (p.clifford) {
+      const c = CLIFFORDS[p.clifford];
+      return {
+        center: c.view.center,
+        half: c.view.half,
+        clifford: { abcd: c.abcd, dt: c.dt, target: c.target, radius: c.radius, metric: c.metric },
+        ...p.params,
+      };
+    }
+    return p.params;
   }
 
   // --- The frame -----------------------------------------------------------------
@@ -343,25 +382,34 @@ export class FractalEngine {
     if (!ctx) return;
     const [w, h, dpr] = this.fitOverlay();
     ctx.clearRect(0, 0, w, h);
-    if (this.id === "fraotic") this.drawAttractor(ctx, w, h, dpr);
-    else if (this.id === "lissajous") this.drawLissajous(ctx, w, h, dpr, t);
+    if (this.id === "fraotic") {
+      const p = this.preset();
+      if (p?.flow) this.drawAttractor(ctx, w, h, dpr, FLOWS[p.flow], this.basinParams(p));
+      else if (p?.clifford) this.drawScatter(ctx, w, h, dpr, CLIFFORDS[p.clifford]);
+    } else if (this.id === "lissajous") this.drawLissajous(ctx, w, h, dpr, t);
   }
 
   // FRAOTIC — the attractor, drawn faintly over its own basin, as lorenz.py does.
-  private drawAttractor(ctx: CanvasRenderingContext2D, w: number, h: number, dpr: number): void {
-    const p = this.preset();
-    if (!p) return;
-    const flow = FLOWS[p.params.mode === "lorenz" ? "lorenz" : "thomas"];
+  private drawAttractor(
+    ctx: CanvasRenderingContext2D,
+    w: number,
+    h: number,
+    dpr: number,
+    flow: Flow,
+    params: FractalParams
+  ): void {
     let pts = this.orbits.get(flow.id);
     if (!pts) {
-      // lorenz.py draws the first 20k points, TCSA.py all of them; 40k is plenty on screen.
-      pts = traceFlow(flow, flow.id === "lorenz" ? 20000 : 40000);
+      // lorenz.py draws the first 20k points, TCSA.py all of them; tens of thousands is plenty on screen.
+      pts = traceFlow(flow, flow.trace);
       this.orbits.set(flow.id, pts);
     }
-    const [cx, , cz] = flow.target.center;
-    const B = flow.bounds;
-    const cos = Math.cos(this.angle);
-    const sin = Math.sin(this.angle);
+    const { origin: O, u: U, v: V } = params.slice ?? flow.slice;
+    const B = params.bounds ?? flow.bounds;
+    // The slice's across axis, turned about its up axis as the shader turns it.
+    const th = params.angle ?? 0;
+    const VxU: Vec3 = [V[1] * U[2] - V[2] * U[1], V[2] * U[0] - V[0] * U[2], V[0] * U[1] - V[1] * U[0]];
+    const A: Vec3 = [0, 1, 2].map((k) => U[k] * Math.cos(th) + VxU[k] * Math.sin(th)) as Vec3;
     const aspect = w / h;
     ctx.save();
     ctx.globalAlpha = 0.4;
@@ -369,9 +417,12 @@ export class FractalEngine {
     ctx.lineWidth = 0.6 * dpr;
     ctx.beginPath();
     for (let i = 0; i < pts.length / 3; i++) {
-      // Onto the slice: across = (x − cx)·cosθ + y·sinθ, up = z − cz.
-      const u = (pts[i * 3] - cx) * cos + pts[i * 3 + 1] * sin;
-      const v = pts[i * 3 + 2] - cz;
+      // Onto the slice: across = (p − o)·a, up = (p − o)·v.
+      const dx = pts[i * 3] - O[0];
+      const dy = pts[i * 3 + 1] - O[1];
+      const dz = pts[i * 3 + 2] - O[2];
+      const u = dx * A[0] + dy * A[1] + dz * A[2];
+      const v = dx * V[0] + dy * V[1] + dz * V[2];
       const x = w / 2 + (u / (B * aspect)) * (w / 2);
       const y = h / 2 - (v / B) * (h / 2);
       if (i === 0) ctx.moveTo(x, y);
@@ -379,6 +430,47 @@ export class FractalEngine {
     }
     ctx.stroke();
     ctx.restore();
+  }
+
+  // FRAOTIC on the Clifford map — the orbit's points over its basin, white at 0.6 a
+  // hit, as his overlay plots them (a map jumps, so points, not a line).
+  private drawScatter(ctx: CanvasRenderingContext2D, w: number, h: number, dpr: number, c: Clifford): void {
+    const key = `${c.id}:${w}x${h}`;
+    if (this.scatter?.key !== key) {
+      let pts = this.orbits.get(`clifford:${c.id}`);
+      if (!pts) {
+        pts = traceClifford(c);
+        this.orbits.set(`clifford:${c.id}`, pts);
+      }
+      const hits = new Uint16Array(w * h);
+      const dot = Math.max(1, Math.round(dpr));
+      const [cx, cy] = c.view.center;
+      const half = c.view.half;
+      const aspect = w / h;
+      for (let i = 0; i < pts.length / 2; i++) {
+        const px = Math.round(w / 2 + ((pts[i * 2] - cx) / (half * aspect)) * (w / 2));
+        const py = Math.round(h / 2 - ((pts[i * 2 + 1] - cy) / half) * (h / 2));
+        for (let a = 0; a < dot; a++)
+          for (let b = 0; b < dot; b++) {
+            const x = px + a;
+            const y = py + b;
+            if (x >= 0 && x < w && y >= 0 && y < h && hits[y * w + x] < 64) hits[y * w + x]++;
+          }
+      }
+      const canvas = document.createElement("canvas");
+      canvas.width = w;
+      canvas.height = h;
+      const g = canvas.getContext("2d");
+      if (!g) return;
+      const img = g.createImageData(w, h);
+      for (let i = 0; i < hits.length; i++) {
+        if (!hits[i]) continue;
+        img.data.set([255, 255, 255, Math.round(255 * (1 - Math.pow(0.4, hits[i])))], i * 4);
+      }
+      g.putImageData(img, 0, 0);
+      this.scatter = { key, canvas };
+    }
+    ctx.drawImage(this.scatter.canvas, 0, 0);
   }
 
   // LISSAJOUS — MovingCircle6.py: one circle per column and per row, spaced 3, radius 1.15.

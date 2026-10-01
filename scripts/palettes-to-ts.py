@@ -41,6 +41,14 @@ PALETTES = [
     ("gothic", "cmasher gothic — the Thomas basins", cmr("gothic")),
     ("twilight", "matplotlib twilight_shifted — the Lorenz basins", mpl("twilight_shifted")),
     ("ember", "cmasher ember — the rotated Lorenz slices", cmr("ember")),
+    ("magma", "matplotlib magma — DeepJulia's z^5 and the complex Collatz", mpl("magma")),
+    ("prism", "matplotlib prism — Newton's method on sin z / z (COS_2LOW)", mpl("prism")),
+    ("lilac", "cmasher lilac — Julia_3, c = -0.76 + 0.0838i", cmr("lilac")),
+    ("ocean", "cmasher ocean — Iterate.py's list", cmr("ocean")),
+    ("horizon", "cmasher horizon — Iterate.py's list", cmr("horizon")),
+    ("arctic_r", "cmasher arctic, reversed — JULIA_SIN", cmr("arctic")[::-1]),
+    ("bubblegum", "cmasher bubblegum — X3_1, the second root", cmr("bubblegum")),
+    ("gem", "cmasher gem — X3_1, the third root", cmr("gem")),
 ]
 
 lines = [
