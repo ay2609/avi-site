@@ -63,7 +63,7 @@ export const CHAPTERS: Chapter[] = [
   {
     id: "power",
     headline: "Power",
-    view: { yaw: 26, pitch: -58, roll: -12, zoom: 1.55 },
+    view: { yaw: 26, pitch: -40, roll: -12, zoom: 1.55 },
     focus: { sheets: ["USB-C", "LiPo Charger", "LiPo Connection", "Voltage Regulator"] },
     lift: 0.16,
     dim: true,
@@ -75,7 +75,11 @@ export const CHAPTERS: Chapter[] = [
       { ref: "J2", text: "Li-Po cell" },
       { ref: "U2", text: "TPS79533 · 3.3 V" },
     ],
-    trace: ["J1", "D2", "U3", "J2", "U2"],
+    // The charger's output, the cell and the regulator's input are one net (the
+    // BQ24090 has no separate system output), so the order along it is free:
+    // U2 sits on the way from U3 to J2, and visiting it first keeps the line from
+    // doubling back on itself.
+    trace: ["J1", "D2", "U3", "U2", "J2"],
     display: false,
   },
   {
