@@ -2,7 +2,7 @@
 
 My personal website, live at [halcyn.dev](https://halcyn.dev/).
 
-It's laid out like the front page of a newspaper where every article is a picture. Spin the globe and bend its projection, open the watch to take my smartwatch's board apart one chapter at a time, or open Fractals to walk through live ports of the code I wrote in high school, from the Mandelbrot set to chaotic attractors and a Lissajous table. Clicking an article grows it to full screen at its own address, and Esc folds it back into the page. Every article opens from the keyboard too, and motion respects reduced-motion settings.
+It's laid out like the front page of a newspaper where every article is a picture. Spin the globe and bend its projection (bend it past halfway and the whole page turns to paper, and stays that way next visit), open the watch to take my smartwatch's board apart one chapter at a time, or open Fractals to walk through live ports of the code I wrote in high school, from the Mandelbrot set to chaotic attractors and a Lissajous table. Clicking an article grows it to full screen at its own address, and Esc folds it back into the page. Every article opens from the keyboard too, and motion respects reduced-motion settings.
 
 ## Development
 

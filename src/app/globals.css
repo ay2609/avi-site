@@ -1,7 +1,8 @@
 @import "tailwindcss";
 
 /* One tone, four values. No radii, no shadows, no colour accents. */
-:root {
+:root,
+[data-theme="dark"] {
   --ink: #0a0a0b; /* page */
   --panel: #111113; /* wells recessed into the page */
   --bone: #e6e4df; /* text */
@@ -9,6 +10,47 @@
   --rule: #2a2a2c; /* hairlines */
   --ascii: rgb(230 228 223 / 0.5);
   --stripe: rgb(230 228 223 / 0.1);
+  color-scheme: dark;
+}
+
+/*
+ * Light mode — the globe bent past halfway (src/lib/theme/light.ts). The same
+ * names, so every `bg-ink` / `text-bone` follows: ink is still the page and
+ * bone still the text, they just swap ends. Warm paper rather than white, near-
+ * black rather than black; labels and ASCII sit darker than in dark mode
+ * (dim 6.9:1, ASCII 5.8:1 against the paper) because small type on a light
+ * ground reads thinner.
+ */
+:root[data-theme="light"] {
+  --ink: #f1efea;
+  --panel: #e8e6e0;
+  --bone: #17171a;
+  --dim: #52514d;
+  --rule: #c6c3bb;
+  --ascii: rgb(23 23 26 / 0.68);
+  --stripe: rgb(23 23 26 / 0.08);
+  color-scheme: light;
+}
+
+/* The flip: colours cross-fade for as long as the class is on (see light.ts). */
+:root.theme-flip,
+:root.theme-flip * {
+  transition:
+    background-color 0.3s ease-out,
+    color 0.3s ease-out,
+    border-color 0.3s ease-out,
+    fill 0.3s ease-out,
+    stroke 0.3s ease-out,
+    filter 0.3s ease-out !important;
+}
+
+/*
+ * The fractal pictures in light mode: inverted, hues turned back, so the
+ * palettes keep their hues on a paper ground. (Their ASCII on the front page
+ * has its own light colours instead — see src/lib/fractals/cover.ts.)
+ */
+:root[data-theme="light"] .invert-on-light {
+  filter: invert(1) hue-rotate(180deg);
 }
 
 @theme inline {

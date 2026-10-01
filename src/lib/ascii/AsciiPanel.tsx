@@ -2,6 +2,8 @@
 
 import { type CSSProperties, useEffect, useRef } from "react";
 
+import { getTheme, onTheme } from "@/lib/theme/light";
+
 import { ASCII_FIELDS, ASCII_RAMPS, ASCII_TINTS, type AsciiFieldId } from "./fields";
 
 interface AsciiPanelProps {
@@ -20,7 +22,8 @@ interface AsciiPanelProps {
  *
  * A field with a tint is coloured cell by cell: the tint is painted once per
  * grid into a one-pixel-per-cell image behind the text, clipped to the glyphs
- * (`background-clip: text`), so the frames stay plain text.
+ * (`background-clip: text`), so the frames stay plain text. It is painted
+ * again when the theme flips, since tints carry their own light-mode colours.
  */
 export default function AsciiPanel({
   field,
@@ -46,6 +49,7 @@ export default function AsciiPanel({
     let scaleY = 1;
     let line: string[] = [];
     let out: string[] = [];
+    let lineHeight = 0;
 
     /**
      * Measure a real glyph rather than assuming an aspect ratio: the ratio
@@ -62,8 +66,7 @@ export default function AsciiPanel({
       probe.remove();
 
       const styles = getComputedStyle(el);
-      const lineHeight =
-        parseFloat(styles.lineHeight) || parseFloat(styles.fontSize) * 1.15;
+      lineHeight = parseFloat(styles.lineHeight) || parseFloat(styles.fontSize) * 1.15;
       const width = el.clientWidth;
       const height = el.clientHeight;
       if (!charWidth || !lineHeight || !width || !height) return false;
@@ -84,7 +87,7 @@ export default function AsciiPanel({
 
       line = new Array(cols);
       out = new Array(rows);
-      if (tint) paintTint(lineHeight);
+      if (tint) paintTint();
       return true;
     };
 
@@ -92,8 +95,9 @@ export default function AsciiPanel({
     const u = (x: number) => (x / (cols - 1) - 0.5) * scaleX + 0.5;
     const v = (y: number) => (y / (rows - 1) - 0.5) * scaleY + 0.5;
 
-    const paintTint = (lineHeight: number) => {
-      if (!tint) return;
+    const paintTint = () => {
+      if (!tint || !cols || !rows) return;
+      const theme = getTheme();
       const canvas = document.createElement("canvas");
       canvas.width = cols;
       canvas.height = rows;
@@ -102,7 +106,7 @@ export default function AsciiPanel({
       const img = ctx.createImageData(cols, rows);
       for (let y = 0; y < rows; y += 1) {
         for (let x = 0; x < cols; x += 1) {
-          const rgb = tint(u(x), v(y));
+          const rgb = tint(u(x), v(y), theme);
           if (!rgb) continue;
           const i = (y * cols + x) * 4;
           img.data[i] = rgb[0];
@@ -145,6 +149,7 @@ export default function AsciiPanel({
       if (measure()) draw(lastSeconds);
     });
     resizeObserver.observe(el);
+    const offTheme = tint ? onTheme(paintTint) : () => {};
 
     const reduceMotion = window.matchMedia(
       "(prefers-reduced-motion: reduce)"
@@ -152,7 +157,10 @@ export default function AsciiPanel({
 
     if (reduceMotion) {
       draw(0);
-      return () => resizeObserver.disconnect();
+      return () => {
+        resizeObserver.disconnect();
+        offTheme();
+      };
     }
 
     let raf = 0;
@@ -174,6 +182,7 @@ export default function AsciiPanel({
     return () => {
       cancelAnimationFrame(raf);
       resizeObserver.disconnect();
+      offTheme();
     };
   }, [field, fps]);
 

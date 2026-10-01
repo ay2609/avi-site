@@ -21,6 +21,9 @@ uniform float uAltitudeCutoffTopPct;
 uniform float uOceanIsoStrength;
 uniform float uLandIsoStrength;
 uniform vec3 uTopoLineColor;
+uniform vec3 uOceanColor;
+uniform vec3 uLandColor;
+uniform vec3 uGridColor;
 
 float hash31(vec3 p) {
   return fract(sin(1000.0 * dot(p, vec3(1.0, 57.0, -13.7))) * 4375.5453);
@@ -96,20 +99,15 @@ void main() {
 
   float lineMask = contour * areaVisibility * altitudeMask;
 
-  vec3 oceanColor = vec3(0.015, 0.02, 0.03);
-  vec3 landColor = vec3(0.07, 0.08, 0.08);
-  vec3 contourColor = uTopoLineColor;
-
-  vec3 baseColor = mix(oceanColor, landColor, landMask);
-  vec3 finalRgb = mix(baseColor, contourColor, lineMask);
+  vec3 baseColor = mix(uOceanColor, uLandColor, landMask);
+  vec3 finalRgb = mix(baseColor, uTopoLineColor, lineMask);
 
   // Subtle wireframe-style latitude/longitude overlay.
   float lonGrid = getPeriodicLineMask(vUv.x, uGridLonCount, uGridWidth, uGridBias);
   float latGrid = getPeriodicLineMask(vUv.y, uGridLatCount, uGridWidth, uGridBias);
   float poleFade = smoothstep(0.01, 0.08, vUv.y) * (1.0 - smoothstep(0.92, 0.99, vUv.y));
   float gridMask = max(lonGrid, latGrid) * poleFade;
-  vec3 gridColor = vec3(0.78);
-  finalRgb = mix(finalRgb, gridColor, gridMask * uGridStrength);
+  finalRgb = mix(finalRgb, uGridColor, gridMask * uGridStrength);
 
   gl_FragColor = vec4(finalRgb, opacity);
 }

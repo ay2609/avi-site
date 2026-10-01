@@ -14,6 +14,7 @@ import * as THREE from "three";
 
 import { TickManager, type TickData } from "@/lib/render/tick-manager";
 import { WheelGesture } from "@/lib/stage/wheel";
+import { themeFader } from "@/lib/theme/light";
 
 import { CHAPTERS, DISPLAY, LAST_CHAPTER, type FaceButton } from "./chapters";
 import { FACE_H, FACE_W, SovereignFace } from "./face";
@@ -25,6 +26,9 @@ export const LOOK = {
   edgeAngle: 24,
   ink: 0x0a0a0b,
   bone: 0xfafafa,
+  /** Light mode (see lib/theme): paper faces, ink edges — the page's own --ink and --bone there. */
+  paper: 0xf1efea,
+  inkLine: 0x17171a,
   /** Line opacity: the front page, a part in focus, out of focus, the board out of focus. */
   edge: 0.62,
   focus: 0.8,
@@ -146,6 +150,10 @@ export class WatchEngine {
   private readonly resizeObserver: ResizeObserver;
   private readonly controller = new AbortController();
   private readonly disposables: { dispose(): void }[] = [];
+  /** Every face and edge material, recoloured as the theme fades. */
+  private readonly faceMaterials: THREE.MeshBasicMaterial[] = [];
+  private readonly lineMaterials: THREE.LineBasicMaterial[] = [];
+  private readonly theme = themeFader();
 
   private model: WatchModel | null = null;
   private parts: { info: PartInfo; group: THREE.Group; edges: THREE.LineBasicMaterial }[] = [];
@@ -275,6 +283,7 @@ export class WatchEngine {
       polygonOffsetUnits: 1,
     });
     this.disposables.push(faces);
+    this.faceMaterials.push(faces);
 
     for (const info of model.parts) {
       const geometry = new THREE.BufferGeometry();
@@ -288,11 +297,13 @@ export class WatchEngine {
       group.add(new THREE.Mesh(geometry, faces), new THREE.LineSegments(edges, material));
       this.roller.add(group);
       this.parts.push({ info, group, edges: material });
+      this.lineMaterials.push(material);
       this.disposables.push(geometry, edges, material);
     }
 
     this.buildDisplay(model);
     this.poses = CHAPTERS.map((chapter) => this.pose(chapter));
+    this.paint(this.theme.step(0).t);
   }
 
   /** The Waveshare module: board, glass, and the active area carrying the face. */
@@ -309,6 +320,8 @@ export class WatchEngine {
     });
     const lines = new THREE.LineBasicMaterial({ color: LOOK.bone, transparent: true, opacity: LOOK.focus });
     this.displayEdges = lines;
+    this.faceMaterials.push(faces);
+    this.lineMaterials.push(lines);
 
     const box = (w: number, h: number, d: number, z: number) => {
       const g = new THREE.BoxGeometry(w * s, h * s, d * s);
@@ -427,9 +440,20 @@ export class WatchEngine {
   private readonly scratch = new THREE.Vector3();
   private readonly lookAt = new THREE.Vector3();
 
+  /** Dark to light by `t` (0–1). The face is a screen and stays as it is. */
+  private paint(t: number): void {
+    const face = new THREE.Color(LOOK.ink).lerp(new THREE.Color(LOOK.paper), t);
+    const line = new THREE.Color(LOOK.bone).lerp(new THREE.Color(LOOK.inkLine), t);
+    for (const m of this.faceMaterials) m.color.copy(face);
+    for (const m of this.lineMaterials) m.color.copy(line);
+  }
+
   private frame = (data: TickData): void => {
     const now = performance.now();
     const dt = Math.min(Math.max(data.timeDiff, 0), 100) / 1000;
+
+    const theme = this.theme.step(dt);
+    if (theme.moved) this.paint(theme.t);
 
     if (this.tween) {
       const t = clamp((now - this.tween.start) / this.tween.ms, 0, 1);

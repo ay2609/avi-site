@@ -107,6 +107,7 @@ export default function FractalArticle({ open, landed }: { open: boolean; landed
       engine()?.wheel((Math.abs(e.deltaY) >= Math.abs(e.deltaX) ? e.deltaY : e.deltaX) * scale);
     };
     const onKey = (e: KeyboardEvent) => {
+      if (e.defaultPrevented) return; // Space over the docked globe pauses it instead
       const k = e.key;
       if (["ArrowDown", "ArrowRight", "PageDown", " "].includes(k)) engine()?.step(1);
       else if (["ArrowUp", "ArrowLeft", "PageUp"].includes(k)) engine()?.step(-1);
@@ -259,10 +260,10 @@ export default function FractalArticle({ open, landed }: { open: boolean; landed
         <canvas
           ref={glRef}
           aria-hidden
-          className="absolute inset-0 h-full w-full transition-opacity duration-300 ease-out"
+          className="invert-on-light absolute inset-0 h-full w-full transition-opacity duration-300 ease-out"
           style={{ opacity: open ? 1 : 0 }}
         />
-        <canvas ref={drawRef} aria-hidden className="absolute inset-0 h-full w-full" style={{ opacity: visible ? 1 : 0 }} />
+        <canvas ref={drawRef} aria-hidden className="invert-on-light absolute inset-0 h-full w-full" style={{ opacity: visible ? 1 : 0 }} />
       </div>
 
       <div

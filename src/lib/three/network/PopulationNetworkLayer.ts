@@ -27,9 +27,19 @@ const NODE_VERTEX_SHADER = `
   }
 `;
 
+// Light mode (uLight 0 → 1): the violets deepen — squared-ish and darkened — so
+// they hold on paper as they glow on ink.
+const DEEPEN = `
+  uniform float uLight;
+  vec3 themed(vec3 c) {
+    return mix(c, pow(c, vec3(2.2)) * 0.55, uLight);
+  }
+`;
+
 const NODE_FRAGMENT_SHADER = `
   varying vec3 vColor;
   varying float vAlpha;
+  ${DEEPEN}
 
   void main() {
     vec2 centered = gl_PointCoord * 2.0 - 1.0;
@@ -46,7 +56,7 @@ const NODE_FRAGMENT_SHADER = `
       discard;
     }
 
-    vec3 color = vColor * (0.75 + glow * 0.4);
+    vec3 color = themed(vColor * (0.75 + glow * 0.4));
     gl_FragColor = vec4(color, alpha);
   }
 `;
@@ -64,9 +74,10 @@ const LINK_VERTEX_SHADER = `
 
 const LINK_FRAGMENT_SHADER = `
   varying vec4 vColorAlpha;
+  ${DEEPEN}
 
   void main() {
-    gl_FragColor = vColorAlpha;
+    gl_FragColor = vec4(themed(vColorAlpha.rgb), vColorAlpha.a);
   }
 `;
 
@@ -144,6 +155,7 @@ export class PopulationNetworkLayer {
       depthTest: true,
       uniforms: {
         uTime: { value: 0 },
+        uLight: { value: 0 },
       },
       blending: THREE.NormalBlending,
     });
@@ -152,6 +164,9 @@ export class PopulationNetworkLayer {
       vertexShader: LINK_VERTEX_SHADER,
       fragmentShader: LINK_FRAGMENT_SHADER,
       transparent: true,
+      uniforms: {
+        uLight: { value: 0 },
+      },
       depthWrite: false,
       depthTest: true,
       blending: THREE.NormalBlending,
@@ -165,6 +180,12 @@ export class PopulationNetworkLayer {
 
     this.group.add(this.linksSegments);
     this.group.add(this.nodesPoints);
+  }
+
+  /** Light mode, 0 (dark) to 1 (light). */
+  setLight(t: number): void {
+    this.nodesMaterial.uniforms.uLight.value = t;
+    this.linksMaterial.uniforms.uLight.value = t;
   }
 
   async init(): Promise<void> {

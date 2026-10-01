@@ -8,6 +8,7 @@ import vertexShader from "@/lib/shaders/globe/positionColor.vert";
 import fragmentShader from "@/lib/shaders/globe/positionColor.frag";
 import { TickManager, type TickData } from "@/lib/render/tick-manager";
 import { PopulationNetworkLayer } from "@/lib/three/network/PopulationNetworkLayer";
+import { getBend, saveBend, setBend, themeFader } from "@/lib/theme/light";
 
 import { HybridCamera } from "./HybridCamera";
 
@@ -51,13 +52,24 @@ const TOPOGRAPHY_CONFIG = {
   altitudeCutoffTopPct: 0.10, // Cut off this fraction from highest altitudes.
   oceanIsoStrength: 0.15, // Visibility strength for contours in non-land areas.
   landIsoStrength: 0.50, // Visibility strength for contours in land areas.
-  topoLineColor: 0xffffff,
   gridLonCount: 36, // Vertical meridians around the globe.
   gridLatCount: 18, // Horizontal parallels from pole to pole.
   gridWidth: 1.5, // Grid anti-alias width multiplier.
   gridBias: 0.00035, // Base grid line softness.
   gridStrength: 0.11, // Grid visibility strength.
 } as const;
+
+type RGB = [number, number, number];
+
+/**
+ * The globe's colours in each theme, as raw shader RGB (no colour management).
+ * Light mode is paper: a globe a shade under the page, land a shade under that,
+ * ink contours. The grid keeps the same step from its ground in both.
+ */
+const GLOBE_COLORS: Record<"dark" | "light", { ocean: RGB; land: RGB; contour: RGB; grid: RGB }> = {
+  dark: { ocean: [0.015, 0.02, 0.03], land: [0.07, 0.08, 0.08], contour: [1, 1, 1], grid: [0.78, 0.78, 0.78] },
+  light: { ocean: [0.87, 0.868, 0.86], land: [0.78, 0.775, 0.76], contour: [0.08, 0.08, 0.1], grid: [0.15, 0.15, 0.16] },
+};
 
 /**
  * Packed field texture baked from the original 21600x10800 elevation map and
@@ -154,7 +166,10 @@ export default function GlobeCanvas({
         uAltitudeCutoffTopPct: { value: TOPOGRAPHY_CONFIG.altitudeCutoffTopPct },
         uOceanIsoStrength: { value: TOPOGRAPHY_CONFIG.oceanIsoStrength },
         uLandIsoStrength: { value: TOPOGRAPHY_CONFIG.landIsoStrength },
-        uTopoLineColor: { value: new THREE.Color(TOPOGRAPHY_CONFIG.topoLineColor) },
+        uTopoLineColor: { value: new THREE.Vector3() },
+        uOceanColor: { value: new THREE.Vector3() },
+        uLandColor: { value: new THREE.Vector3() },
+        uGridColor: { value: new THREE.Vector3() },
         uGridLonCount: { value: TOPOGRAPHY_CONFIG.gridLonCount },
         uGridLatCount: { value: TOPOGRAPHY_CONFIG.gridLatCount },
         uGridWidth: { value: TOPOGRAPHY_CONFIG.gridWidth },
@@ -162,6 +177,23 @@ export default function GlobeCanvas({
         uGridStrength: { value: TOPOGRAPHY_CONFIG.gridStrength },
       },
     });
+    // Dark to light by `t` (0–1), as the theme fades.
+    const paint = (t: number) => {
+      const { dark, light } = GLOBE_COLORS;
+      const set = (name: string, a: RGB, b: RGB) =>
+        (globeMaterial.uniforms[name].value as THREE.Vector3).set(
+          a[0] + (b[0] - a[0]) * t,
+          a[1] + (b[1] - a[1]) * t,
+          a[2] + (b[2] - a[2]) * t
+        );
+      set("uOceanColor", dark.ocean, light.ocean);
+      set("uLandColor", dark.land, light.land);
+      set("uTopoLineColor", dark.contour, light.contour);
+      set("uGridColor", dark.grid, light.grid);
+      networkLayer.setLight(t);
+    };
+    const fader = themeFader();
+
     const globe = new THREE.Mesh(globeGeometry, globeMaterial);
     scene.add(globe);
 
@@ -169,6 +201,7 @@ export default function GlobeCanvas({
     const networkLayer = new PopulationNetworkLayer(globeRadius);
     globe.add(networkLayer.group);
     void networkLayer.init();
+    paint(fader.step(0).t);
 
     // --- Controls ---
     const controls = new OrbitControls(camera, renderer.domElement);
@@ -182,7 +215,12 @@ export default function GlobeCanvas({
     controls.enablePan = false;
 
     // --- Interaction state ---
-    let projectionBlendTarget: number = HYBRID_CAMERA_CONFIG.initialProjectionBlend;
+    // The bend starts where the reader left it (it drives light mode — see lib/theme).
+    let projectionBlendTarget: number = THREE.MathUtils.lerp(
+      HYBRID_CAMERA_CONFIG.minProjectionBlend,
+      HYBRID_CAMERA_CONFIG.maxProjectionBlend,
+      getBend()
+    );
     let projectionBlendCurrent: number = projectionBlendTarget;
     let currentSpinSpeed: number = GLOBE_CONFIG.autoSpinSpeed;
     let isAutoSpinPaused = false;
@@ -222,6 +260,10 @@ export default function GlobeCanvas({
         projectionBlendTarget + event.deltaY * scale * HYBRID_CAMERA_CONFIG.wheelSensitivity,
         HYBRID_CAMERA_CONFIG.minProjectionBlend,
         HYBRID_CAMERA_CONFIG.maxProjectionBlend
+      );
+      saveBend(
+        (projectionBlendTarget - HYBRID_CAMERA_CONFIG.minProjectionBlend) /
+          (HYBRID_CAMERA_CONFIG.maxProjectionBlend - HYBRID_CAMERA_CONFIG.minProjectionBlend)
       );
     };
 
@@ -285,6 +327,8 @@ export default function GlobeCanvas({
       );
 
       globeMaterial.uniforms.uTime.value = now * 0.001;
+      const theme = fader.step(deltaSeconds);
+      if (theme.moved) paint(theme.t);
 
       // Auto-spin: stops while dragging, ramps back in after a beat of stillness.
       if (isAutoSpinPaused || isUserInteracting) {
@@ -331,6 +375,8 @@ export default function GlobeCanvas({
         0,
         1
       );
+      setBend(normalizedProjectionBlend);
+
       networkLayer.update(
         {
           camera,

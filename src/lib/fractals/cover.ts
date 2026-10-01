@@ -44,10 +44,23 @@ function paletteBytes(id: PaletteId): Uint8Array {
   return bytes;
 }
 
-/** The cover's colour for escape step `k`, as the shader shades it; null for the set itself (ink). */
-export function coverRGB(k: number): RGB | null {
+/**
+ * Light mode's slice of the palette. Sunburst darkens steadily from white to
+ * black, so on paper it runs backwards over its saturated middle: the set's
+ * edge (t = 1) at LIGHT_RANGE[0], deep crimson, out to [1], orange, at the
+ * fringe — every character at least 5:1 against the page, where the pale
+ * end would vanish.
+ */
+const LIGHT_RANGE = [0.24, 0.48] as const;
+
+/**
+ * The cover's colour for escape step `k`, as the shader shades it (in light
+ * mode, on LIGHT_RANGE); null for the set itself.
+ */
+export function coverRGB(k: number, theme: "dark" | "light" = "dark"): RGB | null {
   if (!k) return null;
-  const t = Math.min(Math.pow(k / COVER.max, 1 / COVER.gamma), 1);
+  let t = Math.min(Math.pow(k / COVER.max, 1 / COVER.gamma), 1);
+  if (theme === "light") t = LIGHT_RANGE[1] + (LIGHT_RANGE[0] - LIGHT_RANGE[1]) * t;
   const bytes = paletteBytes(COVER.palette);
   const i = Math.round(t * 255) * 3;
   return [bytes[i], bytes[i + 1], bytes[i + 2]];

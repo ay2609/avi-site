@@ -36,7 +36,7 @@ export type AsciiFieldId =
 export type AsciiField = (x: number, y: number, t: number) => number;
 
 /** A cell's colour (0–255 RGB), or null to leave it uncoloured. Same x, y as the field. */
-export type AsciiTint = (x: number, y: number) => [number, number, number] | null;
+export type AsciiTint = (x: number, y: number, theme: "dark" | "light") => [number, number, number] | null;
 
 const TAU = Math.PI * 2;
 
@@ -227,7 +227,7 @@ const mandel: AsciiField = (x, y, t) => {
 };
 
 /** A cell's escape step doesn't depend on how many steps run, so its colour is the cover's, fixed. */
-const mandelTint: AsciiTint = (x, y) => coverRGB(escapeStep(...mandelC(x, y), COVER.iters));
+const mandelTint: AsciiTint = (x, y, theme) => coverRGB(escapeStep(...mandelC(x, y), COVER.iters), theme);
 
 export const ASCII_FIELDS: Record<AsciiFieldId, AsciiField> = {
   terrain,

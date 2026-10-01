@@ -177,6 +177,7 @@ export default function WatchArticle({ open, landed }: { open: boolean; landed: 
       engine()?.wheel((Math.abs(e.deltaY) >= Math.abs(e.deltaX) ? e.deltaY : e.deltaX) * scale);
     };
     const onKey = (e: KeyboardEvent) => {
+      if (e.defaultPrevented) return; // Space over the docked globe pauses it instead
       const k = e.key;
       if (["ArrowDown", "ArrowRight", "PageDown", " "].includes(k)) engine()?.step(1);
       else if (["ArrowUp", "ArrowLeft", "PageUp"].includes(k)) engine()?.step(-1);

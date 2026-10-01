@@ -55,9 +55,10 @@ export default function StageChrome({
           </button>
         </div>
 
-        {/* Bottom band — how to work the art; phones get their own gestures. */}
+        {/* Bottom band — how to work the art, set right: the docked globe's
+            window sits bottom left. Phones get their own gestures. */}
         <div
-          className={`${band} items-center gap-4 px-4 max-sm:hidden`}
+          className={`${band} items-center justify-end gap-4 px-4 max-sm:hidden`}
           style={{
             left: "var(--sx)",
             width: "var(--sw)",
