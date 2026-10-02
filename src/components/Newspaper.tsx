@@ -4,6 +4,7 @@ import type { ReactNode, Ref } from "react";
 
 import AsciiPanel from "@/lib/ascii/AsciiPanel";
 import Clock from "@/components/Clock";
+import SoundToggle from "@/components/SoundToggle";
 import { LABEL } from "@/components/furniture";
 import type { AsciiFieldId } from "@/lib/ascii/fields";
 import type { ArticleId } from "@/lib/stage/articles";
@@ -104,13 +105,13 @@ function Article({
       {...click}
     >
       {/* Hover ring over the whole article — headline and art. A solid bone
-          hairline that fades in over the section's dashed rules, bled 1px so
+          hairline that flickers on over the section's dashed rules, bled 1px so
           it sits exactly on them. The art's layer sits above this section and
           takes the pointer there, so it mirrors its hover onto `data-hover`.
           Keyboard focus shows it too. */}
       <div
         aria-hidden
-        className="pointer-events-none absolute -inset-x-px -top-px -bottom-px z-10 border border-bone opacity-0 transition-opacity duration-300 ease-out group-hover:opacity-100 group-focus-visible:opacity-100 group-data-[hover]:opacity-100"
+        className="ring-flicker pointer-events-none absolute -inset-x-px -top-px -bottom-px z-10 border border-bone"
       />
       <div className="px-4 pb-3 pt-4">
         <div className={LABEL}>{label}</div>
@@ -189,10 +190,14 @@ export default function Newspaper({
         data-push="up"
         className="fit border-b border-dashed border-rule px-4 pb-[18px] pt-[44px]"
       >
-        <div className={`${LABEL} flex justify-end`}>
-          <Clock className="text-bone" />
+        {/* Above the name, whose glyphs overhang its box and would take the clicks. */}
+        <div className={`${LABEL} relative z-10 flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2`}>
+          <SoundToggle />
+          {/* Ticks aloud while hovered, with the sound on. */}
+          <Clock className="text-bone" data-sfx="clock" />
         </div>
         <h1
+          data-masthead
           className="font-serif-ui mt-3 whitespace-nowrap uppercase leading-[0.82] tracking-[-0.03em] text-bone"
           style={{ fontSize: fillSize("Avi Yadava", "18rem", "2.4rem") }}
         >
@@ -248,8 +253,9 @@ export default function Newspaper({
       </div>
 
       {/* A seam between the letter and the work: a strip of ASCII three
-          characters tall (10px / 1.15 → 34.5px), the width of the page. */}
-      <div aria-hidden className="h-[34.5px] overflow-hidden border-b border-dashed border-rule">
+          characters tall (10px / 1.15 → 34.5px), the width of the page. The
+          cursor sets it rippling (SoundBoard). */}
+      <div aria-hidden data-sfx="seam" className="h-[34.5px] overflow-hidden border-b border-dashed border-rule">
         <AsciiPanel field="seam" minRows={3} />
       </div>
 

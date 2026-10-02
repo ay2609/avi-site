@@ -107,6 +107,29 @@ body {
   );
 }
 
+/*
+ * The hover ring catches like a tube: hard steps on, no fade (after
+ * fundomo.com). It sits directly inside its group — an article's section, or
+ * the globe's layer — and comes on with the pointer, keyboard focus, or the
+ * hover the art's layer mirrors onto its section (`data-hover`).
+ */
+.ring-flicker {
+  opacity: 0; /* off until hovered; without this rule every ring shows */
+}
+.group:hover > .ring-flicker,
+.group:focus-visible > .ring-flicker,
+.group[data-hover] > .ring-flicker {
+  animation: flicker-on 0.3s step-end forwards;
+}
+@keyframes flicker-on {
+  0% { opacity: 0; }
+  12% { opacity: 1; }
+  24% { opacity: 0.15; }
+  40% { opacity: 1; }
+  56% { opacity: 0.35; }
+  70%, 100% { opacity: 1; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

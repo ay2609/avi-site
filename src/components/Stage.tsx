@@ -13,6 +13,7 @@ import {
 
 import Newspaper from "@/components/Newspaper";
 import Backdrop, { BACKDROP, spotFor } from "@/components/Backdrop";
+import SoundBoard from "@/components/SoundBoard";
 import StageChrome from "@/components/StageChrome";
 import { LABEL } from "@/components/furniture";
 import FractalArticle from "@/components/FractalArticle";
@@ -20,6 +21,7 @@ import WatchArticle from "@/components/WatchArticle";
 import GlobeCanvas from "@/lib/three/GlobeCanvas";
 import { ARTICLES, ARTICLE_IDS, type ArticleId, articleForPath } from "@/lib/stage/articles";
 import { useOpenOnClick } from "@/lib/stage/click";
+import { sfx } from "@/lib/sound/sfx";
 import {
   type Box,
   type Variant,
@@ -125,13 +127,13 @@ function Layer({
     >
       {children}
       {ring && (
-        /* Hover ring: a solid bone hairline that fades in over the section's
+        /* Hover ring: a solid bone hairline that flickers on over the section's
            dashed rules. Bled 1px so it sits exactly on the rules around the
            slot (the masthead's above the globe); hidden on the stage, whose
            rules are elsewhere. */
         <div
           aria-hidden
-          className="pointer-events-none absolute -inset-px border border-bone opacity-0 transition-opacity duration-300 ease-out group-hover:opacity-100 group-data-[open=true]:hidden group-data-[docked=true]:hidden"
+          className="ring-flicker pointer-events-none absolute -inset-px border border-bone group-data-[open=true]:hidden group-data-[docked=true]:hidden"
         />
       )}
     </div>
@@ -480,6 +482,8 @@ export default function Stage() {
         );
       }
       tl.fromTo(cs, { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.01, stagger: { each: T.type / cs.length } }, "land");
+      // The labels typing in chatter as they go.
+      tl.call(() => sfx.chatter(cs.length, T.type), undefined, "land");
       return tl;
     },
     [layerRefs, slotRefs, q, chars, placeStage, placeMini, placeRules, headlines, ghostFrom]
@@ -652,6 +656,7 @@ export default function Stage() {
           return;
         }
         tlRef.current = buildOpen(openId, variant).play();
+        sfx.sweep(true, T.fly);
       } else {
         setLandedId(null);
         html.style.overflow = "";
@@ -670,6 +675,7 @@ export default function Stage() {
           return;
         }
         tlRef.current = buildClose(prev, variant);
+        sfx.sweep(false, T.fly / T.closeSpeed);
       }
     },
     { dependencies: [openId], scope: rootRef }
@@ -677,6 +683,7 @@ export default function Stage() {
 
   return (
     <div ref={rootRef} className="contents">
+      <SoundBoard />
       <Newspaper mainRef={mainRef} slotRefs={slotRefs} onOpen={open} />
       <StageChrome chromeRef={chromeRef} article={staged} onClose={close} />
       {ARTICLE_IDS.map((id) => {
