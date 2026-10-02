@@ -13,6 +13,7 @@ import {
 
 import Newspaper from "@/components/Newspaper";
 import Backdrop, { BACKDROP, spotFor } from "@/components/Backdrop";
+import LiveIcon from "@/components/LiveIcon";
 import SoundBoard from "@/components/SoundBoard";
 import StageChrome from "@/components/StageChrome";
 import { LABEL } from "@/components/furniture";
@@ -684,6 +685,7 @@ export default function Stage() {
   return (
     <div ref={rootRef} className="contents">
       <SoundBoard />
+      <LiveIcon />
       <Newspaper mainRef={mainRef} slotRefs={slotRefs} onOpen={open} />
       <StageChrome chromeRef={chromeRef} article={staged} onClose={close} />
       {ARTICLE_IDS.map((id) => {

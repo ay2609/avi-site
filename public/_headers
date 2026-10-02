@@ -1,0 +1,31 @@
+# Cloudflare reads this from the assets directory (out/) and doesn't serve it.
+#
+# The icons and link previews are written by `next build` without an
+# extension (src/app/icon.tsx, apple-icon.tsx, opengraph-image.tsx and each
+# article's), so say what they are — unfurlers can refuse an image served as
+# octet-stream. The article paths' suffixes come from their routes, so they
+# only change if a route moves; check out/ after renaming one.
+
+/icon
+  Content-Type: image/png
+  Cache-Control: public, max-age=86400
+
+/apple-icon
+  Content-Type: image/png
+  Cache-Control: public, max-age=86400
+
+/opengraph-image
+  Content-Type: image/png
+  Cache-Control: public, max-age=3600
+
+/watch/opengraph-image-1ysh03
+  Content-Type: image/png
+  Cache-Control: public, max-age=3600
+
+/fractals/opengraph-image-1mat6i
+  Content-Type: image/png
+  Cache-Control: public, max-age=3600
+
+/globe/opengraph-image-1yhenw
+  Content-Type: image/png
+  Cache-Control: public, max-age=3600
