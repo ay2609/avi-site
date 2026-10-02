@@ -27,7 +27,7 @@ export interface Preset {
 }
 
 export interface Chapter {
-  id: "fractals" | "julia" | "fraotic" | "lissajous";
+  id: "fractals" | "julia" | "fraotic";
   headline: string;
   presets?: Preset[];
 }
@@ -407,7 +407,6 @@ export const CHAPTERS: Chapter[] = [
   { id: "fractals", headline: "Fractals" },
   { id: "julia", headline: "Julia", presets: JULIA },
   { id: "fraotic", headline: "Fraotic", presets: FRAOTIC },
-  { id: "lissajous", headline: "Lissajous" },
 ];
 
 export const LAST_CHAPTER = CHAPTERS.length - 1;

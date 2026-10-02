@@ -323,13 +323,3 @@ export function traceClifford(c: Clifford): Float64Array {
   }
   return out.subarray(0, k * 2);
 }
-
-// --- The Lissajous table (FractalsPython/Circles/MovingCircle6.py) -------------
-
-export const LISSAJOUS = {
-  /** "best working normal version": one circle per column and per row, at these rhythms. */
-  columns: [1, 2, 3, 5, 7, 10],
-  rows: [1, 2, 5],
-  /** Each tick adds 360·rhythm/1000 degrees every 10 ms: rhythm 1 turns once in 10 s. */
-  period: 10,
-};

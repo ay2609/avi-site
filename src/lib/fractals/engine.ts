@@ -1,6 +1,6 @@
 /**
  * The fractals walkthrough's scenes: what the shader draws in each chapter,
- * what the 2D overlay draws over it (the attractor, the Lissajous table), and
+ * what the 2D overlay draws over it (the attractor or the map's orbit), and
  * how one chapter hands over to the next — the picture re-resolves from a
  * coarse grid, the article's motif.
  *
@@ -15,7 +15,6 @@ import { WheelGesture } from "@/lib/stage/wheel";
 import {
   CLIFFORDS,
   FLOWS,
-  LISSAJOUS,
   traceClifford,
   traceFlow,
   type Clifford,
@@ -49,9 +48,6 @@ export const TUNE = {
   maxDpr: 1.5,
 } as const;
 
-const BONE = "#e6e4df";
-const DIM = "#8a8987";
-
 const clamp = (v: number, a: number, b: number) => Math.min(Math.max(v, a), b);
 const easeInOut = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
 
@@ -71,7 +67,6 @@ export class FractalEngine {
   private progress = 0;
   private travelFrom = 0;
   private travelStart = 0;
-  private sceneStart = 0;
   private presets: Record<string, number> = { julia: 0, fraotic: 0 };
   private juliaC: Vec2 | null = null;
   private angle = 0;
@@ -130,7 +125,6 @@ export class FractalEngine {
     }
     // Landed: resolve up from the ASCII's grid, then the walkthrough runs.
     if (was !== "stage") {
-      this.sceneStart = performance.now();
       this.resolve = this.reduce ? null : { cells: TUNE.landCells, step: TUNE.landStep, start: performance.now() };
       this.dirtyGL = true;
       this.start();
@@ -199,7 +193,6 @@ export class FractalEngine {
       this.progress = k;
       this.cb.onProgress(k);
     }
-    this.sceneStart = performance.now();
     this.juliaC = null;
     this.angle = 0;
     if (changed || instant) {
@@ -328,8 +321,6 @@ export class FractalEngine {
   private frame = (now: number) => {
     this.raf = 0;
     if (this.disposed || this.mode !== "stage") return;
-    const t = (now - this.sceneStart) / 1000;
-
     // Index marker
     const tt = clamp((now - this.travelStart) / (TUNE.travel * 1000), 0, 1);
     const p = this.travelFrom + (this.chapter - this.travelFrom) * easeInOut(tt);
@@ -358,9 +349,9 @@ export class FractalEngine {
     }
 
     // Overlay
-    this.drawOverlay(t);
+    this.drawOverlay();
 
-    const busy = !!this.resolve || tt < 1 || this.dragging || this.id === "lissajous";
+    const busy = !!this.resolve || tt < 1 || this.dragging;
     if (busy) this.start();
   };
 
@@ -377,7 +368,7 @@ export class FractalEngine {
     return [w, h, dpr];
   }
 
-  private drawOverlay(t: number): void {
+  private drawOverlay(): void {
     const ctx = this.ctx;
     if (!ctx) return;
     const [w, h, dpr] = this.fitOverlay();
@@ -386,7 +377,7 @@ export class FractalEngine {
       const p = this.preset();
       if (p?.flow) this.drawAttractor(ctx, w, h, dpr, FLOWS[p.flow], this.basinParams(p));
       else if (p?.clifford) this.drawScatter(ctx, w, h, dpr, CLIFFORDS[p.clifford]);
-    } else if (this.id === "lissajous") this.drawLissajous(ctx, w, h, dpr, t);
+    }
   }
 
   // FRAOTIC — the attractor, drawn faintly over its own basin, as lorenz.py does.
@@ -471,85 +462,5 @@ export class FractalEngine {
       this.scatter = { key, canvas };
     }
     ctx.drawImage(this.scatter.canvas, 0, 0);
-  }
-
-  // LISSAJOUS — MovingCircle6.py: one circle per column and per row, spaced 3, radius 1.15.
-  private drawLissajous(ctx: CanvasRenderingContext2D, w: number, h: number, dpr: number, t: number): void {
-    const { columns, rows, period } = LISSAJOUS;
-    const R = 1.15;
-    const span = { x0: -R * 1.5, x1: columns.length * 3 + R * 1.5, y0: -(rows.length - 1) * 3 - R * 1.5, y1: 3 + R * 1.5 };
-    // Leave the headline's band above and the caption's below.
-    const area = { top: h * 0.22, bottom: h * 0.84, left: w * 0.05, right: w * 0.95 };
-    const s = Math.min((area.right - area.left) / (span.x1 - span.x0), (area.bottom - area.top) / (span.y1 - span.y0));
-    const ox = (area.left + area.right) / 2 - ((span.x0 + span.x1) / 2) * s;
-    const oy = (area.top + area.bottom) / 2 + ((span.y0 + span.y1) / 2) * s;
-    const X = (x: number) => ox + x * s;
-    const Y = (y: number) => oy - y * s;
-    const time = this.reduce ? period : t;
-    const phi = (r: number, tt: number) => (2 * Math.PI * r * tt) / period;
-    const colX = (j: number, tt: number) => (j + 1) * 3 + R * Math.cos(phi(columns[j], tt));
-    const rowY = (i: number, tt: number) => -i * 3 + R * Math.sin(phi(rows[i], tt));
-
-    ctx.save();
-    ctx.lineWidth = dpr;
-    // Circles
-    ctx.strokeStyle = DIM;
-    ctx.globalAlpha = 0.5;
-    columns.forEach((_, j) => {
-      ctx.beginPath();
-      ctx.arc(X((j + 1) * 3), Y(3), R * s, 0, Math.PI * 2);
-      ctx.stroke();
-    });
-    rows.forEach((_, i) => {
-      ctx.beginPath();
-      ctx.arc(X(0), Y(-i * 3), R * s, 0, Math.PI * 2);
-      ctx.stroke();
-    });
-    // Projection lines
-    if (!this.reduce) {
-      ctx.globalAlpha = 0.22;
-      ctx.setLineDash([3 * dpr, 4 * dpr]);
-      columns.forEach((_, j) => {
-        const x = X(colX(j, time));
-        ctx.beginPath();
-        ctx.moveTo(x, Y(3 + R * Math.sin(phi(columns[j], time))));
-        ctx.lineTo(x, Y(span.y0));
-        ctx.stroke();
-      });
-      rows.forEach((_, i) => {
-        const y = Y(rowY(i, time));
-        ctx.beginPath();
-        ctx.moveTo(X(R * Math.cos(phi(rows[i], time))), y);
-        ctx.lineTo(X(span.x1), y);
-        ctx.stroke();
-      });
-      ctx.setLineDash([]);
-    }
-    // Curves: the last ten seconds of each (his deque held 1000 ticks of 10 ms).
-    ctx.strokeStyle = BONE;
-    ctx.globalAlpha = 0.85;
-    const from = Math.max(0, time - period);
-    const samples = 360;
-    rows.forEach((_, i) => {
-      columns.forEach((_, j) => {
-        ctx.beginPath();
-        for (let k = 0; k <= samples; k++) {
-          const tt = from + ((time - from) * k) / samples;
-          const x = X(colX(j, tt));
-          const y = Y(rowY(i, tt));
-          if (k === 0) ctx.moveTo(x, y);
-          else ctx.lineTo(x, y);
-        }
-        ctx.stroke();
-      });
-    });
-    // Points
-    ctx.globalAlpha = 1;
-    ctx.fillStyle = BONE;
-    const d = Math.max(3, Math.round(2 * dpr));
-    const dotAt = (x: number, y: number) => ctx.fillRect(X(x) - d / 2, Y(y) - d / 2, d, d);
-    columns.forEach((r, j) => dotAt(colX(j, time), 3 + R * Math.sin(phi(r, time))));
-    rows.forEach((r, i) => dotAt(R * Math.cos(phi(r, time)), rowY(i, time)));
-    ctx.restore();
   }
 }

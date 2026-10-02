@@ -2,7 +2,7 @@
 
 My personal website, live at [halcyn.dev](https://halcyn.dev/).
 
-It's laid out like the front page of a newspaper where every article is a picture. Spin the globe and bend its projection (bend it past halfway and the whole page turns to paper, and stays that way next visit), open the watch to take my smartwatch's board apart one chapter at a time, or open Fractals to walk through live ports of the code I wrote in high school, from the Mandelbrot set to chaotic attractors and a Lissajous table. Clicking an article grows it to full screen at its own address, and Esc folds it back into the page. Every article opens from the keyboard too, and motion respects reduced-motion settings.
+It's laid out like the front page of a newspaper where every article is a picture. Spin the globe and bend its projection (bend it past halfway and the whole page turns to paper, and stays that way next visit), open the watch to take my smartwatch's board apart one chapter at a time, or open Fractals to walk through live ports of the code I wrote in high school, from the Mandelbrot set to chaotic attractors. Clicking an article grows it to full screen at its own address, and Esc folds it back into the page. Every article opens from the keyboard too, and motion respects reduced-motion settings.
 
 ## Development
 
@@ -28,7 +28,7 @@ Cloudflare deploys `main` automatically after a push: Workers Builds runs `npm c
 - `src/lib/three/GlobeCanvas.tsx`, `src/lib/shaders/globe/` and `src/lib/three/network/`: the globe's contour shader, perspective-to-orthographic camera and mesh network.
 - `src/components/Backdrop.tsx`: the faint ASCII field behind the open globe.
 - `src/components/WatchArticle.tsx` and `src/lib/watch/`: the watch teardown — five chapters, part callouts, and a re-creation of the watch face my firmware draws.
-- `src/components/FractalArticle.tsx` and `src/lib/fractals/`: the fractals walkthrough — one WebGL shader porting my Python, the Mandelbrot cover, the Julia and Fraotic presets, and the Lissajous table.
+- `src/components/FractalArticle.tsx` and `src/lib/fractals/`: the fractals walkthrough — one WebGL shader porting my Python, the Mandelbrot cover and the Julia and Fraotic presets.
 - `src/lib/ascii/`: the animated ASCII fields on the page.
 - `scripts/`: offline pipelines for the globe texture, the watch parts, the firmware's glyphs and the fractal palettes.
 
