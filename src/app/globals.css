@@ -81,6 +81,10 @@ body {
 .font-serif-ui {
   font-family: var(--font-serif), Georgia, "Times New Roman", serif;
 }
+/* Body copy and captions. Instrument Serif is too tall to read in; titles only. */
+.font-text-ui {
+  font-family: var(--font-text), Georgia, "Times New Roman", serif;
+}
 .font-mono-ui {
   font-family: var(--font-mono), ui-monospace, "SFMono-Regular", monospace;
 }
