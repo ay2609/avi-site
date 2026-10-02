@@ -370,9 +370,17 @@ export default function FractalArticle({ open, landed }: { open: boolean; landed
                         </button>
                       ) : (
                         <>
-                          <span className={`mr-[1.2em] tracking-[0.18em] ${active ? "text-bone" : ""}`}>
+                          {/* The group's name opens it at its first variant; inside it, it stays put. */}
+                          <button
+                            type="button"
+                            tabIndex={tab}
+                            onClick={() => !active && pick(row.items[0])}
+                            className={`pointer-events-auto mr-[1.2em] uppercase tracking-[0.18em] transition-colors ${
+                              active ? "text-bone" : "cursor-pointer hover:text-bone"
+                            }`}
+                          >
                             <span data-typed>{row.label}</span>
-                          </span>
+                          </button>
                           {row.items.map((k, j) => (
                             <Fragment key={k}>
                               {j > 0 && (
