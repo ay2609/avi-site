@@ -30,7 +30,8 @@ export type AsciiFieldId =
   | "weave"
   | "scan"
   | "crate"
-  | "mandel";
+  | "mandel"
+  | "seam";
 
 /** x, y are in [0, 1] over the square inscribed in the panel; t is seconds. */
 export type AsciiField = (x: number, y: number, t: number) => number;
@@ -188,6 +189,18 @@ const scan: AsciiField = (x, y, t) => {
 };
 
 /**
+ * For a strip only three characters tall: two slanted waves drifting past each
+ * other, so the rule between sections reads as a moving seam. Frequencies are
+ * per row height (the field's unit is the strip's height, about six characters
+ * wide), which keeps each lobe a dozen-odd characters long at any width.
+ */
+const seam: AsciiField = (x, y, t) => {
+  const a = 0.5 + 0.5 * Math.sin(x * 1.9 - t * 1.1 + y * 2.2);
+  const b = 0.5 + 0.5 * Math.sin(x * 0.75 + t * 0.42 - y * 1.4);
+  return Math.pow(a * b, 0.85);
+};
+
+/**
  * An egg-crate interference — sin·sin on two axes that slowly turn — after the
  * backdrop on caponier.io. Soft lobes, no lines, so it survives any grid size;
  * the stage uses it large and nearly invisible behind the globe.
@@ -240,6 +253,7 @@ export const ASCII_FIELDS: Record<AsciiFieldId, AsciiField> = {
   scan,
   crate,
   mandel,
+  seam,
 };
 
 /** Sparse-to-dense character ramps. Index 0 renders as empty space. */
@@ -252,6 +266,7 @@ export const ASCII_RAMPS: Record<AsciiFieldId, string> = {
   spiral: " .:-=+*#%",
   weave: " .:-=+*#",
   scan: " .:-=+*#",
+  seam: " .:-=+*#",
   crate: " .:-=+*#%@",
   mandel: " .:-=+*#%@",
 };

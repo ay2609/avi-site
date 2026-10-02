@@ -11,6 +11,8 @@ interface AsciiPanelProps {
   /** Refresh rate. Well below display refresh; the globe needs the frames. */
   fps?: number;
   className?: string;
+  /** The fewest rows the grid may have; a thin strip asks for fewer than the default. */
+  minRows?: number;
   /** Overrides for the text (font size, line height, colour) — inline, so they win. */
   style?: CSSProperties;
 }
@@ -29,6 +31,7 @@ export default function AsciiPanel({
   field,
   fps = 18,
   className = "",
+  minRows = 4,
   style,
 }: AsciiPanelProps) {
   const preRef = useRef<HTMLPreElement | null>(null);
@@ -72,7 +75,7 @@ export default function AsciiPanel({
       if (!charWidth || !lineHeight || !width || !height) return false;
 
       const nextCols = Math.max(8, Math.floor(width / charWidth));
-      const nextRows = Math.max(4, Math.floor(height / lineHeight));
+      const nextRows = Math.max(minRows, Math.floor(height / lineHeight));
       if (nextCols === cols && nextRows === rows) return false;
 
       cols = nextCols;
@@ -184,7 +187,7 @@ export default function AsciiPanel({
       resizeObserver.disconnect();
       offTheme();
     };
-  }, [field, fps]);
+  }, [field, fps, minRows]);
 
   return (
     <pre
