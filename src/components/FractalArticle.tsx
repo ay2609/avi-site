@@ -6,6 +6,7 @@ import { LABEL } from "@/components/furniture";
 import AsciiPanel from "@/lib/ascii/AsciiPanel";
 import { CHAPTERS, dragOf, LAST_CHAPTER, presetRows } from "@/lib/fractals/chapters";
 import { FractalEngine } from "@/lib/fractals/engine";
+import { sfx } from "@/lib/sound/sfx";
 import { gsap, prefersReducedMotion, SplitText, stageBox } from "@/lib/stage/motion";
 
 /** Height of one row of the chapter index, px — the marker moves in these. */
@@ -70,7 +71,10 @@ export default function FractalArticle({ open, landed }: { open: boolean; landed
       onProgress: (p) => {
         if (markerRef.current) markerRef.current.style.transform = `translateY(${p * INDEX_ROW}px)`;
       },
-      onChapter: setChapter,
+      onChapter: (k) => {
+        setChapter(k);
+        if (stateRef.current.landed) sfx.detent();
+      },
       onPreset: setPreset,
     });
     engine.setOpen(stateRef.current.open, stateRef.current.landed);

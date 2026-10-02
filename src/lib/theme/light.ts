@@ -1,5 +1,7 @@
 import { useSyncExternalStore } from "react";
 
+import { sfx } from "@/lib/sound/sfx";
+
 import { BEND_KEY } from "./prepaint";
 
 /**
@@ -42,6 +44,7 @@ export function getBend(): number {
 
 export function setBend(next: number): void {
   bend = next;
+  sfx.bend(next); // hums while it moves
   if (next > FLIP_ON) setTheme("light");
   else if (next < FLIP_OFF) setTheme("dark");
 }
@@ -78,6 +81,7 @@ function setTheme(next: Theme): void {
   clearTimeout(flipTimer);
   flipTimer = setTimeout(() => html.classList.remove("theme-flip"), FLIP_S * 1000 + 50);
   themeSubs.forEach((f) => f());
+  sfx.lights(next); // the relay, and the tubes (or a whine down)
 }
 
 export function onTheme(f: () => void): () => void {

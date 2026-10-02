@@ -3,6 +3,7 @@
 import { type ReactNode, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import { LABEL } from "@/components/furniture";
+import { sfx } from "@/lib/sound/sfx";
 import { gsap, prefersReducedMotion, SplitText } from "@/lib/stage/motion";
 import { CHAPTERS, LAST_CHAPTER, type Callout } from "@/lib/watch/chapters";
 import { type Anchor, type FrameInfo, WatchEngine } from "@/lib/watch/engine";
@@ -143,6 +144,7 @@ export default function WatchArticle({ open, landed }: { open: boolean; landed: 
       if (f.chapter !== shown.current.chapter) {
         shown.current.chapter = f.chapter;
         setChapter(f.chapter);
+        if (stateRef.current.landed) sfx.detent();
       }
       if (f.settled !== shown.current.settled) {
         shown.current.settled = f.settled;

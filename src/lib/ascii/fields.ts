@@ -197,8 +197,38 @@ const scan: AsciiField = (x, y, t) => {
 const seam: AsciiField = (x, y, t) => {
   const a = 0.5 + 0.5 * Math.sin(x * 1.9 - t * 1.1 + y * 2.2);
   const b = 0.5 + 0.5 * Math.sin(x * 0.75 + t * 0.42 - y * 1.4);
-  return Math.pow(a * b, 0.85);
+  return Math.min(1, Math.pow(a * b, 0.85) + plucked(x));
 };
+
+/**
+ * The seam is strummed by the cursor (see Newspaper): each pluck sends a ring
+ * out both ways from where it landed, fading over a second or so. Positions
+ * are in the field's units; times are the page clock's, in s.
+ */
+const plucks: { x: number; at: number; strength: number }[] = [];
+const PLUCK_LIFE = 1.4;
+
+export function pluckSeam(x: number, strength = 1): void {
+  plucks.push({ x, at: performance.now() / 1000, strength });
+  if (plucks.length > 12) plucks.shift();
+}
+
+function plucked(x: number): number {
+  if (!plucks.length) return 0;
+  const now = performance.now() / 1000;
+  let sum = 0;
+  for (const p of plucks) {
+    const age = now - p.at;
+    if (age > PLUCK_LIFE) continue;
+    const d = Math.abs(x - p.x);
+    // A crest travelling outward at ~6 units/s, its wake ringing behind it.
+    const front = d - age * 6;
+    const crest = Math.exp(-front * front * 1.5);
+    const wake = front < 0 ? 0.5 + 0.5 * Math.cos(front * 3.2) : 0;
+    sum += p.strength * Math.exp(-age * 2.6) * Math.max(crest, wake * Math.exp(front * 0.5) * 0.7);
+  }
+  return sum;
+}
 
 /**
  * An egg-crate interference — sin·sin on two axes that slowly turn — after the
