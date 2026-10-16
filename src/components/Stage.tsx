@@ -731,7 +731,9 @@ export default function Stage() {
             style={{ height: MINI.bar }}
           >
             <span>/Globe</span>
-            <span className="max-sm:hidden">Scroll to bend</span>
+            {/* Only while the pointer is over it, so it doesn't argue with the
+                article's own "scroll to walk through". */}
+            <span className="opacity-0 transition-opacity group-hover:opacity-100 max-sm:hidden">Scroll to bend</span>
           </div>
         </div>
         <GlobeCanvas />

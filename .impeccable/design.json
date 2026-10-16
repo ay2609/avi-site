@@ -1,0 +1,297 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-16T08:40:00Z",
+  "title": "Design System: Avi's front page",
+  "extensions": {
+    "colorMeta": {
+      "ink": {
+        "role": "neutral",
+        "displayName": "Ink",
+        "canonical": "#0a0a0b",
+        "tonalRamp": [
+          "#0a0a0b",
+          "#161618",
+          "#232325",
+          "#3a3a3c",
+          "#58585a",
+          "#7c7c7d",
+          "#a9a9a9",
+          "#dededd"
+        ]
+      },
+      "panel": {
+        "role": "neutral",
+        "displayName": "Recessed Well",
+        "canonical": "#111113",
+        "tonalRamp": [
+          "#0b0b0d",
+          "#111113",
+          "#1d1d20",
+          "#333336",
+          "#525255",
+          "#78787b",
+          "#a6a6a8",
+          "#dcdcdd"
+        ]
+      },
+      "bone": {
+        "role": "primary",
+        "displayName": "Bone",
+        "canonical": "#e6e4df",
+        "tonalRamp": [
+          "#26251f",
+          "#45433d",
+          "#65635d",
+          "#86847e",
+          "#a7a59f",
+          "#c6c4bf",
+          "#e6e4df",
+          "#f6f5f2"
+        ]
+      },
+      "dim": {
+        "role": "neutral",
+        "displayName": "Dim Label Grey",
+        "canonical": "#8a8987",
+        "tonalRamp": [
+          "#272726",
+          "#3d3c3b",
+          "#555453",
+          "#6f6e6c",
+          "#8a8987",
+          "#a6a5a3",
+          "#c4c3c1",
+          "#e3e2e0"
+        ]
+      },
+      "rule": {
+        "role": "neutral",
+        "displayName": "Hairline",
+        "canonical": "#2a2a2c",
+        "tonalRamp": [
+          "#151516",
+          "#2a2a2c",
+          "#3f3f42",
+          "#58585b",
+          "#747477",
+          "#949497",
+          "#b8b8ba",
+          "#dcdcdd"
+        ]
+      },
+      "paper": {
+        "role": "neutral",
+        "displayName": "Newsprint",
+        "canonical": "#f1efea",
+        "tonalRamp": [
+          "#2a2925",
+          "#4a4843",
+          "#6b6963",
+          "#8e8c86",
+          "#b1afa9",
+          "#d2d0ca",
+          "#e8e6e0",
+          "#f1efea"
+        ]
+      },
+      "paper-ink": {
+        "role": "primary",
+        "displayName": "Press Black",
+        "canonical": "#17171a",
+        "tonalRamp": [
+          "#17171a",
+          "#2b2b2f",
+          "#424246",
+          "#5d5d61",
+          "#7b7b7f",
+          "#9d9da0",
+          "#c3c3c5",
+          "#e7e7e8"
+        ]
+      },
+      "hub-violet": {
+        "role": "tertiary",
+        "displayName": "Hub Violet",
+        "canonical": "rgb(227 107 255)",
+        "tonalRamp": [
+          "#2f0a3a",
+          "#4f1462",
+          "#721f8c",
+          "#962bb8",
+          "#ba3fe0",
+          "#e36bff",
+          "#ee9fff",
+          "#f8d6ff"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "masthead": {
+        "displayName": "Masthead",
+        "purpose": "The name, fitted to the page width. Nothing else."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Article and chapter names, uppercase, fitted to their box."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Sentence-case titles: the greeting and the contact address."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "The About letter; Newsreader with optical sizing."
+      },
+      "dek": {
+        "displayName": "Dek",
+        "purpose": "One or two dim lines under a headline; italic in figure captions."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "All furniture: kickers, clock, sound switch, stage bands, chapter indexes, contact links."
+      },
+      "stage-headline": {
+        "displayName": "Stage Headline",
+        "purpose": "Chapter name on an open article; the front-page headline flies into it."
+      },
+      "contact": {
+        "displayName": "Contact",
+        "purpose": "The email address at the foot of the page."
+      }
+    },
+    "shadows": [],
+    "motion": [
+      {
+        "name": "flicker-on",
+        "value": "0.3s step-end keyframes 0 → 1 → .15 → 1 → .35 → 1",
+        "purpose": "Hover/focus ring catching like a tube."
+      },
+      {
+        "name": "theme-flip",
+        "value": "0.3s ease-out on colours",
+        "purpose": "Cross-fade while the globe flips the theme."
+      },
+      {
+        "name": "link-hover",
+        "value": "transition-colors (150ms)",
+        "purpose": "Links and labels dimming or brightening."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "sm",
+        "value": "640px",
+        "purpose": "Stage controls band hidden below."
+      },
+      {
+        "name": "md",
+        "value": "768px",
+        "purpose": "Front page goes to one column below."
+      },
+      {
+        "name": "stage-compact",
+        "value": "560px container",
+        "purpose": "Chapter copy moves above the art."
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Article",
+      "kind": "card",
+      "refersTo": "article-section",
+      "description": "A front-page story: kicker, fitted headline, dek, art. The whole thing opens on click; a ring flickers on with hover or focus.",
+      "html": "<a class=\"ds-article\" href=\"#\"><span class=\"ds-ring\"></span><span class=\"ds-label\">/Project — ESP32 / KiCad</span><span class=\"ds-headline\">Watch</span><span class=\"ds-dek\">My freshman-year project: a smartwatch designed from nothing.</span><span class=\"ds-art\"></span></a>",
+      "css": ".ds-article{position:relative;display:flex;flex-direction:column;width:320px;padding:16px 16px 0;background:var(--ink,#0a0a0b);color:var(--bone,#e6e4df);border-bottom:1px dashed var(--rule,#2a2a2c);text-decoration:none;outline:none}.ds-ring{position:absolute;inset:-1px;border:1px solid var(--bone,#e6e4df);opacity:0;pointer-events:none}.ds-article:hover .ds-ring,.ds-article:focus-visible .ds-ring{animation:ds-flicker .3s step-end forwards}@keyframes ds-flicker{0%{opacity:0}12%{opacity:1}24%{opacity:.15}40%{opacity:1}56%{opacity:.35}70%,100%{opacity:1}}.ds-label{font:300 10px/1.4 'IBM Plex Mono',monospace;letter-spacing:.18em;text-transform:uppercase;color:var(--dim,#8a8987)}.ds-headline{margin-top:6px;font:400 4.5rem/.86 'Instrument Serif',Georgia,serif;letter-spacing:-.02em;text-transform:uppercase}.ds-dek{margin-top:12px;font:400 .95rem/1.5 Newsreader,Georgia,serif;color:var(--dim,#8a8987)}.ds-art{display:block;margin:12px -16px 0;aspect-ratio:4/3;background-image:repeating-linear-gradient(45deg,transparent 0 2px,rgb(230 228 223/.1) 7px,rgb(230 228 223/.1) 7px)}"
+    },
+    {
+      "name": "Mono Label Link",
+      "kind": "nav",
+      "refersTo": "mono-link",
+      "description": "Contact links and stage buttons: hairline mono, bone, dims on hover.",
+      "html": "<nav class=\"ds-mono-nav\"><a href=\"#\">LinkedIn</a><a href=\"#\">GitHub</a></nav>",
+      "css": ".ds-mono-nav{display:flex;gap:28px;background:var(--ink,#0a0a0b);padding:16px}.ds-mono-nav a{font:300 10px/1.4 'IBM Plex Mono',monospace;letter-spacing:.18em;text-transform:uppercase;color:var(--bone,#e6e4df);text-decoration:none;transition:color .15s}.ds-mono-nav a:hover{color:var(--dim,#8a8987)}.ds-mono-nav a:focus-visible{outline:1px solid var(--bone,#e6e4df);outline-offset:4px}"
+    },
+    {
+      "name": "Inline Prose Link",
+      "kind": "custom",
+      "refersTo": "inline-link",
+      "description": "A link inside the letter: dashed dim underline, solid bone on hover.",
+      "html": "<p class=\"ds-prose\">I'm the executive director of <a href=\"#\">Startup Shell</a>.</p>",
+      "css": ".ds-prose{font:400 1.125rem/1.6 Newsreader,Georgia,serif;color:var(--bone,#e6e4df);background:var(--ink,#0a0a0b);padding:16px}.ds-prose a{color:inherit;text-decoration:underline dashed 1px var(--dim,#8a8987);text-underline-offset:.22em;transition:text-decoration-color .15s}.ds-prose a:hover{text-decoration-color:var(--bone,#e6e4df)}.ds-prose a:focus-visible{outline:1px solid var(--bone,#e6e4df);outline-offset:2px}"
+    },
+    {
+      "name": "Chapter Index",
+      "kind": "nav",
+      "description": "Numbered mono chapter list with a 1×10px marker beside the active entry.",
+      "html": "<ol class=\"ds-index\"><li>00 Watch</li><li>01 Power</li><li class=\"on\">02 Brain</li><li>03 Senses</li><li>04 Face</li></ol>",
+      "css": ".ds-index{list-style:none;margin:0;padding:16px 16px 16px 32px;background:var(--ink,#0a0a0b);font:300 10px/1.6 'IBM Plex Mono',monospace;letter-spacing:.18em;text-transform:uppercase;color:var(--dim,#8a8987)}.ds-index li{position:relative;cursor:pointer;transition:color .15s}.ds-index li:hover,.ds-index li.on{color:var(--bone,#e6e4df)}.ds-index li.on::before{content:'';position:absolute;left:-16px;top:3px;width:1px;height:10px;background:var(--bone,#e6e4df)}"
+    },
+    {
+      "name": "Stage Band",
+      "kind": "custom",
+      "refersTo": "stage-band",
+      "description": "Top band of an open article: kicker left, Esc — Back right, over a dashed rule.",
+      "html": "<div class=\"ds-band\"><span>/Watch — ESP32 / KiCad</span><button>Esc — Back</button></div>",
+      "css": ".ds-band{display:flex;justify-content:space-between;align-items:center;gap:16px;width:420px;padding:16px;background:var(--ink,#0a0a0b);border-bottom:1px dashed var(--rule,#2a2a2c);font:300 10px/1.4 'IBM Plex Mono',monospace;letter-spacing:.18em;text-transform:uppercase;color:var(--dim,#8a8987)}.ds-band button{all:unset;cursor:pointer;color:var(--bone,#e6e4df);transition:color .15s}.ds-band button:hover{color:var(--dim,#8a8987)}.ds-band button:focus-visible{outline:1px solid var(--bone,#e6e4df);outline-offset:4px}"
+    },
+    {
+      "name": "Sound Switch",
+      "kind": "button",
+      "description": "Mono switch with a 10-cell ASCII level meter reading the real output.",
+      "html": "<button class=\"ds-sound\">Sound — <b>On</b> <span>.:=+*#=:..</span></button>",
+      "css": ".ds-sound{all:unset;cursor:pointer;display:inline-flex;gap:12px;align-items:baseline;padding:16px;background:var(--ink,#0a0a0b);font:300 10px/1.4 'IBM Plex Mono',monospace;letter-spacing:.18em;text-transform:uppercase;color:var(--dim,#8a8987);transition:color .15s}.ds-sound b{font-weight:300;color:var(--bone,#e6e4df)}.ds-sound span{white-space:pre;color:var(--bone,#e6e4df)}.ds-sound:hover{color:var(--bone,#e6e4df)}.ds-sound:focus-visible{outline:1px solid var(--bone,#e6e4df);outline-offset:2px}"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Broadsheet of One",
+    "overview": "The site is set like the front page of a newspaper, with one person as the whole edition. A masthead carries the name at poster scale, and tiers of articles below it zig-zag the way a broadsheet does: the wide column swaps sides each tier. Every article is a picture rather than a block of text: a globe, a circuit board, a fractal. Clicking one grows it to fill the screen at its own address, and the newspaper's grid lines stretch out to the edges of the viewport around it. Esc folds it back into the page.\n\nThe material is newsprint in negative. It's one tone in four values, with hairline dashed rules instead of boxes, no radii and no shadows. The only real colours are the work itself: the globe's violet network hubs and the fractals' matplotlib palettes. Light mode isn't a settings toggle. You reach it by bending the globe past halfway, and it then holds across visits. Motion is mechanical rather than soft: hover rings switch on in hard steps like a fluorescent tube, labels type themselves in, and an optional synthesized sound layer clicks and hums.",
+    "keyCharacteristics": [
+      "Newspaper grid: masthead, tiers, dashed column rules, figure captions (\"Fig. 1\"), and a mono kicker over every headline.",
+      "Headlines are fitted to their box in container units (`cqw`), so each word fills its column.",
+      "Monochrome chrome: colour belongs only to the artwork.",
+      "Live art everywhere: WebGL and animated ASCII fields stand in for photos.",
+      "Hard-step motion and typed labels; reduced-motion collapses all of it."
+    ],
+    "rules": [
+      {
+        "name": "The Colour Is the Work Rule",
+        "body": "UI chrome never takes a hue. Colour on screen should always come from an artwork.",
+        "section": "colors"
+      },
+      {
+        "name": "The Two Ends Rule",
+        "body": "A theme is the same four tokens swapped. Never add a light-only or dark-only token for chrome.",
+        "section": "colors"
+      },
+      {
+        "name": "The Titles-Only Rule",
+        "body": "Instrument Serif is too tall to read in. It sets names and titles only, never a sentence of body text.",
+        "section": "typography"
+      },
+      {
+        "name": "The Fitted Headline Rule",
+        "body": "Size headlines with `fillSize()` against the nearest `.fit` container. Never pick a fixed px size per word.",
+        "section": "typography"
+      },
+      {
+        "name": "The Flat Newsprint Rule",
+        "body": "Nothing casts a shadow. Separation comes from a hairline or from space.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do keep every label in Plex Mono 300 at 10px, uppercase with 0.18em tracking, starting with a slash (\"/About\", \"/Contact\").",
+      "Do draw structure with 1px dashed `rule` hairlines; the outer page edges are the only solid rules.",
+      "Do let artwork carry all of the colour: the globe's violet and the fractal palettes.",
+      "Do give every opening thing both a click and a keyboard path, plus a visible focus state (the flicker ring).",
+      "Do use hard-step (`step-end`) timing for state changes that should feel electrical, and respect `prefers-reduced-motion`."
+    ],
+    "donts": [
+      "Don't round a corner or add a shadow.",
+      "Don't set body copy in Instrument Serif.",
+      "Don't add a UI accent colour. A hover is bone or dim, never a hue.",
+      "Don't fade a hover ring in smoothly; it catches like a tube."
+    ]
+  }
+}

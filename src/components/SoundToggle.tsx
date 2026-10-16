@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useSyncExternalStore } from "react";
 
-import { LABEL } from "@/components/furniture";
+import { HIT, LABEL } from "@/components/furniture";
 import { prefersReducedMotion } from "@/lib/stage/motion";
 import { sfx } from "@/lib/sound/sfx";
 
@@ -69,7 +69,7 @@ export default function SoundToggle() {
       onClick={toggle}
       aria-pressed={on}
       title="Every sound on this page is synthesized live in your browser"
-      className={`${LABEL} flex items-baseline gap-3 transition-colors hover:text-bone`}
+      className={`${LABEL} ${HIT} flex items-baseline gap-3 transition-colors hover:text-bone`}
     >
       <span>
         Sound — <span className={on ? "text-bone" : ""}>{on ? "On" : "Off"}</span>

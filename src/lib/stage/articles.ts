@@ -13,8 +13,10 @@ export interface Article {
   aspect: number;
   /** Top band, left. */
   kicker: string;
-  /** Bottom band, left: how to work the art (Esc is the button in the top band). */
+  /** Bottom band, right: how to work the art (Esc is the button in the top band). */
   controls: string;
+  /** The same, for a touch screen, short enough to clear the docked globe. */
+  touch: string;
   /** A near-invisible animated ASCII field behind the whole stage. */
   backdrop?: AsciiFieldId;
   /** `<title>` when open. */
@@ -27,7 +29,8 @@ export const ARTICLES: Record<ArticleId, Article> = {
     route: "/globe",
     aspect: 1,
     kicker: "/Globe — Three.js / GLSL",
-    controls: "Drag to orbit · Scroll to bend · Space to pause",
+    controls: "Drag to orbit · Scroll to bend; past halfway, paper · Space to pause",
+    touch: "Drag to orbit",
     backdrop: "crate",
     title: "Globe — Avi Yadava",
   },
@@ -37,6 +40,7 @@ export const ARTICLES: Record<ArticleId, Article> = {
     aspect: 4 / 3,
     kicker: "/Watch — ESP32 / KiCad",
     controls: "Scroll to walk through",
+    touch: "Swipe up to walk through",
     title: "Watch — Avi Yadava",
   },
   fractals: {
@@ -45,6 +49,7 @@ export const ARTICLES: Record<ArticleId, Article> = {
     aspect: 1,
     kicker: "/Fractals — NumPy / GLSL",
     controls: "Scroll to walk through · Drag to explore",
+    touch: "Swipe up · Tap for next",
     title: "Fractals — Avi Yadava",
   },
 };

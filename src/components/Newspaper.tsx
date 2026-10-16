@@ -5,7 +5,7 @@ import type { ReactNode, Ref } from "react";
 import AsciiPanel from "@/lib/ascii/AsciiPanel";
 import Clock from "@/components/Clock";
 import SoundToggle from "@/components/SoundToggle";
-import { LABEL } from "@/components/furniture";
+import { HIT, LABEL } from "@/components/furniture";
 import type { AsciiFieldId } from "@/lib/ascii/fields";
 import type { ArticleId } from "@/lib/stage/articles";
 import { useOpenOnClick } from "@/lib/stage/click";
@@ -70,6 +70,18 @@ function A({ href, children }: { href: string; children: ReactNode }) {
 }
 
 /**
+ * Says the thing opens, on the label line, for readers with no hover to find
+ * out with. The whole article is the link; this is only its sign.
+ */
+function OpenCue({ className = "" }: { className?: string }) {
+  return (
+    <span aria-hidden className={`whitespace-nowrap transition-colors ${className}`}>
+      Open ↗
+    </span>
+  );
+}
+
+/**
  * A headline set to span its box, a line of copy, and art that bleeds to the
  * edges. Every article grows to fill its column, so a tier's two columns end
  * level; the slack goes around the art.
@@ -114,7 +126,10 @@ function Article({
         className="ring-flicker pointer-events-none absolute -inset-x-px -top-px -bottom-px z-10 border border-bone"
       />
       <div className="px-4 pb-3 pt-4">
-        <div className={LABEL}>{label}</div>
+        <div className={`${LABEL} flex items-baseline justify-between gap-4`}>
+          <span>{label}</span>
+          <OpenCue className="group-hover:text-bone group-focus-visible:text-bone group-data-[hover]:text-bone" />
+        </div>
         <h2
           data-headline={slot.id}
           className="font-serif-ui mt-1.5 whitespace-nowrap uppercase leading-[0.86] tracking-[-0.02em] text-bone"
@@ -135,9 +150,9 @@ function Article({
  * A spot held for work still to be picked: nothing but ASCII, at least
  * `ratio` tall and growing to level its tier.
  */
-function Placeholder({ field, ratio }: { field: AsciiFieldId; ratio: string }) {
+function Placeholder({ field, ratio, className = "" }: { field: AsciiFieldId; ratio: string; className?: string }) {
   return (
-    <div aria-hidden className={`${ratio} w-full flex-1 overflow-hidden border-b border-dashed border-rule`}>
+    <div aria-hidden className={`${ratio} w-full flex-1 overflow-hidden border-b border-dashed border-rule ${className}`}>
       <AsciiPanel field={field} />
     </div>
   );
@@ -243,8 +258,16 @@ export default function Newspaper({
             onKeyDown={openGlobe.onKeyDown}
             className="aspect-square w-full outline-none focus-visible:outline-solid focus-visible:outline-1 focus-visible:outline-bone"
           />
-          <figcaption className="flex-1 border-t border-dashed border-rule px-4 pb-4 pt-3">
-            <span className={LABEL}>Fig. 1</span>
+          {/* The caption opens the globe too, as an article's headline does. */}
+          <figcaption
+            className="group flex-1 cursor-pointer border-t border-dashed border-rule px-4 pb-4 pt-3"
+            onPointerDownCapture={openGlobe.onPointerDownCapture}
+            onClick={openGlobe.onClick}
+          >
+            <div className={`${LABEL} flex items-baseline justify-between gap-4`}>
+              <span>Fig. 1</span>
+              <OpenCue className="group-hover:text-bone" />
+            </div>
             <p className="font-text-ui mt-1 text-[0.95rem] italic leading-[1.5] text-dim">
               The world, give or take. Scroll over it to bend the view; bend it past halfway and the
               page turns to paper.
@@ -260,10 +283,26 @@ export default function Newspaper({
         <AsciiPanel field="seam" minRows={3} />
       </div>
 
-      {/* 3 — The work. Rail left: the watch and a spot held open. Lead
-          right: the fractals, big. On phones the lead comes first. */}
+      {/* 3 — The work. Rail left: the watch, and a spot held open beside the
+          fractals, which run long. Lead right: the fractals, big. One column
+          on phones, in the same order as on the desktop and the Tab key. */}
       <div data-push="down" className={`grid grid-cols-1 ${WORK_COLS}`}>
-        <div className={`${COLUMN} md:order-2`}>
+        <div className={`${COLUMN} ${RULE_R}`}>
+          <Article
+            label="/Project — ESP32 / KiCad"
+            title="Watch"
+            dek={
+              <>
+                My freshman-year project: a smartwatch designed from nothing, the board in KiCad and the
+                firmware in C. Open it to take it apart.
+              </>
+            }
+            ratio="aspect-[4/3]"
+            slot={{ id: "watch", ref: slotRefs.watch, onOpen: () => onOpen("watch") }}
+          />
+          <Placeholder field="lattice" ratio="aspect-[4/3]" className="max-md:hidden" />
+        </div>
+        <div className={COLUMN}>
           <Article
             label="/Project — Python / NumPy"
             title="Fractals"
@@ -277,31 +316,6 @@ export default function Newspaper({
             ratio="aspect-square"
             slot={{ id: "fractals", ref: slotRefs.fractals, onOpen: () => onOpen("fractals") }}
           />
-        </div>
-        <div className={`${COLUMN} ${RULE_R} md:order-1`}>
-          <Article
-            label="/Project — ESP32 / KiCad"
-            title="Watch"
-            dek={
-              <>
-                My freshman-year project: a smartwatch designed from nothing, the board in KiCad and the
-                firmware in C. Open it to take it apart.
-              </>
-            }
-            ratio="aspect-[4/3]"
-            slot={{ id: "watch", ref: slotRefs.watch, onOpen: () => onOpen("watch") }}
-          />
-          <Placeholder field="lattice" ratio="aspect-[4/3]" />
-        </div>
-      </div>
-
-      {/* 4 — Two more spots held open, the wide one on the left again. */}
-      <div data-push="down" className="grid grid-cols-1 md:grid-cols-[17fr_10fr]">
-        <div className={`${COLUMN} ${RULE_R}`}>
-          <Placeholder field="flow" ratio="aspect-[2/1]" />
-        </div>
-        <div className={COLUMN}>
-          <Placeholder field="ripple" ratio="aspect-[4/3]" />
         </div>
       </div>
 
@@ -330,7 +344,7 @@ export default function Newspaper({
               href={href}
               target="_blank"
               rel="noreferrer"
-              className="font-mono-ui text-[10px] uppercase tracking-[0.18em] text-bone transition-colors hover:text-dim"
+              className={`${HIT} font-mono-ui text-[10px] uppercase tracking-[0.18em] text-bone transition-colors hover:text-dim`}
             >
               {name}
             </a>

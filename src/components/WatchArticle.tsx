@@ -1,6 +1,6 @@
 "use client";
 
-import { type ReactNode, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import { LABEL } from "@/components/furniture";
 import { sfx } from "@/lib/sound/sfx";
@@ -22,6 +22,21 @@ const LABEL_GAP = 22;
 const INSET = 16;
 /** Box width below which the furniture moves outside the box and part labels are dropped. */
 const COMPACT_BELOW = 560;
+
+/**
+ * A callout that presses a button on the face: dashed underneath, like the
+ * links in the prose. A border, not text-decoration, since the typing splits
+ * the label into inline blocks that an underline skips.
+ */
+const PRESSABLE = "border-b border-dashed border-dim pb-px hover:border-bone";
+
+function CalloutText({ o }: { o: Callout }) {
+  return (
+    <>
+      <span className="text-bone">{o.ref}</span> — {o.text}
+    </>
+  );
+}
 
 const pad = (n: number) => String(n).padStart(2, "0");
 
@@ -381,16 +396,14 @@ export default function WatchArticle({ open, landed }: { open: boolean; landed: 
             ))}
         </svg>
 
-        {/* Labels */}
+        {/* Labels: on the leaders beside the board, or, in a box too small for
+            leaders (a phone), listed under it. A label that presses a button
+            on the face is underlined like a link. */}
         <div ref={calloutsRef} className="absolute inset-0">
           {calloutsOn &&
             !compact &&
             c.callouts.map((o) => {
-              const body: ReactNode = (
-                <>
-                  <span className="text-bone">{o.ref}</span> — {o.text}
-                </>
-              );
+              const body = <CalloutText o={o} />;
               return o.press ? (
                 <button
                   key={`${c.id}-${o.ref}`}
@@ -399,7 +412,7 @@ export default function WatchArticle({ open, landed }: { open: boolean; landed: 
                   data-side={o.side}
                   data-typed
                   onClick={() => press(o)}
-                  className={`${LABEL} pointer-events-auto absolute left-0 top-0 cursor-pointer whitespace-nowrap uppercase transition-colors hover:text-bone`}
+                  className={`${LABEL} ${PRESSABLE} pointer-events-auto absolute left-0 top-0 cursor-pointer whitespace-nowrap uppercase transition-colors hover:text-bone`}
                 >
                   {body}
                 </button>
@@ -415,6 +428,32 @@ export default function WatchArticle({ open, landed }: { open: boolean; landed: 
                 </span>
               );
             })}
+          {calloutsOn && compact && c.callouts.length > 0 && (
+            <ul
+              className={`${LABEL} absolute left-4 right-4 top-[calc(100%+16px)] ${
+                c.callouts.length > 4 ? "columns-2 gap-x-3 whitespace-nowrap" : ""
+              }`}
+            >
+              {c.callouts.map((o) => (
+                <li key={`${c.id}-${o.ref}`} className="mb-1 break-inside-avoid">
+                  {o.press ? (
+                    <button
+                      type="button"
+                      data-typed
+                      onClick={() => press(o)}
+                      className={`${PRESSABLE} pointer-events-auto cursor-pointer uppercase tracking-[0.18em] transition-colors hover:text-bone`}
+                    >
+                      <CalloutText o={o} />
+                    </button>
+                  ) : (
+                    <span data-typed>
+                      <CalloutText o={o} />
+                    </span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       </div>
     </div>

@@ -130,6 +130,15 @@ body {
   70%, 100% { opacity: 1; }
 }
 
+/*
+ * The globe on the page lets a vertical swipe scroll past it and orbits on a
+ * sideways drag; open, or docked in its window, it keeps every touch.
+ * (OrbitControls sets touch-action: none inline.)
+ */
+[data-layer="globe"][data-open="false"][data-docked="false"] canvas {
+  touch-action: pan-y !important;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
