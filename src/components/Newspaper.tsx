@@ -258,10 +258,6 @@ export default function Newspaper({
             <div className={`${LABEL} flex justify-end`}>
               <OpenCue className="group-hover:text-bone" />
             </div>
-            <p className="font-text-ui mt-1 text-[0.95rem] italic leading-[1.5] text-dim">
-              The world, give or take. Open it and scroll to bend the view; bend it past halfway and
-              the page turns to paper.
-            </p>
           </figcaption>
         </figure>
       </div>

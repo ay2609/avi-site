@@ -90,7 +90,7 @@ The site is set like the front page of a newspaper, with one person as the whole
 The material is newsprint in negative. It's one tone in four values, with hairline dashed rules instead of boxes, no radii and no shadows. The only real colours are the work itself: the globe's violet network hubs and the fractals' matplotlib palettes. Light and dark follow the reader's system until they pick one with the plain switch in the masthead, and the pick holds across visits. The globe stays tied to it: the switch bends the globe flat for light and round for dark, and bending the globe past halfway inside its window (open, or docked) flips the switch. On the page the globe only turns and opens; the wheel scrolls past it. Motion is mechanical rather than soft: hover rings switch on in hard steps like a fluorescent tube, labels type themselves in, and an optional synthesized sound layer clicks and hums.
 
 **Key Characteristics:**
-- Newspaper grid: masthead, tiers, dashed column rules, a figure caption under the globe, and no section kickers (Oct 22): headlines stand on their own.
+- Newspaper grid: masthead, tiers, dashed column rules, "Open ↗" under the globe, and no section kickers (Oct 22): headlines stand on their own.
 - Headlines are fitted to their box in container units (`cqw`), so each word fills its column.
 - Monochrome chrome: colour belongs only to the artwork.
 - Live art everywhere: WebGL and animated ASCII fields stand in for photos.
@@ -143,7 +143,7 @@ One tone, four values, mirrored for paper. The tokens keep their names in both t
 
 ## Layout
 
-The page is a single well, `clamp(320px, 65.5vw, 1310px)` wide and centred, with a solid hairline down each side. Inside it, tiers stack top to bottom: the masthead; then the About letter (17fr) beside the globe with its caption (10fr); then a three-row ASCII seam; then the work tier, with the Watch rail (a fixed 10/27 of the old 70vw page) beside the Fractals lead. Columns are flex stacks whose last item takes the slack, so the two columns of a tier always end level. The page ends in a footer bar, a dashed rule under LinkedIn and GitHub set right. All sections use a 16px horizontal gutter.
+The page is a single well, `clamp(320px, 65.5vw, 1310px)` wide and centred, with a solid hairline down each side. Inside it, tiers stack top to bottom: the masthead; then the About letter (17fr) beside the globe (10fr), with only "Open ↗" under it; then a three-row ASCII seam; then the work tier, with the Watch rail (a fixed 10/27 of the old 70vw page) beside the Fractals lead. Columns are flex stacks whose last item takes the slack, so the two columns of a tier always end level. The page ends in a footer bar, a dashed rule under LinkedIn and GitHub set right. All sections use a 16px horizontal gutter.
 
 Below 768px everything drops to one column. In the work tier the lead goes first.
 
@@ -164,7 +164,7 @@ Square everything: zero radius anywhere. Containers are implied by dashed 1px ru
 ### Article (front page)
 - **Character:** a newspaper story whose picture is the point.
 - **Structure:** "Open ↗" set right on a label line, a fitted uppercase headline, an optional dim dek, then the art slot at a fixed ratio, centred in whatever height the column leaves.
-- **Open cue:** "Open ↗", dim, turning bone with the ring. Every opening thing carries it (the globe's above its caption), because phones have no hover to discover the ring with.
+- **Open cue:** "Open ↗", dim, turning bone with the ring. Every opening thing carries it (the globe's under it), because phones have no hover to discover the ring with.
 - **Interaction:** the whole section is a `role="link"`. Hover or keyboard focus flickers a solid bone ring on over its dashed rules, in hard steps over 0.3s. One click opens the article at its route.
 
 ### Stage chrome (an open article)
