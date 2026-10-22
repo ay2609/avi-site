@@ -96,7 +96,7 @@ components:
 
 The site is set like the front page of a newspaper, with one person as the whole edition. A masthead carries the name at poster scale, and tiers of articles below it zig-zag the way a broadsheet does: the wide column swaps sides each tier. Every article is a picture rather than a block of text: a globe, a circuit board, a fractal. Clicking one grows it to fill the screen at its own address, and the newspaper's grid lines stretch out to the edges of the viewport around it. Esc folds it back into the page.
 
-The material is newsprint in negative. It's one tone in four values, with hairline dashed rules instead of boxes, no radii and no shadows. The only real colours are the work itself: the globe's violet network hubs and the fractals' matplotlib palettes. Light mode isn't a settings toggle. You reach it by bending the globe past halfway, and it then holds across visits. Motion is mechanical rather than soft: hover rings switch on in hard steps like a fluorescent tube, labels type themselves in, and an optional synthesized sound layer clicks and hums.
+The material is newsprint in negative. It's one tone in four values, with hairline dashed rules instead of boxes, no radii and no shadows. The only real colours are the work itself: the globe's violet network hubs and the fractals' matplotlib palettes. Light and dark follow the reader's system until they pick one with the plain switch in the masthead, and the pick holds across visits. The globe stays tied to it: the switch bends the globe flat for light and round for dark, and bending the globe past halfway inside its window (open, or docked) flips the switch. On the page the globe only turns and opens; the wheel scrolls past it. Motion is mechanical rather than soft: hover rings switch on in hard steps like a fluorescent tube, labels type themselves in, and an optional synthesized sound layer clicks and hums.
 
 **Key Characteristics:**
 - Newspaper grid: masthead, tiers, dashed column rules, figure captions ("Fig. 1"), and a mono kicker over every headline.
@@ -193,6 +193,9 @@ Square everything: zero radius anywhere. Containers are implied by dashed 1px ru
 
 ### Touch words
 - A touch screen gets its own instructions (`pointer: coarse`): "← Back" rather than "Esc — Back", and swipe/tap hints in the bottom band (`touch` in `articles.ts`), short enough to clear the docked globe.
+
+### Light/dark switch
+- Two mono words in the masthead, "Light" and "Dark". The current one is bone with a filled dot (●), the other dim with an open one (○). Each is a button with `aria-pressed` and a 44px hit area. Choosing one eases the globe to its end of the bend.
 
 ### Sound switch
 - A mono "Sound — Off" label with a 10-cell ASCII level meter (`.:-=+*#%`) that reads the real audio output. Switching it on flickers the masthead.

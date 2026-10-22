@@ -4,6 +4,8 @@
  * (server) root layout can import it.
  */
 export const BEND_KEY = "avi-site:bend";
+/** The theme the reader picked with the switch (or by bending the open globe). */
+export const THEME_KEY = "avi-site:theme";
 
-/** Runs in <head>: the saved bend (or the system's preference) picks the theme, as light.ts does. */
-export const PREPAINT = `try{var b=localStorage.getItem("${BEND_KEY}");b=b===null?(matchMedia("(prefers-color-scheme: light)").matches?1:0):+b||0;document.documentElement.dataset.theme=b>=.5?"light":"dark"}catch(e){}`;
+/** Runs in <head>: the reader's pick (or their saved bend's side), else the system's preference, as light.ts does. */
+export const PREPAINT = `try{var t=localStorage.getItem("${THEME_KEY}");if(t!=="light"&&t!=="dark"){var b=localStorage.getItem("${BEND_KEY}");t=b!==null?(+b>=.5?"light":"dark"):matchMedia("(prefers-color-scheme: light)").matches?"light":"dark"}document.documentElement.dataset.theme=t}catch(e){}`;

@@ -2,20 +2,24 @@ import { useSyncExternalStore } from "react";
 
 import { sfx } from "@/lib/sound/sfx";
 
-import { BEND_KEY } from "./prepaint";
+import { BEND_KEY, THEME_KEY } from "./prepaint";
 
 /**
- * Light mode, driven by the globe's bend.
+ * Light and dark, and the globe's bend that goes with them.
  *
- * The globe publishes its bend — 0 perspective, 1 orthographic — here every
- * frame. Past FLIP_ON the site flips to light, and back to dark under
- * FLIP_OFF (the gap keeps it from flickering at the line). The theme is
- * `data-theme` on <html>, which swaps the CSS tokens (globals.css); the WebGL
- * scenes and the tinted ASCII subscribe and fade their own colours over FLIP_S.
+ * The theme is `data-theme` on <html>, which swaps the CSS tokens
+ * (globals.css); the WebGL scenes and the tinted ASCII subscribe and fade
+ * their own colours over FLIP_S. A first visit follows the system; the
+ * switch in the masthead picks one and it's remembered. The inline script in
+ * the root layout applies it before the first paint (prepaint.ts) — keep the
+ * two in step.
  *
- * The bend is remembered across visits; a first visit starts fully bent if
- * the system is in light mode. The inline script in the root layout applies
- * the saved theme before the first paint (prepaint.ts) — keep the two in step.
+ * The globe throws it too, inside its window (open, or docked): it publishes
+ * its bend — 0 perspective, 1 orthographic — here every frame, and crossing
+ * FLIP_ON flips to light, crossing back under FLIP_OFF to dark (the gap keeps
+ * it from flickering at the line). The other way round, the switch (or the
+ * system, until the reader picks) bends the globe to match: flat for light,
+ * round for dark.
  */
 export type Theme = "dark" | "light";
 
@@ -28,13 +32,20 @@ export const FLIP_S = 0.3;
 
 let bend: number | null = null;
 
-/** The bend to start from: the last one saved, or full if the system prefers light. */
-function initialBend(): number {
+function savedBend(): number | null {
   try {
     const saved = window.localStorage.getItem(BEND_KEY);
     if (saved !== null) return Math.min(1, Math.max(0, Number(saved) || 0));
   } catch {}
-  return window.matchMedia("(prefers-color-scheme: light)").matches ? 1 : 0;
+  return null;
+}
+
+/** The bend to start from: the last one saved if it's on the theme's side of the line, else that side's end. */
+function initialBend(): number {
+  const light = getTheme() === "light";
+  const saved = savedBend();
+  if (saved !== null && saved >= 0.5 === light) return saved;
+  return light ? 1 : 0;
 }
 
 export function getBend(): number {
@@ -43,10 +54,11 @@ export function getBend(): number {
 }
 
 export function setBend(next: number): void {
+  const prev = getBend();
   bend = next;
   sfx.bend(next); // hums while it moves
-  if (next > FLIP_ON) setTheme("light");
-  else if (next < FLIP_OFF) setTheme("dark");
+  if (prev <= FLIP_ON && next > FLIP_ON) chooseTheme("light");
+  else if (prev >= FLIP_OFF && next < FLIP_OFF) chooseTheme("dark");
 }
 
 let saveTimer: ReturnType<typeof setTimeout> | undefined;
@@ -67,9 +79,61 @@ let theme: Theme | null = null;
 const themeSubs = new Set<() => void>();
 let flipTimer: ReturnType<typeof setTimeout> | undefined;
 
+const SYSTEM_LIGHT = "(prefers-color-scheme: light)";
+
+/** The reader's last pick — or, from before the switch, the side their saved bend was on. */
+function remembered(): Theme | null {
+  try {
+    const t = window.localStorage.getItem(THEME_KEY);
+    if (t === "light" || t === "dark") return t;
+  } catch {}
+  const b = savedBend();
+  return b === null ? null : b >= 0.5 ? "light" : "dark";
+}
+
 export function getTheme(): Theme {
-  if (theme === null) theme = typeof window === "undefined" ? "dark" : getBend() >= 0.5 ? "light" : "dark";
+  if (theme === null) {
+    if (typeof window === "undefined") return "dark";
+    const system = window.matchMedia(SYSTEM_LIGHT);
+    theme = remembered() ?? (system.matches ? "light" : "dark");
+    // Until the reader picks one, follow the system as it changes.
+    system.addEventListener("change", (e) => {
+      if (remembered()) return;
+      const next = e.matches ? "light" : "dark";
+      setTheme(next);
+      requestBend(next);
+    });
+  }
   return theme;
+}
+
+/** A bend across the line: the theme follows the globe, and it's remembered. */
+function chooseTheme(next: Theme): void {
+  setTheme(next);
+  try {
+    window.localStorage.setItem(THEME_KEY, next);
+  } catch {}
+}
+
+/** The masthead's switch: the theme, remembered, and the globe bends to match. */
+export function switchTheme(next: Theme): void {
+  chooseTheme(next);
+  requestBend(next);
+}
+
+const bendRequests = new Set<(to: number) => void>();
+
+/** Bend the globe to a theme's end of the line (it eases there; see GlobeCanvas). */
+function requestBend(to: Theme): void {
+  const target = to === "light" ? 1 : 0;
+  saveBend(target);
+  bendRequests.forEach((f) => f(target));
+}
+
+/** The globe listens here for the bend the switch asks for, 0 → 1. */
+export function onBendRequest(f: (to: number) => void): () => void {
+  bendRequests.add(f);
+  return () => bendRequests.delete(f);
 }
 
 function setTheme(next: Theme): void {

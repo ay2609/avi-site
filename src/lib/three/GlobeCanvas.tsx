@@ -8,7 +8,7 @@ import vertexShader from "@/lib/shaders/globe/positionColor.vert";
 import fragmentShader from "@/lib/shaders/globe/positionColor.frag";
 import { TickManager, type TickData } from "@/lib/render/tick-manager";
 import { PopulationNetworkLayer } from "@/lib/three/network/PopulationNetworkLayer";
-import { getBend, saveBend, setBend, themeFader } from "@/lib/theme/light";
+import { getBend, onBendRequest, saveBend, setBend, themeFader } from "@/lib/theme/light";
 
 import { HybridCamera } from "./HybridCamera";
 
@@ -39,11 +39,6 @@ const HYBRID_CAMERA_CONFIG = {
   maxProjectionBlend: 1.0,
   /** Blend per pixel of scroll: ~250px bends it all the way. */
   wheelSensitivity: 0.004,
-  /**
-   * A page scroll this recent, ms, means the globe slid under a still cursor
-   * mid-scroll: the wheel stays the page's rather than catching on the globe.
-   */
-  scrollThroughMs: 300,
   blendSmoothing: 10,
 } as const;
 
@@ -89,11 +84,9 @@ const FIELD_TEXTURE = {
 
 interface GlobeCanvasProps {
   /**
-   * "hover" — the globe takes the wheel and the space bar whenever the cursor
-   * is over it, and hands them back the moment it leaves. Note the trade-off:
-   * while the cursor is over the globe the wheel bends the projection instead
-   * of scrolling the page — unless the page is already scrolling, or the bend
-   * is at its end that way, when the wheel goes on to the page.
+   * "hover" — the globe takes the space bar whenever the cursor is over it,
+   * and the wheel too once it's open full screen or docked in its window. On
+   * the page the wheel stays the page's: there it only turns and opens.
    * "always" — takes both unconditionally, for a full-screen presentation.
    */
   interaction?: "hover" | "always";
@@ -221,13 +214,15 @@ export default function GlobeCanvas({
     controls.enablePan = false;
 
     // --- Interaction state ---
-    // The bend starts where the reader left it (it drives light mode — see lib/theme).
-    let projectionBlendTarget: number = THREE.MathUtils.lerp(
-      HYBRID_CAMERA_CONFIG.minProjectionBlend,
-      HYBRID_CAMERA_CONFIG.maxProjectionBlend,
-      getBend()
-    );
+    // The bend starts where the reader left it, and eases to wherever the
+    // light/dark switch sends it (it throws light mode too — see lib/theme).
+    const blendFor = (bend: number) =>
+      THREE.MathUtils.lerp(HYBRID_CAMERA_CONFIG.minProjectionBlend, HYBRID_CAMERA_CONFIG.maxProjectionBlend, bend);
+    let projectionBlendTarget: number = blendFor(getBend());
     let projectionBlendCurrent: number = projectionBlendTarget;
+    const offBendRequest = onBendRequest((to) => {
+      projectionBlendTarget = blendFor(to);
+    });
     let currentSpinSpeed: number = GLOBE_CONFIG.autoSpinSpeed;
     let isAutoSpinPaused = false;
     let isUserInteracting = false;
@@ -255,32 +250,24 @@ export default function GlobeCanvas({
       if (interaction !== "always") setEngaged(false);
     };
 
-    let lastPageScroll = -Infinity;
-    const handlePageScroll = () => {
-      lastPageScroll = performance.now();
+    /** Sitting in the page (not open, not docked): the wheel scrolls the page past it. */
+    const onPage = () => {
+      const layer = host.closest<HTMLElement>("[data-layer]");
+      return !!layer && layer.dataset.open !== "true" && layer.dataset.docked !== "true";
     };
 
     const handleWheel = (event: WheelEvent) => {
-      // Cursor is elsewhere: let the wheel through so the page scrolls.
-      if (!isEngaged) return;
-      if (
-        interaction === "hover" &&
-        performance.now() - lastPageScroll < HYBRID_CAMERA_CONFIG.scrollThroughMs
-      ) {
-        return;
-      }
+      // Cursor is elsewhere, or the globe is in the page: let the wheel through.
+      if (!isEngaged || (interaction === "hover" && onPage())) return;
+      event.preventDefault();
 
       // Lines (Firefox) and pages to pixels, so every browser bends alike.
       const scale = event.deltaMode === 1 ? 40 : event.deltaMode === 2 ? window.innerHeight : 1;
-      const next = THREE.MathUtils.clamp(
+      projectionBlendTarget = THREE.MathUtils.clamp(
         projectionBlendTarget + event.deltaY * scale * HYBRID_CAMERA_CONFIG.wheelSensitivity,
         HYBRID_CAMERA_CONFIG.minProjectionBlend,
         HYBRID_CAMERA_CONFIG.maxProjectionBlend
       );
-      // Bent as far as it goes that way: the page has the wheel back.
-      if (next === projectionBlendTarget && interaction === "hover") return;
-      event.preventDefault();
-      projectionBlendTarget = next;
       saveBend(
         (projectionBlendTarget - HYBRID_CAMERA_CONFIG.minProjectionBlend) /
           (HYBRID_CAMERA_CONFIG.maxProjectionBlend - HYBRID_CAMERA_CONFIG.minProjectionBlend)
@@ -315,7 +302,6 @@ export default function GlobeCanvas({
     };
 
     host.addEventListener("wheel", handleWheel, { passive: false });
-    window.addEventListener("scroll", handlePageScroll, { passive: true });
     host.addEventListener("pointerenter", handlePointerEnter);
     host.addEventListener("pointerleave", handlePointerLeave);
     window.addEventListener("keydown", handleKeyDown);
@@ -414,8 +400,8 @@ export default function GlobeCanvas({
     tickManager.startLoop(render);
 
     return () => {
+      offBendRequest();
       host.removeEventListener("wheel", handleWheel);
-      window.removeEventListener("scroll", handlePageScroll);
       host.removeEventListener("pointerenter", handlePointerEnter);
       host.removeEventListener("pointerleave", handlePointerLeave);
       window.removeEventListener("keydown", handleKeyDown);

@@ -5,6 +5,7 @@ import type { ReactNode, Ref } from "react";
 import AsciiPanel from "@/lib/ascii/AsciiPanel";
 import Clock from "@/components/Clock";
 import SoundToggle from "@/components/SoundToggle";
+import ThemeSwitch from "@/components/ThemeSwitch";
 import { HIT, LABEL } from "@/components/furniture";
 import type { AsciiFieldId } from "@/lib/ascii/fields";
 import type { ArticleId } from "@/lib/stage/articles";
@@ -208,6 +209,7 @@ export default function Newspaper({
         {/* Above the name, whose glyphs overhang its box and would take the clicks. */}
         <div className={`${LABEL} relative z-10 flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2`}>
           <SoundToggle />
+          <ThemeSwitch />
           {/* Ticks aloud while hovered, with the sound on. */}
           <Clock className="text-bone" data-sfx="clock" />
         </div>
@@ -269,8 +271,8 @@ export default function Newspaper({
               <OpenCue className="group-hover:text-bone" />
             </div>
             <p className="font-text-ui mt-1 text-[0.95rem] italic leading-[1.5] text-dim">
-              The world, give or take. Scroll over it to bend the view; bend it past halfway and the
-              page turns to paper.
+              The world, give or take. Open it and scroll to bend the view; bend it past halfway and
+              the page turns to paper.
             </p>
           </figcaption>
         </figure>
