@@ -32,10 +32,9 @@ uniform float uLight;   // 0 ink → 1 paper (ink palette only)
 uniform int uPalette;   // 0 spectrum, 1 ink
 out vec4 outColor;
 
+// A lattice hash with no period or symmetry to show across a wide band.
 float hash(vec3 p) {
-  p = fract(p * 0.3183099 + 0.1);
-  p *= 17.0;
-  return fract(p.x * p.y * p.z * (p.x + p.y + p.z));
+  return fract(sin(dot(p, vec3(127.1, 311.7, 74.7))) * 43758.5453);
 }
 
 // Value noise of wavelength 1, smoothly interpolated, the third axis is time.
