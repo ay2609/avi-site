@@ -338,3 +338,57 @@ export function asciiRows(id: AsciiFieldId, cols: number, rows: number, charW: n
   }
   return out;
 }
+
+// --- The seam --------------------------------------------------------------------
+
+/**
+ * The seam's isovalues in ink, as src/lib/iso/IsoField.tsx draws them on the
+ * page (same noise, levels, terrace light, shadow and hairlines), at one
+ * still moment. `scale` is noise cells across the band's height.
+ */
+export function isoArt(w: number, h: number, scale = 2.2, time = 7): string {
+  const c = canvas(w, h);
+  const fract = (x: number) => x - Math.floor(x);
+  const hash = (x: number, y: number, z: number) => fract(Math.sin(x * 127.1 + y * 311.7 + z * 74.7) * 43758.5453);
+  const smooth = (t: number) => t * t * (3 - 2 * t);
+  const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
+  const noise = (x: number, y: number, z: number) => {
+    const ix = Math.floor(x), iy = Math.floor(y), iz = Math.floor(z);
+    const fx = smooth(x - ix), fy = smooth(y - iy), fz = smooth(z - iz);
+    const layer = (k: number) =>
+      lerp(
+        lerp(hash(ix, iy, iz + k), hash(ix + 1, iy, iz + k), fx),
+        lerp(hash(ix, iy + 1, iz + k), hash(ix + 1, iy + 1, iz + k), fx),
+        fy
+      );
+    return lerp(layer(0), layer(1), fz);
+  };
+  const LEVELS = 22;
+  const field = (px: number, py: number) => noise(px, py, time * 0.11) * LEVELS;
+  const ground = INK;
+  const text = BONE;
+  const toLight = [-0.55 * 0.03, 0.83 * 0.03];
+  const step = scale / c.H; // noise units per supersampled pixel
+  for (let y = 0; y < c.H; y++)
+    for (let x = 0; x < c.W; x++) {
+      // As on the page: centred, y up, short side `scale` cells, drifting with time.
+      const px = (x + 0.5 - c.W / 2) * step + time * 0.03;
+      const py = (c.H / 2 - y - 0.5) * step;
+      const v = field(px, py);
+      const band = Math.floor(v);
+      const f = v - band;
+      const lit = 0.12 + 0.88 * Math.pow(f, 1.25);
+      const above = Math.floor(field(px + toLight[0], py + toLight[1]));
+      const shadow = above > band ? 0.35 : 1;
+      const dv = Math.abs(field(px + step, py) - v) + Math.abs(field(px, py + step) - v);
+      const d = Math.min(f, 1 - f);
+      const edge = 1 - Math.min(1, Math.max(0, d / (1.5 * dv || 1e-6)));
+      const t = 0.03 + 0.2 * lit * shadow;
+      const k = (y * c.W + x) * 3;
+      for (let ch = 0; ch < 3; ch++) {
+        const base = ground[ch] + (text[ch] - ground[ch]) * t;
+        c.px[k + ch] = base + (text[ch] - base) * edge * 0.35;
+      }
+    }
+  return c.read();
+}
