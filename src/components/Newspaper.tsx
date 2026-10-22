@@ -267,7 +267,7 @@ export default function Newspaper({
           page's own tone (Oct 22; it was a strip of ASCII), the width of the
           page. The cursor still strums it with the sound on (SoundBoard). */}
       <div aria-hidden data-sfx="seam" className="h-[96px] overflow-hidden border-b border-dashed border-rule">
-        <IsoField palette="ink" scale={2.2} />
+        <IsoField palette="ink" scale={1.6} />
       </div>
 
       {/* 3 — The work. Rail left: the watch, and a spot held open beside the

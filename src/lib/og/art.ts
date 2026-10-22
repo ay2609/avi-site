@@ -343,52 +343,76 @@ export function asciiRows(id: AsciiFieldId, cols: number, rows: number, charW: n
 
 /**
  * The seam's isovalues in ink, as src/lib/iso/IsoField.tsx draws them on the
- * page (same noise, levels, terrace light, shadow and hairlines), at one
- * still moment. `scale` is noise cells across the band's height.
+ * page — a port of FabriceNeyret2's "isovalues 3" (shadertoy.com/view/ldfczS,
+ * CC BY-NC-SA 3.0) — run on the CPU at build: `steps` frames of isolines,
+ * each laid over the last shifted and faded, ending at `time`. `cells` is
+ * noise cells across the band's height.
  */
-export function isoArt(w: number, h: number, scale = 2.2, time = 7): string {
-  const c = canvas(w, h);
+export function isoArt(w: number, h: number, cells = 1.6, time = 7, steps = 120): string {
   const fract = (x: number) => x - Math.floor(x);
-  const hash = (x: number, y: number, z: number) => fract(Math.sin(x * 127.1 + y * 311.7 + z * 74.7) * 43758.5453);
+  const hash = (x: number, y: number, z: number) => fract(Math.sin(1e3 * (x + 57 * y - 13.7 * z)) * 4375.5453);
   const smooth = (t: number) => t * t * (3 - 2 * t);
   const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
-  const noise = (x: number, y: number, z: number) => {
+  const noise3 = (x: number, y: number, z: number) => {
     const ix = Math.floor(x), iy = Math.floor(y), iz = Math.floor(z);
     const fx = smooth(x - ix), fy = smooth(y - iy), fz = smooth(z - iz);
     const layer = (k: number) =>
-      lerp(
-        lerp(hash(ix, iy, iz + k), hash(ix + 1, iy, iz + k), fx),
-        lerp(hash(ix, iy + 1, iz + k), hash(ix + 1, iy + 1, iz + k), fx),
-        fy
-      );
+      lerp(lerp(hash(ix, iy, iz + k), hash(ix + 1, iy, iz + k), fx), lerp(hash(ix, iy + 1, iz + k), hash(ix + 1, iy + 1, iz + k), fx), fy);
     return lerp(layer(0), layer(1), fz);
   };
-  const LEVELS = 22;
-  const field = (px: number, py: number) => noise(px, py, time * 0.11) * LEVELS;
-  const ground = INK;
-  const text = BONE;
-  const toLight = [-0.55 * 0.03, 0.83 * 0.03];
-  const step = scale / c.H; // noise units per supersampled pixel
-  for (let y = 0; y < c.H; y++)
-    for (let x = 0; x < c.W; x++) {
-      // As on the page: centred, y up, short side `scale` cells, drifting with time.
-      const px = (x + 0.5 - c.W / 2) * step + time * 0.03;
-      const py = (c.H / 2 - y - 0.5) * step;
-      const v = field(px, py);
-      const band = Math.floor(v);
-      const f = v - band;
-      const lit = 0.12 + 0.88 * Math.pow(f, 1.25);
-      const above = Math.floor(field(px + toLight[0], py + toLight[1]));
-      const shadow = above > band ? 0.35 : 1;
-      const dv = Math.abs(field(px + step, py) - v) + Math.abs(field(px, py + step) - v);
-      const d = Math.min(f, 1 - f);
-      const edge = 1 - Math.min(1, Math.max(0, d / (1.5 * dv || 1e-6)));
-      const t = 0.03 + 0.2 * lit * shadow;
-      const k = (y * c.W + x) * 3;
-      for (let ch = 0; ch < 3; ch++) {
-        const base = ground[ch] + (text[ch] - ground[ch]) * t;
-        c.px[k + ch] = base + (text[ch] - base) * edge * 0.35;
+  const noise = (x: number, y: number, z: number) => (noise3(x, y, z) + noise3(x + 11.5, y + 11.5, z + 11.5)) / 2;
+
+  const ground = INK.map((c) => c / 255);
+  const text = BONE.map((c) => c / 255);
+  const cellPx = h / cells;
+  const k = cellPx / (470 / 8); // the original's motion, in these cells
+  const keep = Math.exp(-33 / 470);
+  let buf = new Float32Array(w * h * 3);
+  for (let i = 0; i < w * h; i++) buf.set(ground, i * 3);
+  let next = new Float32Array(w * h * 3);
+  const n = new Float32Array(w * h);
+
+  for (let s = steps; s >= 0; s--) {
+    const t = time - s / 60;
+    // This frame's noise over the grid (y up, as gl_FragCoord), then its isolines.
+    for (let y = 0; y < h; y++)
+      for (let x = 0; x < w; x++) n[y * w + x] = noise((x + 0.5) / cellPx, (h - y - 0.5) / cellPx, 0.1 * t);
+    const sx = k;
+    const sy = -k * Math.sin(t); // image rows run down, the shader's up
+    for (let y = 0; y < h; y++)
+      for (let x = 0; x < w; x++) {
+        const i = y * w + x;
+        const v = Math.sin(6.28 * 10 * n[i]);
+        const dn = Math.abs(n[y * w + Math.min(w - 1, x + 1)] - n[i]) + Math.abs(n[Math.min(h - 1, y + 1) * w + x] - n[i]);
+        const fw = Math.abs(6.28 * 10 * Math.cos(6.28 * 10 * n[i])) * dn + 1e-6;
+        const a = 1 - smooth(Math.min(1, Math.max(0, (0.5 * Math.abs(v)) / fw)));
+        // The last frame, sampled shifted (bilinear, clamped at the edges).
+        const px = Math.min(w - 1, Math.max(0, x + sx));
+        const py = Math.min(h - 1, Math.max(0, y + sy));
+        const x0 = Math.floor(px), y0 = Math.floor(py);
+        const x1 = Math.min(w - 1, x0 + 1), y1 = Math.min(h - 1, y0 + 1);
+        const tx = px - x0, ty = py - y0;
+        const level = 0.3 + 0.5 * (0.5 + 0.5 * Math.sin(12 * n[i]));
+        for (let c = 0; c < 3; c++) {
+          const last = lerp(
+            lerp(buf[(y0 * w + x0) * 3 + c], buf[(y0 * w + x1) * 3 + c], tx),
+            lerp(buf[(y1 * w + x0) * 3 + c], buf[(y1 * w + x1) * 3 + c], tx),
+            ty
+          );
+          const trail = ground[c] + (last - ground[c]) * keep;
+          const line = ground[c] + (text[c] - ground[c]) * level;
+          next[i * 3 + c] = trail + (line - trail) * a;
+        }
       }
-    }
-  return c.read();
+    [buf, next] = [next, buf];
+  }
+
+  const out = new Uint8ClampedArray(w * h * 4);
+  for (let i = 0; i < w * h; i++) {
+    out[i * 4] = buf[i * 3] * 255;
+    out[i * 4 + 1] = buf[i * 3 + 1] * 255;
+    out[i * 4 + 2] = buf[i * 3 + 2] * 255;
+    out[i * 4 + 3] = 255;
+  }
+  return pngDataUrl(w, h, out);
 }
