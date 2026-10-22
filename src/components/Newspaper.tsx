@@ -3,6 +3,7 @@
 import type { ReactNode, Ref } from "react";
 
 import AsciiPanel from "@/lib/ascii/AsciiPanel";
+import IsoField from "@/lib/iso/IsoField";
 import Clock from "@/components/Clock";
 import SoundToggle from "@/components/SoundToggle";
 import ThemeSwitch from "@/components/ThemeSwitch";
@@ -262,11 +263,11 @@ export default function Newspaper({
         </figure>
       </div>
 
-      {/* A seam between the letter and the work: a strip of ASCII three
-          characters tall (10px / 1.15 → 34.5px), the width of the page. The
-          cursor sets it rippling (SoundBoard). */}
-      <div aria-hidden data-sfx="seam" className="h-[34.5px] overflow-hidden border-b border-dashed border-rule">
-        <AsciiPanel field="seam" minRows={3} />
+      {/* A seam between the letter and the work: a band of isovalues in the
+          page's own tone (Oct 22; it was a strip of ASCII), the width of the
+          page. The cursor still strums it with the sound on (SoundBoard). */}
+      <div aria-hidden data-sfx="seam" className="h-[96px] overflow-hidden border-b border-dashed border-rule">
+        <IsoField palette="ink" scale={2.2} />
       </div>
 
       {/* 3 — The work. Rail left: the watch, and a spot held open beside the

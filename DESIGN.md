@@ -143,7 +143,7 @@ One tone, four values, mirrored for paper. The tokens keep their names in both t
 
 ## Layout
 
-The page is a single well, `clamp(320px, 65.5vw, 1310px)` wide and centred, with a solid hairline down each side. Inside it, tiers stack top to bottom: the masthead; then the About letter (17fr) beside the globe (10fr), with only "Open ↗" under it; then a three-row ASCII seam; then the work tier, with the Watch rail (a fixed 10/27 of the old 70vw page) beside the Fractals lead. Columns are flex stacks whose last item takes the slack, so the two columns of a tier always end level. The page ends in a footer bar, a dashed rule under LinkedIn and GitHub set right. All sections use a 16px horizontal gutter.
+The page is a single well, `clamp(320px, 65.5vw, 1310px)` wide and centred, with a solid hairline down each side. Inside it, tiers stack top to bottom: the masthead; then the About letter (17fr) beside the globe (10fr), with only "Open ↗" under it; then the seam, a 96px band of isovalues in ink; then the work tier, with the Watch rail (a fixed 10/27 of the old 70vw page) beside the Fractals lead. Columns are flex stacks whose last item takes the slack, so the two columns of a tier always end level. The page ends in a footer bar, a dashed rule under LinkedIn and GitHub set right. All sections use a 16px horizontal gutter.
 
 Below 768px everything drops to one column. In the work tier the lead goes first.
 
@@ -189,8 +189,11 @@ Square everything: zero radius anywhere. Containers are implied by dashed 1px ru
 ### Sound switch
 - A mono "Sound — Off" label with a 10-cell ASCII level meter (`.:-=+*#%`) that reads the real audio output. Switching it on flickers the masthead.
 
+### Isovalues (the seam)
+- A drifting noise drawn as stacked, shaded terraces (`src/lib/iso/IsoField.tsx`, after FabriceNeyret2's "isovalues 3"). On the page it runs in **ink**: the ground with terraces lifting a little towards the text colour and a hairline on each isoline, following light and dark. A **spectrum** paint exists for a piece that wants colour. It stops drawing off screen and holds still for reduced motion.
+
 ### ASCII fields
-- Animated character fields (seam, lattice, flow, ripple, crate) drawn in the ASCII token. They're decoration and spacers, never content, and are hidden from assistive tech.
+- Animated character fields (lattice, crate, the fractal cover) drawn in the ASCII token; the seam field survives only in the link preview. They're decoration and spacers, never content, and are hidden from assistive tech.
 
 ## Do's and Don'ts
 
