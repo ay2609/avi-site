@@ -92,14 +92,12 @@ function OpenCue({ className = "" }: { className?: string }) {
  * on a single click.
  */
 function Article({
-  label,
   title,
   max = "4.5rem",
   dek,
   ratio,
   slot,
 }: {
-  label: string;
   title: string;
   /** The headline's ceiling: a lead outranks the rail. */
   max?: string;
@@ -127,8 +125,7 @@ function Article({
         className="ring-flicker pointer-events-none absolute -inset-x-px -top-px -bottom-px z-10 border border-bone"
       />
       <div className="px-4 pb-3 pt-4">
-        <div className={`${LABEL} flex items-baseline justify-between gap-4`}>
-          <span>{label}</span>
+        <div className={`${LABEL} flex justify-end`}>
           <OpenCue className="group-hover:text-bone group-focus-visible:text-bone group-data-[hover]:text-bone" />
         </div>
         <h2
@@ -159,17 +156,11 @@ function Placeholder({ field, ratio, className = "" }: { field: AsciiFieldId; ra
   );
 }
 
-/**
- * The address is on the domain (Cloudflare Email Routing forwards it, Sep 29);
- * `null` hides the serif line. Links open in a new tab. No phone.
- */
-const CONTACT: { email: string | null; links: readonly (readonly [string, string])[] } = {
-  email: "avi@halcyn.dev",
-  links: [
-    ["LinkedIn", "https://www.linkedin.com/in/ay2609/"],
-    ["GitHub", "https://github.com/ay2609"],
-  ],
-};
+/** The footer's links, set right; they open in a new tab. (The email left the page Oct 22.) */
+const LINKS: readonly (readonly [string, string])[] = [
+  ["LinkedIn", "https://www.linkedin.com/in/ay2609/"],
+  ["GitHub", "https://github.com/ay2609"],
+];
 
 interface NewspaperProps {
   /** The <main> element, so the stage can recede it. */
@@ -222,13 +213,11 @@ export default function Newspaper({
         </h1>
       </header>
 
-      {/* 2 — Lead left: the letter. Rail right: the globe as its figure —
-          still alive, still the switch for the lights. */}
+      {/* 2 — Lead left: the letter. Rail right: the globe as its figure. */}
       <div data-push="down" className="grid grid-cols-1 md:grid-cols-[17fr_10fr]">
         <section className={`${COLUMN} ${RULE_R} fit border-b border-dashed border-rule px-4 pb-10 pt-4`}>
-          <p className={LABEL}>/About</p>
           <h2
-            className="font-serif-ui mt-1.5 leading-[0.9] tracking-[-0.02em] text-bone"
+            className="font-serif-ui mt-2 leading-[0.9] tracking-[-0.02em] text-bone"
             style={{ fontSize: "clamp(2.5rem, 9cqw, 5rem)" }}
           >
             Hi, I&rsquo;m Avi.
@@ -266,8 +255,7 @@ export default function Newspaper({
             onPointerDownCapture={openGlobe.onPointerDownCapture}
             onClick={openGlobe.onClick}
           >
-            <div className={`${LABEL} flex items-baseline justify-between gap-4`}>
-              <span>Fig. 1</span>
+            <div className={`${LABEL} flex justify-end`}>
               <OpenCue className="group-hover:text-bone" />
             </div>
             <p className="font-text-ui mt-1 text-[0.95rem] italic leading-[1.5] text-dim">
@@ -291,7 +279,6 @@ export default function Newspaper({
       <div data-push="down" className={`grid grid-cols-1 ${WORK_COLS}`}>
         <div className={`${COLUMN} ${RULE_R}`}>
           <Article
-            label="/Project — ESP32 / KiCad"
             title="Watch"
             dek={
               <>
@@ -306,7 +293,6 @@ export default function Newspaper({
         </div>
         <div className={COLUMN}>
           <Article
-            label="/Project — Python / NumPy"
             title="Fractals"
             max="8rem"
             dek={
@@ -321,38 +307,20 @@ export default function Newspaper({
         </div>
       </div>
 
-      {/* 5 — Contact */}
-      <section
-        data-push="down"
-        className="flex flex-wrap items-end justify-between gap-6 border-b border-dashed border-rule px-4 pb-9 pt-4"
-      >
-        <div>
-          <p className={LABEL}>/Contact</p>
-          <p className={`${PROSE} mt-8 text-dim`}>If you&rsquo;d like to say hi, write to</p>
-          {CONTACT.email && (
-            <a
-              href={`mailto:${CONTACT.email}`}
-              className="font-serif-ui mt-1 block tracking-[-0.015em] text-bone transition-colors hover:text-dim"
-              style={{ fontSize: "clamp(28px, 4.5vw, 56px)" }}
-            >
-              {CONTACT.email}
-            </a>
-          )}
-        </div>
-        <nav className="flex flex-wrap gap-7">
-          {CONTACT.links.map(([name, href]) => (
-            <a
-              key={name}
-              href={href}
-              target="_blank"
-              rel="noreferrer"
-              className={`${HIT} font-mono-ui text-[10px] uppercase tracking-[0.18em] text-bone transition-colors hover:text-dim`}
-            >
-              {name}
-            </a>
-          ))}
-        </nav>
-      </section>
+      {/* 5 — The footer: a bar with the links, set right. */}
+      <footer data-push="down" className="flex justify-end gap-7 border-b border-dashed border-rule px-4 py-4">
+        {LINKS.map(([name, href]) => (
+          <a
+            key={name}
+            href={href}
+            target="_blank"
+            rel="noreferrer"
+            className={`${HIT} font-mono-ui text-[10px] uppercase tracking-[0.18em] text-bone transition-colors hover:text-dim`}
+          >
+            {name}
+          </a>
+        ))}
+      </footer>
     </main>
   );
 }
