@@ -143,7 +143,7 @@ One tone, four values, mirrored for paper. The tokens keep their names in both t
 
 ## Layout
 
-The page is a single well, `clamp(320px, 65.5vw, 1310px)` wide and centred, with a solid hairline down each side. Inside it, tiers stack top to bottom: the masthead; then the About letter (17fr) beside the globe (10fr), with only "Open ↗" under it; then the seam, a 96px band of isovalues in ink; then the work tier, with the Watch rail (a fixed 10/27 of the old 70vw page) beside the Fractals lead. Columns are flex stacks whose last item takes the slack, so the two columns of a tier always end level. The page ends in a footer bar, a dashed rule under LinkedIn and GitHub set right. All sections use a 16px horizontal gutter.
+The page is a single well, `clamp(320px, 65.5vw, 1310px)` wide and centred, with a solid hairline down each side. Inside it, tiers stack top to bottom: the masthead; then the About letter (17fr) beside the globe (10fr), with only "Open ↗" under it; then the seam, a 96px band of isovalues in ink; then the work: equal tiles, two across on a desktop and one on a phone, every project the same anatomy (Oct 27). The letter's tier is a flex stack whose last item takes the slack, so its two columns end level; in the work, each tile pins its art to its foot, so a row's tiles end level too. The page ends in a footer bar, a dashed rule under LinkedIn and GitHub set right. All sections use a 16px horizontal gutter.
 
 Below 768px everything drops to one column. In the work tier the lead goes first.
 
@@ -161,9 +161,9 @@ Square everything: zero radius anywhere. Containers are implied by dashed 1px ru
 
 ## Components
 
-### Article (front page)
+### Project tile (front page)
 - **Character:** a newspaper story whose picture is the point.
-- **Structure:** "Open ↗" set right on a label line, a fitted uppercase headline, an optional dim dek, then the art slot at a fixed ratio, centred in whatever height the column leaves.
+- **Structure:** a label line with the number and stack ("01 — ESP32 / KiCad") and "Open ↗" set right; the name in uppercase serif at clamp 2.4–4rem, the same in every tile; a dim line of copy; then the art at 4:3 across the foot, under a dashed rule. A new project is one more tile.
 - **Open cue:** "Open ↗", dim, turning bone with the ring. Every opening thing carries it (the globe's under it), because phones have no hover to discover the ring with.
 - **Interaction:** the whole section is a `role="link"`. Hover or keyboard focus flickers a solid bone ring on over its dashed rules, in hard steps over 0.3s. One click opens the article at its route.
 

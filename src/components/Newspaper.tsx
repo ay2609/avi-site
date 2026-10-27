@@ -2,13 +2,11 @@
 
 import type { ReactNode, Ref } from "react";
 
-import AsciiPanel from "@/lib/ascii/AsciiPanel";
 import IsoField from "@/lib/iso/IsoField";
 import Clock from "@/components/Clock";
 import SoundToggle from "@/components/SoundToggle";
 import ThemeSwitch from "@/components/ThemeSwitch";
 import { HIT, LABEL } from "@/components/furniture";
-import type { AsciiFieldId } from "@/lib/ascii/fields";
 import type { ArticleId } from "@/lib/stage/articles";
 import { useOpenOnClick } from "@/lib/stage/click";
 
@@ -52,12 +50,6 @@ const INLINE =
  */
 const WELL = "clamp(320px, 65.5vw, 1310px)";
 
-/**
- * The watch's rail keeps the width it had at the old 70vw page (10/27 of it),
- * so the board stays the same size; the fractals take what's left.
- */
-const WORK_COLS = "md:grid-cols-[calc(clamp(320px,70vw,1400px)*10/27)_minmax(0,1fr)]";
-
 /** A column of a tier: stacks its articles, the last one taking any slack. */
 const COLUMN = "flex min-w-0 flex-col";
 const RULE_R = "md:border-r md:border-dashed md:border-rule";
@@ -84,40 +76,40 @@ function OpenCue({ className = "" }: { className?: string }) {
 }
 
 /**
- * A headline set to span its box, a line of copy, and art that bleeds to the
- * edges. Every article grows to fill its column, so a tier's two columns end
- * level; the slack goes around the art.
+ * One project's tile (Oct 27: every project the same): its number and stack
+ * on the label line with "Open ↗", its name, a line of copy, and its art at
+ * 4:3 across the foot, bleeding to the rules.
  *
- * The art is an empty slot a document-level layer sits over (see Stage),
- * centred in whatever height the column gives it, and the whole article opens
- * on a single click.
+ * The art is an empty slot a document-level layer sits over (see Stage), and
+ * the whole tile opens on a single click.
  */
 function Article({
+  index,
   title,
-  max = "4.5rem",
+  stack,
   dek,
-  ratio,
   slot,
 }: {
+  /** Its number in the run, "01" on. */
+  index: string;
   title: string;
-  /** The headline's ceiling: a lead outranks the rail. */
-  max?: string;
+  /** What it's made with, as the label line gives it. */
+  stack: string;
   dek?: ReactNode;
-  ratio: string;
   slot: { id: ArticleId; ref: Ref<HTMLDivElement>; onOpen: () => void };
 }) {
   const click = useOpenOnClick(slot.onOpen);
   return (
     <section
       data-article={slot.id}
-      className="group fit relative flex flex-1 cursor-pointer flex-col border-b border-dashed border-rule outline-none"
+      className="group fit relative flex cursor-pointer flex-col border-b border-dashed border-rule outline-none md:odd:border-r"
       role="link"
       tabIndex={0}
       aria-label={`Open ${title}`}
       {...click}
     >
-      {/* Hover ring over the whole article — headline and art. A solid bone
-          hairline that flickers on over the section's dashed rules, bled 1px so
+      {/* Hover ring over the whole tile — words and art. A solid bone
+          hairline that flickers on over the tile's dashed rules, bled 1px so
           it sits exactly on them. The art's layer sits above this section and
           takes the pointer there, so it mirrors its hover onto `data-hover`.
           Keyboard focus shows it too. */}
@@ -125,35 +117,27 @@ function Article({
         aria-hidden
         className="ring-flicker pointer-events-none absolute -inset-x-px -top-px -bottom-px z-10 border border-bone"
       />
-      <div className="px-4 pb-3 pt-4">
-        <div className={`${LABEL} flex justify-end`}>
+      <div className="px-4 pb-4 pt-4">
+        <div className={`${LABEL} flex items-baseline justify-between gap-4`}>
+          <span>
+            {index} — {stack}
+          </span>
           <OpenCue className="group-hover:text-bone group-focus-visible:text-bone group-data-[hover]:text-bone" />
         </div>
         <h2
           data-headline={slot.id}
-          className="font-serif-ui mt-1.5 whitespace-nowrap uppercase leading-[0.86] tracking-[-0.02em] text-bone"
-          style={{ fontSize: fillSize(title, max) }}
+          className="font-serif-ui mt-2 whitespace-nowrap uppercase leading-[0.86] tracking-[-0.02em] text-bone"
+          style={{ fontSize: "clamp(2.4rem, 4.6vw, 4rem)" }}
         >
           {title}
         </h2>
         {dek && <p className="font-text-ui mt-3 max-w-[30rem] text-[0.95rem] leading-[1.5] text-dim">{dek}</p>}
       </div>
-      <div className="flex flex-1 flex-col justify-center">
-        <div ref={slot.ref} data-slot={slot.id} className={`${ratio} w-full`} />
+      {/* The art, the same 4:3 in every tile, set at the foot so a row's tiles end level. */}
+      <div className="mt-auto border-t border-dashed border-rule">
+        <div ref={slot.ref} data-slot={slot.id} className="aspect-[4/3] w-full" />
       </div>
     </section>
-  );
-}
-
-/**
- * A spot held for work still to be picked: nothing but ASCII, at least
- * `ratio` tall and growing to level its tier.
- */
-function Placeholder({ field, ratio, className = "" }: { field: AsciiFieldId; ratio: string; className?: string }) {
-  return (
-    <div aria-hidden className={`${ratio} w-full flex-1 overflow-hidden border-b border-dashed border-rule ${className}`}>
-      <AsciiPanel field={field} />
-    </div>
   );
 }
 
@@ -270,38 +254,34 @@ export default function Newspaper({
         <IsoField palette="ink" scale={1.6} />
       </div>
 
-      {/* 3 — The work. Rail left: the watch, and a spot held open beside the
-          fractals, which run long. Lead right: the fractals, big. One column
-          on phones, in the same order as on the desktop and the Tab key. */}
-      <div data-push="down" className={`grid grid-cols-1 ${WORK_COLS}`}>
-        <div className={`${COLUMN} ${RULE_R}`}>
-          <Article
-            title="Watch"
-            dek={
-              <>
-                My freshman-year project: a smartwatch designed from nothing, the board in KiCad and the
-                firmware in C. Open it to take it apart.
-              </>
-            }
-            ratio="aspect-[4/3]"
-            slot={{ id: "watch", ref: slotRefs.watch, onOpen: () => onOpen("watch") }}
-          />
-          <Placeholder field="lattice" ratio="aspect-[4/3]" className="max-md:hidden" />
-        </div>
-        <div className={COLUMN}>
-          <Article
-            title="Fractals"
-            max="8rem"
-            dek={
-              <>
-                Live ports of the Python I wrote in high school, from the Mandelbrot set to chaotic
-                attractors, in the colour maps I picked back then.
-              </>
-            }
-            ratio="aspect-square"
-            slot={{ id: "fractals", ref: slotRefs.fractals, onOpen: () => onOpen("fractals") }}
-          />
-        </div>
+      {/* 3 — The work: equal tiles, two across (one on phones), each the same
+          anatomy — number and stack, name, a line, its art at 4:3 — so a new
+          project is one more tile. */}
+      <div data-push="down" className="grid grid-cols-1 md:grid-cols-2">
+        <Article
+          index="01"
+          title="Watch"
+          stack="ESP32 / KiCad"
+          dek={
+            <>
+              My freshman-year project: a smartwatch designed from nothing, the board in KiCad and the firmware
+              in C. Open it to take it apart.
+            </>
+          }
+          slot={{ id: "watch", ref: slotRefs.watch, onOpen: () => onOpen("watch") }}
+        />
+        <Article
+          index="02"
+          title="Fractals"
+          stack="Python / NumPy"
+          dek={
+            <>
+              Live ports of the Python I wrote in high school, from the Mandelbrot set to chaotic attractors, in
+              the colour maps I picked back then.
+            </>
+          }
+          slot={{ id: "fractals", ref: slotRefs.fractals, onOpen: () => onOpen("fractals") }}
+        />
       </div>
 
       {/* 5 — The footer: a bar with the links, set right. */}
