@@ -54,6 +54,22 @@ export interface Chapter {
   display: boolean;
 }
 
+/** What a screen that plays music is playing (the player's), for the article to show. */
+export interface Playing {
+  index: number;
+  count: number;
+  title: string;
+  artist: string;
+  /** The track on Spotify. */
+  url: string;
+  playing: boolean;
+  /** s */
+  elapsed: number;
+  duration: number;
+  /** Where the tracks come from. */
+  source: { name: string; url: string };
+}
+
 /** A framebuffer something draws into, RGBA with row 0 at the top. */
 export interface Screen {
   readonly width: number;
@@ -68,6 +84,11 @@ export interface Screen {
   /** 0–100, or null when unknown. */
   battery?: number | null;
   press?(button: string): void;
+  /** The screen goes off (its chapter left, or the article closed). */
+  sleep?(): void;
+  /** What's playing, and a way to hear when it changes. */
+  status?(): Playing | null;
+  subscribe?(f: () => void): () => void;
 }
 
 export interface Device {

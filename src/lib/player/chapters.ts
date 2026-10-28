@@ -1,6 +1,6 @@
 import type { Chapter, Device } from "@/lib/teardown/device";
 
-import { AlbumCover } from "./cover";
+import { PocketPlayer } from "./pocket";
 
 /**
  * The player walkthrough: six chapters over the Tiny Music Player's board
@@ -144,9 +144,9 @@ export const CHAPTERS: Chapter[] = [
       { ref: "OLED", text: "0.6″ · 64 × 64" },
       { ref: "DS1", text: "FH12 · FPC" },
       { ref: "U7", text: "TPS61040 · 12 V" },
-      { ref: "SW1", text: "Prev" },
-      { ref: "SW2", text: "Play" },
-      { ref: "SW3", text: "Next" },
+      { ref: "SW1", text: "Prev", press: "prev" },
+      { ref: "SW2", text: "Play / pause", press: "play" },
+      { ref: "SW3", text: "Next", press: "next" },
     ],
     display: true,
   },
@@ -156,7 +156,7 @@ export const PLAYER: Device = {
   src: "/player-parts.bin",
   chapters: CHAPTERS,
   major: /^(U|J|SW|BT|DS|OLED)\d*$/,
-  // The OLED's active area: 10.73 mm square, set 1.6 mm in from the glass's
+  // The OLED's active area, where the playlist's covers show: 10.73 mm square, set 1.6 mm in from the glass's
   // far edge (REVISION-B Part 7), the image's top toward the plug.
-  screen: { ref: "OLED", center: [114.04, 112.5], size: [10.73, 10.73], up: "-x", screen: () => new AlbumCover() },
+  screen: { ref: "OLED", center: [114.04, 112.5], size: [10.73, 10.73], up: "-x", screen: () => new PocketPlayer() },
 };

@@ -29,7 +29,7 @@ Cloudflare deploys `main` automatically after a push: Workers Builds runs `npm c
 - `src/components/Backdrop.tsx`: the faint ASCII field behind the open globe.
 - `src/components/TeardownArticle.tsx` and `src/lib/teardown/`: a board taken apart in chapters — the engine, the parts decoder and the device type the watch and the player share.
 - `src/lib/watch/`: the watch's five chapters, and a re-creation of the watch face my firmware draws.
-- `src/lib/player/`: the Tiny Music Player's six chapters, and the album cover its 64 × 64 OLED shows (the seam's isovalues, at the panel's resolution).
+- `src/lib/player/`: the Tiny Music Player's six chapters, and its last one working: a playlist from Spotify (`playlist.json`, written by `scripts/spotify-playlist.py` from a public playlist's link) with each album cover on the 64 × 64 OLED and the 30-second previews played through a small "tiny player into earbuds" filter. Prev, Play/Pause and Next are the labels on the three buttons (Space plays too).
 - `src/components/FractalArticle.tsx` and `src/lib/fractals/`: the fractals walkthrough — one WebGL shader porting my Python, the Mandelbrot cover and the Julia and Fraotic presets.
 - `src/lib/ascii/`: the animated ASCII fields on the page.
 - `scripts/`: offline pipelines for the globe texture, the watch and player parts (`player-board.sh` exports the player's board from KiCad and adds the parts KiCad has no model for), the firmware's glyphs and the fractal palettes.

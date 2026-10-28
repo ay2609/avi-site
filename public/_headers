@@ -29,3 +29,7 @@
 /globe/opengraph-image-1yhenw
   Content-Type: image/png
   Cache-Control: public, max-age=3600
+
+/player/opengraph-image-1ms95x
+  Content-Type: image/png
+  Cache-Control: public, max-age=3600

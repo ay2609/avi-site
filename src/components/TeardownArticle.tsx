@@ -1,13 +1,23 @@
 "use client";
 
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 
 import { LABEL } from "@/components/furniture";
 import { sfx } from "@/lib/sound/sfx";
 import type { ArticleId } from "@/lib/stage/articles";
 import { gsap, prefersReducedMotion, SplitText } from "@/lib/stage/motion";
-import type { Callout, Device } from "@/lib/teardown/device";
-import { type Anchor, type FrameInfo, TeardownEngine } from "@/lib/teardown/engine";
+import type { Callout, Device, Playing } from "@/lib/teardown/device";
+import {
+  type Anchor,
+  type FrameInfo,
+  TeardownEngine,
+} from "@/lib/teardown/engine";
 
 /** Height of one row of the chapter index, px — the scrub marker moves in these. */
 const INDEX_ROW = 16;
@@ -42,6 +52,67 @@ function CalloutText({ o }: { o: Callout }) {
 }
 
 const pad = (n: number) => String(n).padStart(2, "0");
+const clock = (s: number) => `${Math.floor(s / 60)}:${pad(Math.floor(s % 60))}`;
+
+/**
+ * The player's now-playing lines: track and state and time, the track and its
+ * artist, and the track on Spotify (attribution, and where the full song is).
+ * `short` folds them into two lines, for under a phone-sized box.
+ */
+function NowPlaying({
+  now,
+  live,
+  short = false,
+}: {
+  now: Playing;
+  live: boolean;
+  short?: boolean;
+}) {
+  const state = now.playing
+    ? "Playing"
+    : now.elapsed > 0
+      ? "Paused"
+      : "Press play";
+  const time =
+    now.elapsed > 0 ? ` · ${clock(now.elapsed)} / ${clock(now.duration)}` : "";
+  const spotify = (
+    <a
+      href={now.url}
+      target="_blank"
+      rel="noreferrer"
+      tabIndex={live ? 0 : -1}
+      className={`${PRESSABLE} pointer-events-auto uppercase tracking-[0.18em] transition-colors hover:text-bone`}
+    >
+      Spotify ↗
+    </a>
+  );
+  const track = (
+    <>
+      {now.title} — {now.artist}
+    </>
+  );
+  return (
+    <div className="uppercase tracking-[0.18em]">
+      <div className="truncate">
+        {pad(now.index + 1)} / {pad(now.count)} · {state}
+        {time}
+      </div>
+      {short ? (
+        <div className="mt-1 flex gap-2 whitespace-nowrap">
+          <span className="truncate text-bone">{track}</span>
+          <span className="shrink-0">· {spotify}</span>
+        </div>
+      ) : (
+        <>
+          <div className="mt-1 truncate text-bone">{track}</div>
+          <div className="mt-1 truncate">
+            {spotify} · 30 s previews · {now.source.name}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
 
 /**
  * A board as an article (the watch, the player): a teardown in chapters. On
@@ -74,6 +145,7 @@ export default function TeardownArticle({
   const indexRef = useRef<HTMLOListElement>(null);
   const calloutsRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
+  const nowRef = useRef<HTMLDivElement>(null);
   const anchorsRef = useRef<Map<string, Anchor>>(new Map());
 
   /** The latest props, for an engine created after they arrived (remounts, hot reload). */
@@ -84,6 +156,8 @@ export default function TeardownArticle({
 
   const [chapter, setChapter] = useState(0);
   const [settled, setSettled] = useState(false);
+  /** What the screen is playing, if it plays (the player's last chapter). */
+  const [now, setNow] = useState<Playing | null>(null);
   /** A small box (phones): furniture moves into the bands above and below it, labels give way. */
   const [compact, setCompact] = useState(false);
   const compactRef = useRef(false);
@@ -113,9 +187,14 @@ export default function TeardownArticle({
     const H = overlay.clientHeight;
     const anchors = anchorsRef.current;
     const box = overlay.getBoundingClientRect();
-    const below = (el: HTMLElement | null) => (el ? el.getBoundingClientRect().bottom - box.top + 12 : INSET);
+    const below = (el: HTMLElement | null) =>
+      el ? el.getBoundingClientRect().bottom - box.top + 12 : INSET;
+    // The now-playing line sits at the foot of the left column; labels stay above it.
+    const nowTop = nowRef.current
+      ? nowRef.current.getBoundingClientRect().top - box.top - 12
+      : H - INSET;
     const bounds = {
-      left: [below(headRef.current), H - INSET],
+      left: [below(headRef.current), nowTop],
       right: [below(indexRef.current), H - INSET],
     };
 
@@ -126,18 +205,37 @@ export default function TeardownArticle({
       dot.setAttribute("y", String(a.y - 1.5));
     }
 
-    const labels = compactRef.current ? [] : [...layer.querySelectorAll<HTMLElement>("[data-callout]")];
+    const labels = compactRef.current
+      ? []
+      : [...layer.querySelectorAll<HTMLElement>("[data-callout]")];
     const items = labels
-      .map((el) => ({ el, ref: el.dataset.callout!, a: anchors.get(el.dataset.callout!), side: el.dataset.side }))
-      .filter((it): it is { el: HTMLElement; ref: string; a: Anchor; side: string | undefined } => !!it.a);
+      .map((el) => ({
+        el,
+        ref: el.dataset.callout!,
+        a: anchors.get(el.dataset.callout!),
+        side: el.dataset.side,
+      }))
+      .filter(
+        (
+          it,
+        ): it is {
+          el: HTMLElement;
+          ref: string;
+          a: Anchor;
+          side: string | undefined;
+        } => !!it.a,
+      );
 
     for (const side of ["left", "right"] as const) {
       const group = items
-        .filter((it) => (it.side ?? (it.a.x < W / 2 ? "left" : "right")) === side)
+        .filter(
+          (it) => (it.side ?? (it.a.x < W / 2 ? "left" : "right")) === side,
+        )
         .sort((p, q) => p.a.y - q.a.y);
       const [top, bottom] = bounds[side];
       const ys = group.map((it) => Math.min(Math.max(it.a.y, top), bottom));
-      for (let i = 1; i < ys.length; i++) ys[i] = Math.max(ys[i], ys[i - 1] + LABEL_GAP);
+      for (let i = 1; i < ys.length; i++)
+        ys[i] = Math.max(ys[i], ys[i - 1] + LABEL_GAP);
       for (let i = ys.length - 1; i >= 0; i--) {
         const limit = i === ys.length - 1 ? bottom : ys[i + 1] - LABEL_GAP;
         ys[i] = Math.min(ys[i], limit);
@@ -151,16 +249,26 @@ export default function TeardownArticle({
         const dir = side === "left" ? 1 : -1;
         let elbow = start + dir * (14 + rank * 6);
         if (dir * (it.a.x - elbow) < 4) elbow = it.a.x;
-        const path = svg.querySelector<SVGPathElement>(`[data-leader="${it.ref}"]`);
-        path?.setAttribute("d", `M${start},${y} H${elbow} V${it.a.y} H${it.a.x}`);
+        const path = svg.querySelector<SVGPathElement>(
+          `[data-leader="${it.ref}"]`,
+        );
+        path?.setAttribute(
+          "d",
+          `M${start},${y} H${elbow} V${it.a.y} H${it.a.x}`,
+        );
       });
     }
 
     const trace = svg.querySelector<SVGPathElement>("[data-trace]");
     const refs = CHAPTERS[shown.current.chapter].trace ?? [];
     if (trace && refs.length) {
-      const pts = refs.map((r) => anchors.get(r)).filter((a): a is Anchor => !!a);
-      trace.setAttribute("d", pts.map((a, i) => `${i ? "L" : "M"}${a.x},${a.y}`).join(" "));
+      const pts = refs
+        .map((r) => anchors.get(r))
+        .filter((a): a is Anchor => !!a);
+      trace.setAttribute(
+        "d",
+        pts.map((a, i) => `${i ? "L" : "M"}${a.x},${a.y}`).join(" "),
+      );
     }
   }, [CHAPTERS]);
 
@@ -171,7 +279,8 @@ export default function TeardownArticle({
     if (!host) return;
     const onFrame = (f: FrameInfo) => {
       anchorsRef.current = f.anchors;
-      if (markerRef.current) markerRef.current.style.transform = `translateY(${f.progress * INDEX_ROW}px)`;
+      if (markerRef.current)
+        markerRef.current.style.transform = `translateY(${f.progress * INDEX_ROW}px)`;
       if (f.chapter !== shown.current.chapter) {
         shown.current.chapter = f.chapter;
         setChapter(f.chapter);
@@ -186,7 +295,12 @@ export default function TeardownArticle({
     const engine = new TeardownEngine(host, device, onFrame);
     engine.setInteractive(stateRef.current.open && stateRef.current.landed);
     engineRef.current = engine;
+    const screen = engine.screen;
+    const unlisten =
+      screen?.status && screen.subscribe?.(() => setNow(screen.status!()));
+    if (screen?.status) setNow(screen.status());
     return () => {
+      unlisten?.();
       engine.dispose();
       engineRef.current = null;
     };
@@ -206,14 +320,30 @@ export default function TeardownArticle({
     const engine = () => engineRef.current;
     const onWheel = (e: WheelEvent) => {
       e.preventDefault();
-      const scale = e.deltaMode === 1 ? 40 : e.deltaMode === 2 ? window.innerHeight : 1;
-      engine()?.wheel((Math.abs(e.deltaY) >= Math.abs(e.deltaX) ? e.deltaY : e.deltaX) * scale);
+      const scale =
+        e.deltaMode === 1 ? 40 : e.deltaMode === 2 ? window.innerHeight : 1;
+      engine()?.wheel(
+        (Math.abs(e.deltaY) >= Math.abs(e.deltaX) ? e.deltaY : e.deltaX) *
+          scale,
+      );
     };
     const onKey = (e: KeyboardEvent) => {
       if (e.defaultPrevented) return; // Space over the docked globe pauses it instead
       const k = e.key;
-      if (["ArrowDown", "ArrowRight", "PageDown", " "].includes(k)) engine()?.step(1);
-      else if (["ArrowUp", "ArrowLeft", "PageUp"].includes(k)) engine()?.step(-1);
+      // On a screen that plays, Space is its play button.
+      if (
+        k === " " &&
+        CHAPTERS[shown.current.chapter].display &&
+        engine()?.screen?.status
+      ) {
+        engine()?.press("play");
+        e.preventDefault();
+        return;
+      }
+      if (["ArrowDown", "ArrowRight", "PageDown", " "].includes(k))
+        engine()?.step(1);
+      else if (["ArrowUp", "ArrowLeft", "PageUp"].includes(k))
+        engine()?.step(-1);
       else if (k === "Home") engine()?.go(0);
       else if (k === "End") engine()?.go(LAST_CHAPTER);
       else if (/^[0-9]$/.test(k)) engine()?.go(Number(k));
@@ -242,7 +372,10 @@ export default function TeardownArticle({
     const onPointer = (e: PointerEvent) => {
       const r = hostRef.current?.getBoundingClientRect();
       if (!r) return;
-      engine()?.setTilt(((e.clientX - r.left) / r.width) * 2 - 1, ((e.clientY - r.top) / r.height) * 2 - 1);
+      engine()?.setTilt(
+        ((e.clientX - r.left) / r.width) * 2 - 1,
+        ((e.clientY - r.top) / r.height) * 2 - 1,
+      );
     };
     window.addEventListener("wheel", onWheel, { passive: false });
     window.addEventListener("keydown", onKey);
@@ -258,32 +391,41 @@ export default function TeardownArticle({
       window.removeEventListener("touchend", onTouchEnd);
       window.removeEventListener("pointermove", onPointer);
     };
-  }, [open, landed, LAST_CHAPTER]);
+  }, [open, landed, CHAPTERS, LAST_CHAPTER]);
 
   // --- Typing and drawing in ------------------------------------------------------
 
   const visible = open && landed;
 
   /** Type in every `[data-typed]` under `root` (except `skip`), over `seconds`. */
-  const type = useCallback((root: Element | null, seconds: number, skip?: string) => {
-    if (!root) return () => {};
-    const selector = skip ? `[data-typed]:not(${skip})` : "[data-typed]";
-    const splits = [...root.querySelectorAll<HTMLElement>(selector)].map((el) =>
-      // words as well as chars, so a wrapping line still breaks between words
-      SplitText.create(el, { type: "words,chars" })
-    );
-    const chars = splits.flatMap((s) => s.chars);
-    if (prefersReducedMotion() || !chars.length) return () => splits.forEach((s) => s.revert());
-    const tween = gsap.fromTo(
-      chars,
-      { autoAlpha: 0 },
-      { autoAlpha: 1, duration: 0.01, stagger: { each: seconds / chars.length } }
-    );
-    return () => {
-      tween.kill();
-      splits.forEach((s) => s.revert());
-    };
-  }, []);
+  const type = useCallback(
+    (root: Element | null, seconds: number, skip?: string) => {
+      if (!root) return () => {};
+      const selector = skip ? `[data-typed]:not(${skip})` : "[data-typed]";
+      const splits = [...root.querySelectorAll<HTMLElement>(selector)].map(
+        (el) =>
+          // words as well as chars, so a wrapping line still breaks between words
+          SplitText.create(el, { type: "words,chars" }),
+      );
+      const chars = splits.flatMap((s) => s.chars);
+      if (prefersReducedMotion() || !chars.length)
+        return () => splits.forEach((s) => s.revert());
+      const tween = gsap.fromTo(
+        chars,
+        { autoAlpha: 0 },
+        {
+          autoAlpha: 1,
+          duration: 0.01,
+          stagger: { each: seconds / chars.length },
+        },
+      );
+      return () => {
+        tween.kill();
+        splits.forEach((s) => s.revert());
+      };
+    },
+    [],
+  );
 
   // On landing the headline is already in place — it flew there — so only the
   // rest is typed; on a change of chapter everything is.
@@ -292,25 +434,43 @@ export default function TeardownArticle({
     const landing = visible && !wasVisible.current;
     wasVisible.current = visible;
     if (!visible) return;
-    const copy = overlayRef.current?.querySelector("[data-chapter-copy]") ?? null;
+    const copy =
+      overlayRef.current?.querySelector("[data-chapter-copy]") ?? null;
     return type(copy, 0.4, landing ? "[data-flies]" : undefined);
   }, [visible, chapter, type]);
 
-  const calloutsOn = visible && settled && (CHAPTERS[chapter].callouts.length > 0 || !!CHAPTERS[chapter].trace);
+  const calloutsOn =
+    visible &&
+    settled &&
+    (CHAPTERS[chapter].callouts.length > 0 || !!CHAPTERS[chapter].trace);
   useLayoutEffect(() => {
     if (!calloutsOn) return;
     layout();
     const untype = type(calloutsRef.current, LABELS_IN);
-    const lines = svgRef.current ? [...svgRef.current.querySelectorAll("path")] : [];
-    const dots = svgRef.current ? [...svgRef.current.querySelectorAll("rect")] : [];
+    const lines = svgRef.current
+      ? [...svgRef.current.querySelectorAll("path")]
+      : [];
+    const dots = svgRef.current
+      ? [...svgRef.current.querySelectorAll("rect")]
+      : [];
     if (prefersReducedMotion()) return untype;
     const tl = gsap.timeline();
     tl.fromTo(
       lines,
       { strokeDashoffset: 1 },
-      { strokeDashoffset: 0, duration: LINES_IN, ease: "expo.out", stagger: LINE_STAGGER }
+      {
+        strokeDashoffset: 0,
+        duration: LINES_IN,
+        ease: "expo.out",
+        stagger: LINE_STAGGER,
+      },
     );
-    tl.fromTo(dots, { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.01, stagger: LINE_STAGGER }, 0);
+    tl.fromTo(
+      dots,
+      { autoAlpha: 0 },
+      { autoAlpha: 1, duration: 0.01, stagger: LINE_STAGGER },
+      0,
+    );
     return () => {
       tl.kill();
       untype();
@@ -319,7 +479,9 @@ export default function TeardownArticle({
 
   const c = CHAPTERS[chapter];
   /** A long list goes in two columns under a small box, when every label fits half its width. */
-  const twoUp = c.callouts.length > 4 && c.callouts.every((o) => o.ref.length + 3 + o.text.length <= TWO_UP_CHARS);
+  const twoUp =
+    c.callouts.length > 4 &&
+    c.callouts.every((o) => o.ref.length + 3 + o.text.length <= TWO_UP_CHARS);
   const go = (k: number) => engineRef.current?.go(k);
   const press = (o: Callout) => o.press && engineRef.current?.press(o.press);
 
@@ -381,6 +543,17 @@ export default function TeardownArticle({
           </div>
         </nav>
 
+        {/* What the screen is playing (the player), at the foot of the left
+            column; under the labels on a phone. */}
+        {visible && c.display && now && !compact && (
+          <div
+            ref={nowRef}
+            className={`${LABEL} absolute bottom-4 left-4 max-w-[min(22rem,45%)]`}
+          >
+            <NowPlaying now={now} live={visible} />
+          </div>
+        )}
+
         {/* Leaders and traces */}
         <svg
           ref={svgRef}
@@ -409,7 +582,12 @@ export default function TeardownArticle({
                   stroke="var(--dim)"
                   strokeWidth={1}
                 />
-                <rect data-dot={o.ref} width={3} height={3} fill="var(--bone)" />
+                <rect
+                  data-dot={o.ref}
+                  width={3}
+                  height={3}
+                  fill="var(--bone)"
+                />
               </g>
             ))}
         </svg>
@@ -447,30 +625,40 @@ export default function TeardownArticle({
               );
             })}
           {calloutsOn && compact && c.callouts.length > 0 && (
-            <ul
-              className={`${LABEL} absolute left-4 right-4 top-[calc(100%+16px)] ${
-                twoUp ? "columns-2 gap-x-3 whitespace-nowrap" : ""
-              }`}
+            <div
+              className={`${LABEL} absolute left-4 right-4 top-[calc(100%+16px)]`}
             >
-              {c.callouts.map((o) => (
-                <li key={`${c.id}-${o.ref}`} className="mb-1 break-inside-avoid">
-                  {o.press ? (
-                    <button
-                      type="button"
-                      data-typed
-                      onClick={() => press(o)}
-                      className={`${PRESSABLE} pointer-events-auto cursor-pointer uppercase tracking-[0.18em] transition-colors hover:text-bone`}
-                    >
-                      <CalloutText o={o} />
-                    </button>
-                  ) : (
-                    <span data-typed>
-                      <CalloutText o={o} />
-                    </span>
-                  )}
-                </li>
-              ))}
-            </ul>
+              <ul
+                className={twoUp ? "columns-2 gap-x-3 whitespace-nowrap" : ""}
+              >
+                {c.callouts.map((o) => (
+                  <li
+                    key={`${c.id}-${o.ref}`}
+                    className="mb-1 break-inside-avoid"
+                  >
+                    {o.press ? (
+                      <button
+                        type="button"
+                        data-typed
+                        onClick={() => press(o)}
+                        className={`${PRESSABLE} pointer-events-auto cursor-pointer uppercase tracking-[0.18em] transition-colors hover:text-bone`}
+                      >
+                        <CalloutText o={o} />
+                      </button>
+                    ) : (
+                      <span data-typed>
+                        <CalloutText o={o} />
+                      </span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+              {c.display && now && (
+                <div className="mt-2">
+                  <NowPlaying now={now} live={visible} short />
+                </div>
+              )}
+            </div>
           )}
         </div>
       </div>

@@ -284,6 +284,11 @@ export class TeardownEngine {
     this.face?.press?.(button);
   }
 
+  /** What the screen draws, for the article (the player's now-playing line). */
+  get screen(): Screen | null {
+    return this.face;
+  }
+
   // --- Scene -----------------------------------------------------------------
 
   private build(model: BoardModel): void {
@@ -565,6 +570,7 @@ export class TeardownEngine {
     }
     if (this.face && (this.display || this.screenMaterial)) {
       if (d > 0.001 && !this.faceOn) this.face.reset(now);
+      else if (d <= 0.001 && this.faceOn) this.face.sleep?.();
       this.faceOn = d > 0.001;
       if (this.faceOn && this.face.step(now, !this.reduce) && this.faceTexture) this.faceTexture.needsUpdate = true;
     }
@@ -612,6 +618,7 @@ export class TeardownEngine {
 
   dispose(): void {
     this.disposed = true;
+    this.face?.sleep?.();
     this.controller.abort();
     this.ticker.stopLoop();
     this.resizeObserver.disconnect();
