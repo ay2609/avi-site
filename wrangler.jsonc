@@ -1,11 +1,24 @@
 // Cloudflare Workers — serves the static export (`next build` with output: "export" writes ./out).
 // Every page is a file: /globe serves globe.html (html_handling defaults to auto-trailing-slash),
 // and anything else gets out/404.html.
+//
+// worker/index.ts runs first on every request: aviyadava.com is the site (Oct 28), and the old
+// halcyn.dev names and www.aviyadava.com redirect there (301). All four are custom domains here;
+// halcyn.dev stays attached so it can answer with the redirect.
 {
   "name": "avi-site",
   "compatibility_date": "2026-09-29",
+  "main": "worker/index.ts",
   "assets": {
     "directory": "./out",
-    "not_found_handling": "404-page"
-  }
+    "binding": "ASSETS",
+    "not_found_handling": "404-page",
+    "run_worker_first": true
+  },
+  "routes": [
+    { "pattern": "aviyadava.com", "custom_domain": true },
+    { "pattern": "www.aviyadava.com", "custom_domain": true },
+    { "pattern": "halcyn.dev", "custom_domain": true },
+    { "pattern": "www.halcyn.dev", "custom_domain": true }
+  ]
 }

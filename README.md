@@ -1,6 +1,6 @@
 # Avi's front page
 
-My personal website, live at [halcyn.dev](https://halcyn.dev/).
+My personal website, live at [aviyadava.com](https://aviyadava.com/) (halcyn.dev redirects there).
 
 It's laid out like the front page of a newspaper where every article is a picture. Spin the globe and bend its projection (bend it past halfway and the whole page turns to paper, and stays that way next visit), open the watch to take my smartwatch's board apart one chapter at a time, or open Fractals to walk through live ports of the code I wrote in high school, from the Mandelbrot set to chaotic attractors. Clicking an article grows it to full screen at its own address, and Esc folds it back into the page. Every article opens from the keyboard too, and motion respects reduced-motion settings.
 
@@ -19,7 +19,7 @@ The site is a Next.js app exported as plain static files (`output: "export"`, bu
 
 ## Publishing
 
-Cloudflare deploys `main` automatically after a push: Workers Builds runs `npm clean-install`, `npm run build` and `npx wrangler deploy`, and `wrangler.jsonc` serves `out/` as static assets with `404.html` for missing pages. halcyn.dev and www.halcyn.dev are custom domains on the `avi-site` Worker. Other branches don't build, so a push to `main` is a release. Mail to avi@halcyn.dev is forwarded by Cloudflare Email Routing.
+Cloudflare deploys `main` automatically after a push: Workers Builds runs `npm clean-install`, `npm run build` and `npx wrangler deploy`, and `wrangler.jsonc` serves `out/` as static assets with `404.html` for missing pages. aviyadava.com, www.aviyadava.com, halcyn.dev and www.halcyn.dev are custom domains on the `avi-site` Worker; `worker/index.ts` runs first and sends everything but aviyadava.com there with a 301. Other branches don't build, so a push to `main` is a release. Mail to avi@halcyn.dev is forwarded by Cloudflare Email Routing.
 
 ## Main files
 

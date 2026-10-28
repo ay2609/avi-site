@@ -13,7 +13,7 @@ const DESCRIPTION =
  * sites that unfurl links.
  */
 export const metadata: Metadata = {
-  metadataBase: new URL("https://halcyn.dev"),
+  metadataBase: new URL("https://aviyadava.com"),
   title: "Avi Yadava",
   description: DESCRIPTION,
   openGraph: { siteName: "Avi Yadava", type: "website", url: "/", description: DESCRIPTION },

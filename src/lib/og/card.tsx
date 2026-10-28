@@ -71,7 +71,7 @@ export function card(children: ReactNode, right = dateline()): ImageResponse {
           }}
         >
           <div style={{ ...label, display: "flex", justifyContent: "space-between", padding: "26px 24px 0" }}>
-            <span>halcyn.dev</span>
+            <span>aviyadava.com</span>
             <span style={{ color: C.bone }}>{right}</span>
           </div>
           {children}

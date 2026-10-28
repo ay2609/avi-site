@@ -9,7 +9,7 @@ import { card, colors, OG_SIZE, rule, serif } from "@/lib/og/card";
  */
 
 export const dynamic = "force-static";
-export const alt = "Avi Yadava — the front page of halcyn.dev";
+export const alt = "Avi Yadava — the front page of aviyadava.com";
 export const size = OG_SIZE;
 export const contentType = "image/png";
 
