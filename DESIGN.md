@@ -163,7 +163,7 @@ Square everything: zero radius anywhere. Containers are implied by dashed 1px ru
 
 ### Project tile (front page)
 - **Character:** a newspaper story whose picture is the point.
-- **Structure:** a label line with the number and stack ("01 — ESP32 / KiCad") and "Open ↗" set right; the name in uppercase serif at clamp 2.4–4rem, the same in every tile; a dim line of copy; then the art at 4:3 across the foot, under a dashed rule. A new project is one more tile.
+- **Structure:** "Open ↗" alone, set right, above the name (the number-and-stack line was removed Oct 27); the name in uppercase serif at clamp 2.4–4rem, the same in every tile; a dim line of copy; then the art at 4:3 across the foot, under a dashed rule. A new project is one more tile.
 - **Open cue:** "Open ↗", dim, turning bone with the ring. Every opening thing carries it (the globe's under it), because phones have no hover to discover the ring with.
 - **Interaction:** the whole section is a `role="link"`. Hover or keyboard focus flickers a solid bone ring on over its dashed rules, in hard steps over 0.3s. One click opens the article at its route.
 

@@ -76,25 +76,19 @@ function OpenCue({ className = "" }: { className?: string }) {
 }
 
 /**
- * One project's tile (Oct 27: every project the same): its number and stack
- * on the label line with "Open ↗", its name, a line of copy, and its art at
- * 4:3 across the foot, bleeding to the rules.
+ * One project's tile (Oct 27: every project the same): "Open ↗" set right,
+ * its name, a line of copy, and its art at 4:3 across the foot, bleeding to
+ * the rules.
  *
  * The art is an empty slot a document-level layer sits over (see Stage), and
  * the whole tile opens on a single click.
  */
 function Article({
-  index,
   title,
-  stack,
   dek,
   slot,
 }: {
-  /** Its number in the run, "01" on. */
-  index: string;
   title: string;
-  /** What it's made with, as the label line gives it. */
-  stack: string;
   dek?: ReactNode;
   slot: { id: ArticleId; ref: Ref<HTMLDivElement>; onOpen: () => void };
 }) {
@@ -118,15 +112,12 @@ function Article({
         className="ring-flicker pointer-events-none absolute -inset-x-px -top-px -bottom-px z-10 border border-bone"
       />
       <div className="px-4 pb-4 pt-4">
-        <div className={`${LABEL} flex items-baseline justify-between gap-4`}>
-          <span>
-            {index} — {stack}
-          </span>
+        <div className={`${LABEL} flex justify-end`}>
           <OpenCue className="group-hover:text-bone group-focus-visible:text-bone group-data-[hover]:text-bone" />
         </div>
         <h2
           data-headline={slot.id}
-          className="font-serif-ui mt-2 whitespace-nowrap uppercase leading-[0.86] tracking-[-0.02em] text-bone"
+          className="font-serif-ui mt-1.5 whitespace-nowrap uppercase leading-[0.86] tracking-[-0.02em] text-bone"
           style={{ fontSize: "clamp(2.4rem, 4.6vw, 4rem)" }}
         >
           {title}
@@ -255,13 +246,11 @@ export default function Newspaper({
       </div>
 
       {/* 3 — The work: equal tiles, two across (one on phones), each the same
-          anatomy — number and stack, name, a line, its art at 4:3 — so a new
+          anatomy — name, a line, its art at 4:3 — so a new
           project is one more tile. */}
       <div data-push="down" className="grid grid-cols-1 md:grid-cols-2">
         <Article
-          index="01"
           title="Watch"
-          stack="ESP32 / KiCad"
           dek={
             <>
               My freshman-year project: a smartwatch designed from nothing, the board in KiCad and the firmware
@@ -271,9 +260,7 @@ export default function Newspaper({
           slot={{ id: "watch", ref: slotRefs.watch, onOpen: () => onOpen("watch") }}
         />
         <Article
-          index="02"
           title="Fractals"
-          stack="Python / NumPy"
           dek={
             <>
               Live ports of the Python I wrote in high school, from the Mandelbrot set to chaotic attractors, in
