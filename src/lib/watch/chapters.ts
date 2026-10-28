@@ -1,53 +1,13 @@
+import type { Chapter, Device } from "@/lib/teardown/device";
+
+import { SovereignFace } from "./face";
+
 /**
  * The watch walkthrough: five chapters, each a camera, a set of parts lifted
- * off the board, and a few labelled parts.
- *
- * Parts are named by reference designator; `sheets` pulls in every part drawn
- * on those schematic sheets (see the parts table in public/watch-parts.bin).
- * Angles are degrees. Copy is set in the site's label style (uppercase by CSS).
+ * off the board, and a few labelled parts (types in src/lib/teardown/device).
  */
 
 export type FaceButton = "wake" | "sleep" | "next" | "back" | "spare";
-
-export interface Callout {
-  /** A reference designator, or "LCD" for the display module. */
-  ref: string;
-  text: string;
-  /** In the FACE chapter, a label that presses that button on the face. */
-  press?: FaceButton;
-  /** Force the label's column; by default it goes on the side its part is on. */
-  side?: "left" | "right";
-}
-
-export interface ChapterView {
-  /** Turntable angle; "spin" keeps the front-page turntable turning. */
-  yaw: number | "spin";
-  pitch: number;
-  /** Rotation in the board's own plane; "diagonal" stands the board's diagonal upright. */
-  roll: number | "diagonal";
-  zoom: number;
-  /** Where the camera looks, in model space; default: the lifted parts' centre. */
-  look?: [number, number, number];
-  /** Shifts the subject within the box, in fractions of the box (x right, y up). */
-  shift?: [number, number];
-}
-
-export interface Chapter {
-  id: string;
-  headline: string;
-  view: ChapterView;
-  /** Parts lifted and drawn at full line weight. */
-  focus: { sheets?: string[]; refs?: string[] };
-  /** How far focused parts rise, in model units (the board's long side is 1). */
-  lift: number;
-  /** Everything outside the focus is drawn faintly. */
-  dim: boolean;
-  callouts: Callout[];
-  /** A path drawn through these parts, in order (the power path, the I²C bus). */
-  trace?: string[];
-  /** The display module is on the stage. */
-  display: boolean;
-}
 
 export const CHAPTERS: Chapter[] = [
   {
@@ -131,8 +91,6 @@ export const CHAPTERS: Chapter[] = [
   },
 ];
 
-export const LAST_CHAPTER = CHAPTERS.length - 1;
-
 /**
  * The Waveshare 1.69" LCD module, in millimetres. Module and active area are
  * from Waveshare's spec; the glass outline and corner radius are estimates.
@@ -146,3 +104,10 @@ export const DISPLAY = {
   hover: 10.5,
   pixels: [240, 280],
 } as const;
+
+export const WATCH: Device = {
+  src: "/watch-parts.bin",
+  chapters: CHAPTERS,
+  major: /^(U|J|SW)\d/,
+  module: { ref: "LCD", ...DISPLAY, screen: () => new SovereignFace() },
+};

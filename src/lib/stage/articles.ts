@@ -4,7 +4,7 @@ import type { AsciiFieldId } from "@/lib/ascii/fields";
  * The expandable articles. Each has a slot in the newspaper, a document-level
  * layer that carries its art, a route, and the copy the stage shows around it.
  */
-export type ArticleId = "globe" | "watch" | "fractals";
+export type ArticleId = "globe" | "watch" | "player" | "fractals";
 
 export interface Article {
   id: ArticleId;
@@ -42,6 +42,15 @@ export const ARTICLES: Record<ArticleId, Article> = {
     controls: "Scroll to walk through",
     touch: "Swipe up to walk through",
     title: "Watch — Avi Yadava",
+  },
+  player: {
+    id: "player",
+    route: "/player",
+    aspect: 4 / 3,
+    kicker: "/Player — STM32 / KiCad",
+    controls: "Scroll to walk through",
+    touch: "Swipe up to walk through",
+    title: "Player — Avi Yadava",
   },
   fractals: {
     id: "fractals",

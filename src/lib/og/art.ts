@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { ASCII_FIELDS, ASCII_RAMPS, type AsciiFieldId } from "@/lib/ascii/fields";
 import { COVER_VIEW, COVER, coverRGB, escapeStep } from "@/lib/fractals/cover";
 import { WORLD_GRAPH } from "@/lib/three/network/world-graph";
-import { decodeWatchModel } from "@/lib/watch/model";
+import { decodeBoardModel } from "@/lib/teardown/model";
 
 import { LAND } from "./land";
 import { pngDataUrl } from "./png";
@@ -189,16 +189,17 @@ export function globeArt(size: number, lng0 = -40, tilt = 18): string {
   return c.read();
 }
 
-// --- The watch's board -----------------------------------------------------------
+// --- A teardown's board ------------------------------------------------------------
 
 /**
- * The board as line art, the way the page's turntable draws it: the mesh's
+ * A board (public/watch-parts.bin, public/player-parts.bin) as line art, the
+ * way the page's turntable draws it: the mesh's
  * feature edges (creases over 28° and open edges, as THREE.EdgesGeometry
  * finds them), with hidden lines removed against a depth buffer of the solid.
  */
-export function watchArt(w: number, h: number, yawDeg = -28, pitchDeg = 52): string {
-  const file = readFileSync(join(process.cwd(), "public/watch-parts.bin"));
-  const model = decodeWatchModel(file.buffer.slice(file.byteOffset, file.byteOffset + file.byteLength));
+export function boardArt(path: string, w: number, h: number, yawDeg = -28, pitchDeg = 52): string {
+  const file = readFileSync(join(process.cwd(), path));
+  const model = decodeBoardModel(file.buffer.slice(file.byteOffset, file.byteOffset + file.byteLength));
   const c = canvas(w, h);
   const yaw = (yawDeg * Math.PI) / 180;
   const pitch = (pitchDeg * Math.PI) / 180;

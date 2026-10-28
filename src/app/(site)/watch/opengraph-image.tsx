@@ -1,4 +1,4 @@
-import { watchArt } from "@/lib/og/art";
+import { boardArt } from "@/lib/og/art";
 import { articleCard, OG_SIZE } from "@/lib/og/card";
 
 /** The watch's link preview: the board as the turntable draws it, from its mesh. */
@@ -14,7 +14,7 @@ export default function Image() {
     title: "Watch",
     dek: "My freshman-year project: a smartwatch designed from nothing, the board in KiCad and the firmware in C.",
     path: "/watch",
-    art: watchArt(560, 540),
+    art: boardArt("public/watch-parts.bin", 560, 540),
     artW: 560,
     artH: 540,
   });

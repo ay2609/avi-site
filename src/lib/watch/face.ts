@@ -12,6 +12,8 @@
  * pointer, the battery is the reader's battery when the browser will say.
  */
 import { LARGE, MEDIUM, SMALL, type BdfFont } from "./glyphs";
+import type { Screen } from "@/lib/teardown/device";
+
 import type { FaceButton } from "./chapters";
 
 export const FACE_W = 240;
@@ -294,8 +296,13 @@ const H12 = SMALL.ref.h;
 const two = (n: number) => (n < 10 ? `0${n}` : `${n}`);
 
 /** The watch: screens, buttons, backlight — main/watch.c's ST7789 task. */
-export class SovereignFace {
+export class SovereignFace implements Screen {
   readonly fb = new Framebuffer();
+  readonly width = FACE_W;
+  readonly height = FACE_H;
+  get bytes(): Uint8Array {
+    return this.fb.bytes;
+  }
   /** Accelerometer stand-in, in g (±1), set from the pointer. */
   tilt = { x: 0, y: 0 };
   /** 0–100, or null when unknown. */

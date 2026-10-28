@@ -1,5 +1,5 @@
 /**
- * Decoder for the "AVP1" watch model written by scripts/glb-to-parts.py: the
+ * Decoder for the "AVP1" board model written by scripts/glb-to-parts.py: the
  * board and every part on it as separate, contiguous slices of one buffer.
  *
  * Model space: X = KiCad X, Y = −KiCad Y, Z = up (component side), centred on
@@ -19,7 +19,7 @@ export interface PartInfo {
   size: [number, number, number];
 }
 
-export interface WatchModel {
+export interface BoardModel {
   halfExtent: [number, number, number];
   /** model = (mm − center) · scale, with mm = (KiCad x, −KiCad y, up). */
   frame: { center: [number, number, number]; scale: number };
@@ -28,7 +28,7 @@ export interface WatchModel {
   indices: Uint16Array;
 }
 
-export function decodeWatchModel(buffer: ArrayBuffer): WatchModel {
+export function decodeBoardModel(buffer: ArrayBuffer): BoardModel {
   const view = new DataView(buffer);
   const magic = String.fromCharCode(...new Uint8Array(buffer, 0, 4));
   if (magic !== "AVP1") throw new Error("not an AVP1 model");
@@ -60,7 +60,7 @@ export function decodeWatchModel(buffer: ArrayBuffer): WatchModel {
 }
 
 /** A KiCad board coordinate (mm) and height above it, in model space. */
-export function fromKicad(model: WatchModel, x: number, y: number, up = 0): [number, number, number] {
+export function fromKicad(model: BoardModel, x: number, y: number, up = 0): [number, number, number] {
   const { center, scale } = model.frame;
   return [(x - center[0]) * scale, (-y - center[1]) * scale, (up - center[2]) * scale];
 }

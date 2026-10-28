@@ -487,5 +487,6 @@ if (typeof window !== "undefined" && process.env.NODE_ENV !== "production")
 export const ARTICLE_NOTES: Record<string, number> = {
   globe: note(5),
   watch: note(7),
+  player: note(8),
   fractals: note(9),
 };

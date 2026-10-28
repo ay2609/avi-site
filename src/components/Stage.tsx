@@ -18,8 +18,10 @@ import SoundBoard from "@/components/SoundBoard";
 import StageChrome from "@/components/StageChrome";
 import { LABEL } from "@/components/furniture";
 import FractalArticle from "@/components/FractalArticle";
-import WatchArticle from "@/components/WatchArticle";
+import TeardownArticle from "@/components/TeardownArticle";
 import GlobeCanvas from "@/lib/three/GlobeCanvas";
+import { PLAYER } from "@/lib/player/chapters";
+import { WATCH } from "@/lib/watch/chapters";
 import { ARTICLES, ARTICLE_IDS, type ArticleId, articleForPath } from "@/lib/stage/articles";
 import { useOpenOnClick } from "@/lib/stage/click";
 import { sfx } from "@/lib/sound/sfx";
@@ -168,11 +170,13 @@ export default function Stage() {
   const slotRefs = useRef<Record<ArticleId, RefObject<HTMLDivElement | null>>>({
     globe: { current: null },
     watch: { current: null },
+    player: { current: null },
     fractals: { current: null },
   }).current;
   const layerRefs = useRef<Record<ArticleId, RefObject<HTMLDivElement | null>>>({
     globe: { current: null },
     watch: { current: null },
+    player: { current: null },
     fractals: { current: null },
   }).current;
 
@@ -749,7 +753,19 @@ export default function Stage() {
       >
         {/* The watch's board, part by part — a turntable on the page, a
             teardown in chapters on the stage (src/lib/watch). */}
-        <WatchArticle open={openId === "watch"} landed={landedId === "watch"} />
+        <TeardownArticle id="watch" device={WATCH} open={openId === "watch"} landed={landedId === "watch"} />
+      </Layer>
+      <Layer
+        id="player"
+        layerRef={layerRefs.player}
+        open={openId === "player"}
+        staged={staged.id === "player"}
+        ring={false}
+        onOpen={() => open("player")}
+        onHover={(on) => hover("player", on)}
+      >
+        {/* The music player's board, the same way (src/lib/player). */}
+        <TeardownArticle id="player" device={PLAYER} open={openId === "player"} landed={landedId === "player"} />
       </Layer>
       <Layer
         id="fractals"

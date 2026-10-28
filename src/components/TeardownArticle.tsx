@@ -4,9 +4,10 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react
 
 import { LABEL } from "@/components/furniture";
 import { sfx } from "@/lib/sound/sfx";
+import type { ArticleId } from "@/lib/stage/articles";
 import { gsap, prefersReducedMotion, SplitText } from "@/lib/stage/motion";
-import { CHAPTERS, LAST_CHAPTER, type Callout } from "@/lib/watch/chapters";
-import { type Anchor, type FrameInfo, WatchEngine } from "@/lib/watch/engine";
+import type { Callout, Device } from "@/lib/teardown/device";
+import { type Anchor, type FrameInfo, TeardownEngine } from "@/lib/teardown/engine";
 
 /** Height of one row of the chapter index, px — the scrub marker moves in these. */
 const INDEX_ROW = 16;
@@ -22,6 +23,8 @@ const LABEL_GAP = 22;
 const INSET = 16;
 /** Box width below which the furniture moves outside the box and part labels are dropped. */
 const COMPACT_BELOW = 560;
+/** The longest label, in characters, that fits one of two columns under a phone-sized box. */
+const TWO_UP_CHARS = 22;
 
 /**
  * A callout that presses a button on the face: dashed underneath, like the
@@ -41,18 +44,31 @@ function CalloutText({ o }: { o: Callout }) {
 const pad = (n: number) => String(n).padStart(2, "0");
 
 /**
- * The watch as an article: a teardown in five chapters. On the front page it
- * is the turntable; once its stage has landed, each scroll or swipe moves one
- * chapter (see src/lib/watch/chapters.ts) and the furniture inside the box —
- * headline, index, labelled parts — follows along.
+ * A board as an article (the watch, the player): a teardown in chapters. On
+ * the front page it is the turntable; once its stage has landed, each scroll
+ * or swipe moves one chapter (see the device's chapters, e.g.
+ * src/lib/watch/chapters.ts) and the furniture inside the box — headline,
+ * index, labelled parts — follows along.
  *
  * Text is typed in when it changes and lines are drawn in; nothing inside the
  * box is shown while the article is flying between the page and the stage.
  */
-export default function WatchArticle({ open, landed }: { open: boolean; landed: boolean }) {
+export default function TeardownArticle({
+  id,
+  device,
+  open,
+  landed,
+}: {
+  id: ArticleId;
+  device: Device;
+  open: boolean;
+  landed: boolean;
+}) {
+  const CHAPTERS = device.chapters;
+  const LAST_CHAPTER = CHAPTERS.length - 1;
   const hostRef = useRef<HTMLDivElement>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
-  const engineRef = useRef<WatchEngine | null>(null);
+  const engineRef = useRef<TeardownEngine | null>(null);
   const markerRef = useRef<HTMLDivElement>(null);
   const headRef = useRef<HTMLDivElement>(null);
   const indexRef = useRef<HTMLOListElement>(null);
@@ -146,7 +162,7 @@ export default function WatchArticle({ open, landed }: { open: boolean; landed: 
       const pts = refs.map((r) => anchors.get(r)).filter((a): a is Anchor => !!a);
       trace.setAttribute("d", pts.map((a, i) => `${i ? "L" : "M"}${a.x},${a.y}`).join(" "));
     }
-  }, []);
+  }, [CHAPTERS]);
 
   // --- Engine ------------------------------------------------------------------
 
@@ -167,14 +183,14 @@ export default function WatchArticle({ open, landed }: { open: boolean; landed: 
       }
       if (f.settled) layout();
     };
-    const engine = new WatchEngine(host, "/watch-parts.bin", onFrame);
+    const engine = new TeardownEngine(host, device, onFrame);
     engine.setInteractive(stateRef.current.open && stateRef.current.landed);
     engineRef.current = engine;
     return () => {
       engine.dispose();
       engineRef.current = null;
     };
-  }, [layout]);
+  }, [device, layout]);
 
   useEffect(() => {
     const engine = engineRef.current;
@@ -242,7 +258,7 @@ export default function WatchArticle({ open, landed }: { open: boolean; landed: 
       window.removeEventListener("touchend", onTouchEnd);
       window.removeEventListener("pointermove", onPointer);
     };
-  }, [open, landed]);
+  }, [open, landed, LAST_CHAPTER]);
 
   // --- Typing and drawing in ------------------------------------------------------
 
@@ -299,9 +315,11 @@ export default function WatchArticle({ open, landed }: { open: boolean; landed: 
       tl.kill();
       untype();
     };
-  }, [calloutsOn, chapter, compact, layout, type]);
+  }, [calloutsOn, chapter, compact, layout, type, CHAPTERS]);
 
   const c = CHAPTERS[chapter];
+  /** A long list goes in two columns under a small box, when every label fits half its width. */
+  const twoUp = c.callouts.length > 4 && c.callouts.every((o) => o.ref.length + 3 + o.text.length <= TWO_UP_CHARS);
   const go = (k: number) => engineRef.current?.go(k);
   const press = (o: Callout) => o.press && engineRef.current?.press(o.press);
 
@@ -323,11 +341,11 @@ export default function WatchArticle({ open, landed }: { open: boolean; landed: 
             ref={headRef}
             className="absolute left-4 top-4 @max-[560px]:top-auto @max-[560px]:bottom-[calc(100%+16px)]"
           >
-            {/* The newspaper's WATCH flies here when the article opens (see Stage). */}
+            {/* The newspaper's headline flies here when the article opens (see Stage). */}
             <h3
               data-typed
               data-flies
-              data-stage-headline="watch"
+              data-stage-headline={id}
               className="font-serif-ui whitespace-nowrap uppercase leading-[0.86] tracking-[-0.02em] text-bone"
               style={{ fontSize: "clamp(2.25rem, 7cqw, 4.5rem)" }}
             >
@@ -431,7 +449,7 @@ export default function WatchArticle({ open, landed }: { open: boolean; landed: 
           {calloutsOn && compact && c.callouts.length > 0 && (
             <ul
               className={`${LABEL} absolute left-4 right-4 top-[calc(100%+16px)] ${
-                c.callouts.length > 4 ? "columns-2 gap-x-3 whitespace-nowrap" : ""
+                twoUp ? "columns-2 gap-x-3 whitespace-nowrap" : ""
               }`}
             >
               {c.callouts.map((o) => (

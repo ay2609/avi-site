@@ -8,6 +8,8 @@ addressable, for the watch walkthrough.
         "~/Documents/KiCad Projects/WatchESP/WatchESP.kicad_pcb" \
         public/watch-parts.bin
 
+    python3 scripts/glb-to-parts.py board.glb board.kicad_pcb out.bin extras.json
+
 KiCad (File > Export > GLB) writes one top-level node per footprint, named by
 its reference designator, plus unnamed nodes for the board itself. The board
 file supplies what the GLB doesn't: each part's value and the schematic sheet
@@ -28,6 +30,12 @@ Format "AVP1" (little-endian):
                                            i: [start, count], center[3], size[3] }] }
     int16  positions[vertexCount * 3]   q / 32767 * halfExtent, padded to 4 bytes
     uint16 indices[indexCount]          relative to the part's first vertex
+
+The optional extras file adds parts KiCad has no 3D model for (the player's
+cells and its OLED glass) as boxes and cylinders, or adds them to a part of
+the same ref. Each is { ref, value, side: "top"|"bottom", box: { x, y, z } }
+or { ..., cylinder: { axis: "x", x: [x0, x1], y, z, r, sides } }: x and y in
+KiCad mm, z in mm away from that side's surface of the board.
 
 Vertices and indices are grouped by part, so each part is a contiguous slice
 that can be uploaded as its own geometry. Vertices are deduplicated exactly
@@ -131,7 +139,44 @@ def kicad_parts(path):
     return parts
 
 
-def main(glb_path, pcb_path, out_path):
+def box_mesh(x, y, z):
+    """An axis-aligned box in (x, y, z) mm: its 8 corners and 12 triangles."""
+    p = np.array([[x[i & 1], y[(i >> 1) & 1], z[(i >> 2) & 1]] for i in range(8)], dtype=np.float64)
+    quads = [(0, 2, 3, 1), (4, 5, 7, 6), (0, 1, 5, 4), (2, 6, 7, 3), (0, 4, 6, 2), (1, 3, 7, 5)]
+    return p, np.array([t for a, b, c, d in quads for t in (a, b, c, a, c, d)])
+
+
+def cylinder_mesh(x, y, z, r, sides):
+    """A prism of `sides` facets along x (few enough that the facets read as lines)."""
+    ring = [(y + r * np.cos(2 * np.pi * k / sides), z + r * np.sin(2 * np.pi * k / sides)) for k in range(sides)]
+    p = np.array([[xx, a, b] for xx in x for a, b in ring] + [[x[0], y, z], [x[1], y, z]], dtype=np.float64)
+    tris, c0, c1 = [], 2 * sides, 2 * sides + 1
+    for k in range(sides):
+        j = (k + 1) % sides
+        tris += [k, j, sides + j, k, sides + j, sides + k, c0, j, k, c1, sides + k, sides + j]
+    return p, np.array(tris)
+
+
+def extra_mesh(extra, board_lo, board_hi):
+    """An extras entry in model mm (x, -kicad y, up)."""
+    up = (lambda d: board_hi + d) if extra.get("side", "top") == "top" else (lambda d: board_lo - d)
+    if "box" in extra:
+        b = extra["box"]
+        p, idx = box_mesh(b["x"], b["y"], sorted(up(d) for d in b["z"]))
+    else:
+        c = extra["cylinder"]
+        p, idx = cylinder_mesh(c["x"], c["y"], up(c["z"]), c["r"], c.get("sides", 12))
+    # Both are convex: wind every triangle to face away from the middle (the
+    # page draws front faces only).
+    t = idx.reshape(-1, 3)
+    a, b, d = p[t[:, 0]], p[t[:, 1]], p[t[:, 2]]
+    out = np.einsum("ij,ij->i", np.cross(b - a, d - a), (a + b + d) / 3 - p.mean(0)) < 0
+    t[out] = t[out][:, ::-1]
+    idx = t.reshape(-1)
+    return np.c_[p[:, 0], -p[:, 1], p[:, 2]], idx
+
+
+def main(glb_path, pcb_path, out_path, extras_path=None):
     doc, blob = read_glb(os.path.expanduser(glb_path))
     board = kicad_parts(os.path.expanduser(pcb_path))
     root = doc["scenes"][doc.get("scene", 0)]["nodes"]
@@ -152,12 +197,22 @@ def main(glb_path, pcb_path, out_path):
     def to_model(p):
         return np.c_[p[:, 0], -p[:, 2], p[:, 1]] * 1000.0
 
-    order = ["PCB"] + sorted((r for r in groups if r != "PCB"), key=lambda r: (re.sub(r"\d", "", r), int(re.sub(r"\D", "", r) or 0)))
+    model_groups = {ref: [(to_model(p), i) for p, i in tris] for ref, tris in groups.items()}
+    values = {}
+    if extras_path:
+        board_z = np.concatenate([p[:, 2] for p, _ in model_groups["PCB"]])
+        lo, hi = board_z.min(), board_z.max()
+        for extra in json.load(open(os.path.expanduser(extras_path))):
+            model_groups.setdefault(extra["ref"], []).append(extra_mesh(extra, lo, hi))
+            if "value" in extra:
+                values[extra["ref"]] = extra["value"]
+
+    order = ["PCB"] + sorted((r for r in model_groups if r != "PCB"), key=lambda r: (re.sub(r"\d", "", r), int(re.sub(r"\D", "", r) or 0)))
     meshes = []
     for ref in order:
-        pos = np.concatenate([to_model(p) for p, _ in groups[ref]])
+        pos = np.concatenate([p for p, _ in model_groups[ref]])
         base, idx = 0, []
-        for p, i in groups[ref]:
+        for p, i in model_groups[ref]:
             idx.append(i + base)
             base += len(p)
         idx = np.concatenate(idx)
@@ -180,10 +235,13 @@ def main(glb_path, pcb_path, out_path):
         plo, phi = n.min(0), n.max(0)
         if ref == "PCB":
             value, sheet = "PCB", "Board"
+        elif ref not in origins:
+            value, sheet = values.get(ref) or board.get(ref, [("",)])[0][0], ""
         else:
             options = board.get(ref, [("", "", 0, 0)])
             ox, oz = origins[ref][0] * 1000, origins[ref][2] * 1000
             value, sheet, _, _ = min(options, key=lambda o: (o[2] - ox) ** 2 + (o[3] - oz) ** 2)
+            value = values.get(ref, value)
         parts.append(
             {
                 "ref": ref,
@@ -229,6 +287,6 @@ def main(glb_path, pcb_path, out_path):
 
 
 if __name__ == "__main__":
-    if len(sys.argv) != 4:
+    if len(sys.argv) not in (4, 5):
         sys.exit(__doc__)
     main(*sys.argv[1:])

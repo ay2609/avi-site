@@ -269,6 +269,16 @@ export default function Newspaper({
           }
           slot={{ id: "fractals", ref: slotRefs.fractals, onOpen: () => onOpen("fractals") }}
         />
+        <Article
+          title="Player"
+          dek={
+            <>
+              The Tiny Music Player, what I&rsquo;m building now: a pocket player for lossless files and wired
+              headphones, with a tiny screen for the album art. Open it to take the board apart.
+            </>
+          }
+          slot={{ id: "player", ref: slotRefs.player, onOpen: () => onOpen("player") }}
+        />
       </div>
 
       {/* 5 — The footer: a bar with the links, set right. */}

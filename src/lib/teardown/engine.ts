@@ -1,7 +1,7 @@
 /**
- * The watch walkthrough's scene: the board as separate parts, posed per
- * chapter and blended by one `progress` value (0 = the front-page turntable,
- * 4 = the face).
+ * A teardown's scene (the watch's, the player's): the board as separate
+ * parts, posed per chapter and blended by one `progress` value (0 = the
+ * front-page turntable, the last chapter = the screen).
  *
  * Drawn like SolidCanvas — ink faces that only occlude, bone feature edges,
  * orthographic, unlit — but every part has its own group and line material,
@@ -16,9 +16,8 @@ import { TickManager, type TickData } from "@/lib/render/tick-manager";
 import { WheelGesture } from "@/lib/stage/wheel";
 import { themeFader } from "@/lib/theme/light";
 
-import { CHAPTERS, DISPLAY, LAST_CHAPTER, type FaceButton } from "./chapters";
-import { FACE_H, FACE_W, SovereignFace } from "./face";
-import { decodeWatchModel, type PartInfo, type WatchModel } from "./model";
+import type { Chapter, Device, Screen } from "./device";
+import { decodeBoardModel, fromKicad, type BoardModel, type PartInfo } from "./model";
 
 export const LOOK = {
   /** Orthographic half-height at zoom 1 (as SolidCanvas). */
@@ -133,10 +132,12 @@ function cubicBezier(x1: number, y1: number, x2: number, y2: number): (x: number
 const expoOut = (t: number) => (t >= 1 ? 1 : 1 - Math.pow(2, -10 * t));
 const stepEase = cubicBezier(...LOOK.stepEase);
 const wrapNear = (a: number, ref: number) => ref + (((((a - ref) % (2 * Math.PI)) + 3 * Math.PI) % (2 * Math.PI)) - Math.PI);
-const isMajor = (ref: string) => /^(U|J|SW)\d/.test(ref);
 
-export class WatchEngine {
+export class TeardownEngine {
   private readonly host: HTMLElement;
+  private readonly device: Device;
+  private readonly chapters: Chapter[];
+  private readonly last: number;
   private readonly onFrame?: (f: FrameInfo) => void;
   private readonly reduce: boolean;
 
@@ -155,16 +156,20 @@ export class WatchEngine {
   private readonly lineMaterials: THREE.LineBasicMaterial[] = [];
   private readonly theme = themeFader();
 
-  private model: WatchModel | null = null;
+  private model: BoardModel | null = null;
   private parts: { info: PartInfo; group: THREE.Group; edges: THREE.LineBasicMaterial }[] = [];
   private poses: Pose[] = [];
   private display: THREE.Group | null = null;
   private displayEdges: THREE.LineBasicMaterial | null = null;
   private displayHome = new THREE.Vector3();
   private lcdAnchor = new THREE.Vector3();
-  private readonly face = new SovereignFace();
+  /** What the screen shows: the module's (the watch), or the one on a part (the player). */
+  private readonly face: Screen | null;
   private faceTexture: THREE.DataTexture | null = null;
   private faceOn = false;
+  /** The player's screen, faded in by the chapter's `display`. */
+  private screenMaterial: THREE.MeshBasicMaterial | null = null;
+  private screenMesh: THREE.Mesh | null = null;
 
   private progress = 0;
   /** The chapter the progress is travelling to (or resting on). */
@@ -178,8 +183,12 @@ export class WatchEngine {
   private height = 1;
   private disposed = false;
 
-  constructor(host: HTMLElement, src: string, onFrame?: (f: FrameInfo) => void) {
+  constructor(host: HTMLElement, device: Device, onFrame?: (f: FrameInfo) => void) {
     this.host = host;
+    this.device = device;
+    this.chapters = device.chapters;
+    this.last = device.chapters.length - 1;
+    this.face = (device.module ?? device.screen)?.screen() ?? null;
     this.onFrame = onFrame;
     this.reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
@@ -199,21 +208,22 @@ export class WatchEngine {
     // Belt and braces: resize observations only arrive with a rendering update.
     window.addEventListener("resize", this.resize);
 
-    fetch(src, { signal: this.controller.signal })
+    fetch(device.src, { signal: this.controller.signal })
       .then((r) => r.arrayBuffer())
       .then((buffer) => {
         if (this.disposed) return;
-        this.build(decodeWatchModel(buffer));
+        this.build(decodeBoardModel(buffer));
         this.ticker.startLoop(this.frame);
       })
       .catch(() => {
         /* aborted on unmount, or the asset is missing — leave the box empty */
       });
 
-    if ("getBattery" in navigator) {
+    const face = this.face;
+    if (face && "battery" in face && "getBattery" in navigator) {
       (navigator as Navigator & { getBattery(): Promise<{ level: number }> })
         .getBattery()
-        .then((b) => (this.face.battery = b.level * 100))
+        .then((b) => (face.battery = b.level * 100))
         .catch(() => {});
     }
   }
@@ -239,7 +249,7 @@ export class WatchEngine {
 
   go(chapter: number): void {
     if (!this.interactive) return;
-    this.travel(clamp(Math.round(chapter), 0, LAST_CHAPTER));
+    this.travel(clamp(Math.round(chapter), 0, this.last));
   }
 
   /** Back to the turntable (the article is closing), in the time of the flight. */
@@ -264,17 +274,19 @@ export class WatchEngine {
 
   /** Pointer over the box, −1…1 each way: the face's accelerometer. */
   setTilt(x: number, y: number): void {
-    this.face.tilt.x = clamp(x, -1, 1);
-    this.face.tilt.y = clamp(y, -1, 1);
+    const tilt = this.face?.tilt;
+    if (!tilt) return;
+    tilt.x = clamp(x, -1, 1);
+    tilt.y = clamp(y, -1, 1);
   }
 
-  press(button: FaceButton): void {
-    this.face.press(button);
+  press(button: string): void {
+    this.face?.press?.(button);
   }
 
   // --- Scene -----------------------------------------------------------------
 
-  private build(model: WatchModel): void {
+  private build(model: BoardModel): void {
     this.model = model;
     const faces = new THREE.MeshBasicMaterial({
       color: LOOK.ink,
@@ -301,13 +313,26 @@ export class WatchEngine {
       this.disposables.push(geometry, edges, material);
     }
 
-    this.buildDisplay(model);
-    this.poses = CHAPTERS.map((chapter) => this.pose(chapter));
+    if (this.device.module) this.buildDisplay(model, this.device.module);
+    if (this.device.screen) this.buildScreen(model, this.device.screen);
+    this.poses = this.chapters.map((chapter) => this.pose(chapter));
     this.paint(this.theme.step(0).t);
   }
 
-  /** The Waveshare module: board, glass, and the active area carrying the face. */
-  private buildDisplay(model: WatchModel): void {
+  /** The face's texture: its framebuffer, nearest-sampled. */
+  private texture(face: Screen): THREE.DataTexture {
+    const texture = new THREE.DataTexture(face.bytes, face.width, face.height, THREE.RGBAFormat);
+    texture.magFilter = THREE.NearestFilter;
+    texture.minFilter = THREE.LinearFilter;
+    texture.generateMipmaps = false;
+    texture.colorSpace = THREE.SRGBColorSpace;
+    texture.needsUpdate = true;
+    this.faceTexture = texture;
+    return texture;
+  }
+
+  /** The watch's Waveshare module: board, glass, and the active area carrying the face. */
+  private buildDisplay(model: BoardModel, DISPLAY: NonNullable<Device["module"]>): void {
     const s = model.frame.scale;
     const board = model.parts[0];
     const boardTop = board.center[2] + board.size[2] / 2;
@@ -361,13 +386,7 @@ export class WatchEngine {
     for (let i = 0; i < pos.count; i++) {
       uv.setXY(i, (pos.getX(i) - x0) / (x1 - x0), 1 - (pos.getY(i) - y0) / (y1 - y0));
     }
-    const texture = new THREE.DataTexture(this.face.fb.bytes, FACE_W, FACE_H, THREE.RGBAFormat);
-    texture.magFilter = THREE.NearestFilter;
-    texture.minFilter = THREE.LinearFilter;
-    texture.generateMipmaps = false;
-    texture.colorSpace = THREE.SRGBColorSpace;
-    texture.needsUpdate = true;
-    this.faceTexture = texture;
+    const texture = this.texture(this.face!);
     const screenMaterial = new THREE.MeshBasicMaterial({ map: texture, toneMapped: false });
     const screenMesh = new THREE.Mesh(screen, screenMaterial);
     screenMesh.position.z = (md + gd) * s + 0.0005;
@@ -384,17 +403,55 @@ export class WatchEngine {
     this.display = group;
   }
 
-  private pose(chapter: (typeof CHAPTERS)[number]): Pose {
+  /**
+   * The player's OLED: the active area as a square on top of its part (the
+   * glass), so it lifts with it, the image's top toward the plug.
+   */
+  private buildScreen(model: BoardModel, spec: NonNullable<Device["screen"]>): void {
+    const part = this.parts.find((p) => p.info.ref === spec.ref);
+    if (!part) return;
+    const s = model.frame.scale;
+    const [w, h] = spec.size;
+    const geometry = new THREE.PlaneGeometry(w * s, h * s);
+    // Plane u runs along model x and v along model y; turn it so the image's
+    // top (row 0, v = 0 here) faces −x and its left faces −y.
+    const pos = geometry.getAttribute("position");
+    const uv = geometry.getAttribute("uv");
+    for (let i = 0; i < pos.count; i++) {
+      uv.setXY(i, pos.getY(i) / (h * s) + 0.5, pos.getX(i) / (w * s) + 0.5);
+    }
+    const material = new THREE.MeshBasicMaterial({
+      map: this.texture(this.face!),
+      toneMapped: false,
+      transparent: true,
+      opacity: 0,
+    });
+    const mesh = new THREE.Mesh(geometry, material);
+    const [x, y] = fromKicad(model, spec.center[0], spec.center[1]);
+    const { center, size } = part.info;
+    mesh.position.set(x, y, center[2] + size[2] / 2 + 0.0005);
+    mesh.visible = false;
+    part.group.add(mesh);
+    this.screenMaterial = material;
+    this.screenMesh = mesh;
+    this.disposables.push(geometry, material, this.faceTexture!);
+  }
+
+  private pose(chapter: Chapter): Pose {
     const model = this.model!;
     const { sheets = [], refs = [] } = chapter.focus;
     const inFocus = (p: PartInfo) => sheets.includes(p.sheet) || refs.includes(p.ref);
+    const board = model.parts[0];
     const lift = new Float32Array(model.parts.length);
     const opacity = new Float32Array(model.parts.length);
     const look = new THREE.Vector3();
     let n = 0;
     model.parts.forEach((p, i) => {
       const focused = i > 0 && inFocus(p);
-      lift[i] = focused ? chapter.lift * (isMajor(p.ref) ? 1 : LOOK.minorLift) : 0;
+      // Parts under the board drop away from it rather than rising through it.
+      const away = p.center[2] < board.center[2] ? -1 : 1;
+      const share = chapter.lifts?.[p.ref] ?? (this.device.major.test(p.ref) ? 1 : LOOK.minorLift);
+      lift[i] = focused ? away * chapter.lift * share : 0;
       opacity[i] = !chapter.dim ? LOOK.edge : focused ? LOOK.focus : i === 0 ? LOOK.boardDim : LOOK.dim;
       if (focused) {
         look.add(new THREE.Vector3(p.center[0], p.center[1], p.center[2] + lift[i]));
@@ -402,7 +459,7 @@ export class WatchEngine {
       }
     });
     if (chapter.view.look) look.set(...chapter.view.look);
-    else if (chapter.display) look.copy(this.displayHome);
+    else if (chapter.display && this.device.module) look.copy(this.displayHome);
     else if (n) look.divideScalar(n);
 
     const { yaw, pitch, roll, zoom, shift = [0, 0] } = chapter.view;
@@ -471,8 +528,8 @@ export class WatchEngine {
     const first = this.poses[1]?.yaw ?? 0;
     if (p === 0) this.spin = wrapNear(this.spin, first);
 
-    const a = Math.min(Math.floor(p), LAST_CHAPTER);
-    const b = Math.min(a + 1, LAST_CHAPTER);
+    const a = Math.min(Math.floor(p), this.last);
+    const b = Math.min(a + 1, this.last);
     const f = p - a; // the tween already eases
     const A = this.poses[a];
     const B = this.poses[b];
@@ -500,6 +557,13 @@ export class WatchEngine {
         this.displayHome.y + (1 - smooth(d)) * LOOK.displayParked,
         this.displayHome.z
       );
+    }
+    // The player's screen lights up in place.
+    if (this.screenMaterial) {
+      this.screenMaterial.opacity = smooth(d);
+      this.screenMesh!.visible = d > 0.001;
+    }
+    if (this.face && (this.display || this.screenMaterial)) {
       if (d > 0.001 && !this.faceOn) this.face.reset(now);
       this.faceOn = d > 0.001;
       if (this.faceOn && this.face.step(now, !this.reduce) && this.faceTexture) this.faceTexture.needsUpdate = true;
@@ -517,7 +581,7 @@ export class WatchEngine {
     this.renderer.render(this.scene, this.camera);
 
     if (this.onFrame) {
-      const chapter = clamp(Math.round(p), 0, LAST_CHAPTER);
+      const chapter = clamp(Math.round(p), 0, this.last);
       const settled = Math.abs(this.target - p) <= LOOK.calloutsAt;
       this.onFrame({ progress: p, chapter, settled, anchors: this.anchors(chapter) });
     }
@@ -526,10 +590,10 @@ export class WatchEngine {
   /** Screen positions of the tops of the parts a chapter labels or traces. */
   private anchors(chapter: number): Map<string, Anchor> {
     const out = new Map<string, Anchor>();
-    const c = CHAPTERS[chapter];
+    const c = this.chapters[chapter];
     const refs = new Set([...c.callouts.map((o) => o.ref), ...(c.trace ?? [])]);
     for (const ref of refs) {
-      if (ref === "LCD") {
+      if (ref === this.device.module?.ref) {
         if (!this.display?.visible) continue;
         this.scratch.copy(this.lcdAnchor);
         this.display.localToWorld(this.scratch);
