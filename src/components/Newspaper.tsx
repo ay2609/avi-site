@@ -179,6 +179,7 @@ export default function Newspaper({
         </div>
         <h1
           data-masthead
+          data-ink="Avi Yadava"
           className="font-serif-ui mt-3 whitespace-nowrap uppercase leading-[0.82] tracking-[-0.03em] text-bone"
           style={{ fontSize: fillSize("Avi Yadava", "18rem", "2.4rem") }}
         >

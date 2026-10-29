@@ -164,6 +164,34 @@ body {
 }
 
 /*
+ * The masthead's beat: while the theme flips, the name's copy in the second
+ * ink shows a hair out of line, about the seam's sliver (2-3 px at the
+ * masthead's size), and steps back under it in two hard steps, as if the
+ * sheet went through the press again. Reduced motion skips it.
+ */
+[data-masthead] {
+  position: relative;
+  isolation: isolate;
+}
+[data-masthead]::before {
+  content: attr(data-ink);
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  color: var(--second);
+  pointer-events: none;
+  opacity: 0;
+}
+:root.theme-flip [data-masthead]::before {
+  animation: misregister 0.36s step-end;
+}
+@keyframes misregister {
+  0% { opacity: 1; transform: translate(0.014em, 0.009em); }
+  50% { transform: translate(0.006em, 0.004em); }
+  85%, 100% { opacity: 0; transform: none; }
+}
+
+/*
  * The end mark: closes the letter, as a broadsheet closes an article. It's
  * cut from the watch's own copper (the ESP32 module's thermal pad, a four-by-
  * four grid of crosses), set in the text's colour through a mask.
