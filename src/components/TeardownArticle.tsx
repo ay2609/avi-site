@@ -420,6 +420,8 @@ export default function TeardownArticle({
   }, [calloutsOn, chapter, compact, layout, type, CHAPTERS]);
 
   const c = CHAPTERS[chapter];
+  const photo = CHAPTERS.find((ch) => ch.photo)?.photo;
+  const showPhoto = visible && !!c.photo;
   /** A long list goes in two columns under a small box, when every label fits half its width. */
   const twoUp = c.callouts.length > 4 && c.callouts.every((o) => o.ref.length + 3 + o.text.length <= TWO_UP_CHARS);
   const go = (k: number) => engineRef.current?.go(k);
@@ -428,7 +430,12 @@ export default function TeardownArticle({
 
   return (
     <div className="relative h-full w-full">
-      <div ref={hostRef} className="absolute inset-0 overflow-hidden" />
+      {/* The board fades out under the last chapter's photo (the watch's). */}
+      <div
+        ref={hostRef}
+        className="absolute inset-0 overflow-hidden transition-opacity duration-500"
+        style={{ opacity: showPhoto ? 0 : 1 }}
+      />
 
       <div
         ref={overlayRef}
@@ -492,6 +499,33 @@ export default function TeardownArticle({
           <div className="absolute bottom-5 left-1/2 w-[min(28rem,calc(100%-32px))] -translate-x-1/2 @max-[560px]:bottom-auto @max-[560px]:top-[calc(100%+16px)]">
             <Island now={now} onPress={press} />
           </div>
+        )}
+
+        {/* The real thing, framed like a print under the headline (filling the
+            box on a phone), with its caption below. Black and white so it sits
+            in the page; colour when hovered, or always without a hover. */}
+        {photo && (
+          <figure
+            aria-hidden={!showPhoto}
+            className={`absolute inset-x-[14%] bottom-[9%] top-[17%] m-0 transition-opacity duration-500 @max-[560px]:inset-0 ${
+              showPhoto ? "opacity-100" : "opacity-0"
+            }`}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element -- a static export: no image optimiser */}
+            <img
+              src={photo.src}
+              alt={photo.alt}
+              width={1512}
+              height={1209}
+              decoding="async"
+              className={`h-full w-full border border-rule object-cover grayscale transition-[filter] duration-700 hover:grayscale-0 [@media(hover:none)]:grayscale-0 ${
+                showPhoto ? "pointer-events-auto" : ""
+              }`}
+            />
+            <figcaption className={`${LABEL} absolute left-0 top-[calc(100%+8px)] @max-[560px]:top-[calc(100%+16px)] @max-[560px]:left-4`}>
+              {photo.caption}
+            </figcaption>
+          </figure>
         )}
 
         {/* Leaders and traces */}

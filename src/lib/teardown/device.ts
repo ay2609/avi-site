@@ -55,6 +55,11 @@ export interface Chapter {
   trace?: string[];
   /** The screen is on (the watch: its display module is on the stage). */
   display: boolean;
+  /**
+   * The real thing, at the end: a photo that takes the board's place in the
+   * box (black and white until hovered), with a caption. In public/.
+   */
+  photo?: { src: string; alt: string; caption: string };
 }
 
 /** What a screen that plays music is playing (the player's), for the article to show. */

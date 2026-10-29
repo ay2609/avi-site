@@ -4,7 +4,8 @@ import { SovereignFace } from "./face";
 
 /**
  * The watch walkthrough: five chapters, each a camera, a set of parts lifted
- * off the board, and a few labelled parts (types in src/lib/teardown/device).
+ * off the board, and a few labelled parts (types in src/lib/teardown/device),
+ * then the watch itself, on a wrist.
  */
 
 export type FaceButton = "wake" | "sleep" | "next" | "back" | "spare";
@@ -89,6 +90,23 @@ export const CHAPTERS: Chapter[] = [
       { ref: "SW4", text: "IO5 · back", press: "back" },
     ],
     display: true,
+  },
+  {
+    // The board stays posed as the face, faded out under the photo.
+    id: "wrist",
+    headline: "On the Wrist",
+    index: "Wrist",
+    view: { yaw: -14, pitch: -20, roll: 0, zoom: 1.2 },
+    focus: { sheets: ["Buttons"] },
+    lift: 0,
+    dim: true,
+    callouts: [],
+    display: true,
+    photo: {
+      src: "/watch-worn.jpg",
+      alt: "The watch on a wrist: the board in a white printed frame on a mesh band, two grey buttons on its side, and the display showing 12:38:58 PM in blue line type beside wireframe polyhedra, the battery at 74.2.",
+      caption: "Worn, running the face above",
+    },
   },
 ];
 
