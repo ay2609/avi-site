@@ -10,6 +10,7 @@
   --rule: #2a2a2c; /* hairlines */
   --ascii: rgb(230 228 223 / 0.5);
   --stripe: rgb(230 228 223 / 0.1);
+  --second: #e36bff; /* the second ink: the globe's hub violet, never for chrome on its own */
   color-scheme: dark;
 }
 
@@ -29,28 +30,8 @@
   --rule: #c6c3bb;
   --ascii: rgb(23 23 26 / 0.68);
   --stripe: rgb(23 23 26 / 0.08);
+  --second: #8c29a8; /* the hub violet as it deepens on paper */
   color-scheme: light;
-}
-
-/* The flip: colours cross-fade for as long as the class is on (see light.ts). */
-:root.theme-flip,
-:root.theme-flip * {
-  transition:
-    background-color 0.3s ease-out,
-    color 0.3s ease-out,
-    border-color 0.3s ease-out,
-    fill 0.3s ease-out,
-    stroke 0.3s ease-out,
-    filter 0.3s ease-out !important;
-}
-
-/*
- * The fractal pictures in light mode: inverted, hues turned back, so the
- * palettes keep their hues on a paper ground. (Their ASCII on the front page
- * has its own light colours instead — see src/lib/fractals/cover.ts.)
- */
-:root[data-theme="light"] .invert-on-light {
-  filter: invert(1) hue-rotate(180deg);
 }
 
 /*
@@ -161,6 +142,25 @@ body {
   40% { opacity: 1; }
   56% { opacity: 0.35; }
   70%, 100% { opacity: 1; }
+}
+
+/*
+ * The second ink, off register. A copy of an element's text, in the second
+ * ink, printed under it a little out of line, the way a risograph's second
+ * drum lands. `.misprint` holds it there: the 404.
+ */
+.misprint {
+  position: relative;
+  isolation: isolate;
+}
+.misprint::before {
+  content: attr(data-ink);
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  color: var(--second);
+  pointer-events: none;
+  transform: translate(0.045em, 0.03em) rotate(0.4deg);
 }
 
 /*
