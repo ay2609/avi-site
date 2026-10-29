@@ -53,6 +53,39 @@
   filter: invert(1) hue-rotate(180deg);
 }
 
+/*
+ * The paper's tooth: on the light theme the ground carries faint flecks and
+ * fibres (scripts/paper-tooth.py), so it reads as newsprint rather than a
+ * flat colour. On both html and body, anchored alike, because body's own
+ * ground covers the first screen and html's the rest.
+ */
+:root[data-theme="light"],
+:root[data-theme="light"] body {
+  background-image: url("/paper-tooth.png");
+  background-size: 320px 320px;
+}
+
+/* The flip: colours cross-fade for as long as the class is on (see light.ts). */
+:root.theme-flip,
+:root.theme-flip * {
+  transition:
+    background-color 0.3s ease-out,
+    color 0.3s ease-out,
+    border-color 0.3s ease-out,
+    fill 0.3s ease-out,
+    stroke 0.3s ease-out,
+    filter 0.3s ease-out !important;
+}
+
+/*
+ * The fractal pictures in light mode: inverted, hues turned back, so the
+ * palettes keep their hues on a paper ground. (Their ASCII on the front page
+ * has its own light colours instead — see src/lib/fractals/cover.ts.)
+ */
+:root[data-theme="light"] .invert-on-light {
+  filter: invert(1) hue-rotate(180deg);
+}
+
 @theme inline {
   --color-ink: var(--ink);
   --color-panel: var(--panel);
