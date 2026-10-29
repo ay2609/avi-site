@@ -68,12 +68,31 @@ void main() {
   outColor = vec4(mix(trail, line, v), 1.0);
 }`;
 
+/**
+ * To the screen. With `uAmt` above 0 a second ink prints first, off register:
+ * the same picture, shifted `uOff` and in `uSecond`, showing only as a sliver
+ * where the shifted copy covers more than the first ink does, like the second
+ * drum of a risograph peeking out from under the first. It's added here rather
+ * than in the feedback, so it never seeps into the trails.
+ */
 const SHOW = `#version 300 es
 precision highp float;
 uniform sampler2D uTex;
 uniform vec2 uRes;
+uniform vec3 uGround;
+uniform vec3 uText;
+uniform vec3 uSecond;
+uniform vec2 uOff;
+uniform float uAmt;
 out vec4 outColor;
-void main() { outColor = texture(uTex, gl_FragCoord.xy / uRes); }`;
+float cover(vec3 c) { return clamp(distance(c, uGround) / distance(uText, uGround), 0.0, 1.0); }
+void main() {
+  vec2 U = gl_FragCoord.xy;
+  vec3 c = texture(uTex, U / uRes).rgb;
+  if (uAmt <= 0.0) { outColor = vec4(c, 1.0); return; }
+  float sliver = cover(texture(uTex, (U - uOff) / uRes).rgb) - cover(c);
+  outColor = vec4(mix(c, uSecond, uAmt * smoothstep(0.08, 0.45, sliver)), 1.0);
+}`;
 
 /** The original at its 60 Hz: a pixel of shift and exp(-33/470) of fade a frame, at 470/8 px a cell. */
 const REF_CELL = 470 / 8;
@@ -83,6 +102,9 @@ const INK = [0.039, 0.039, 0.043];
 const BONE = [0.902, 0.894, 0.875];
 const PAPER = [0.945, 0.937, 0.918];
 const PRESS = [0.09, 0.09, 0.102];
+/** The globe's hub violet, and on paper the deeper violet its shader turns it (see PopulationNetworkLayer). */
+const VIOLET = [0.89, 0.42, 1.0];
+const VIOLET_PAPER = [0.55, 0.16, 0.66];
 
 function program(gl: WebGL2RenderingContext, frag: string): WebGLProgram | null {
   const make = (type: number, src: string) => {
@@ -104,9 +126,12 @@ export default function IsoField({
   palette = "spectrum",
   scale = 3,
   maxDpr = 1.5,
+  second = false,
   className = "",
 }: {
   palette?: IsoPalette;
+  /** A second ink in the hub violet, printed a little off register under the first. */
+  second?: boolean;
   /** Noise cells across the field's short side: fewer is bigger, calmer contours. */
   scale?: number;
   /** Pixel ratio ceiling: a large field at full ratio costs more than it shows. */
@@ -140,7 +165,10 @@ export default function IsoField({
       shift: U(step, "uShift"), keep: U(step, "uKeep"), ground: U(step, "uGround"), text: U(step, "uText"),
       palette: U(step, "uPalette"),
     };
-    const v = { tex: U(show, "uTex"), res: U(show, "uRes") };
+    const v = {
+      tex: U(show, "uTex"), res: U(show, "uRes"), ground: U(show, "uGround"), text: U(show, "uText"),
+      second: U(show, "uSecond"), off: U(show, "uOff"), amt: U(show, "uAmt"),
+    };
 
     // Two buffers, flip-flopped: each step reads one and writes the other.
     let w = 0;
@@ -152,7 +180,7 @@ export default function IsoField({
     let light = fader.step(0).t;
     const colors = () => {
       const mix = (a: number[], b: number[]) => a.map((x, i) => x + (b[i] - x) * light) as [number, number, number];
-      return { ground: mix(INK, PAPER), text: mix(BONE, PRESS) };
+      return { ground: mix(INK, PAPER), text: mix(BONE, PRESS), violet: mix(VIOLET, VIOLET_PAPER) };
     };
 
     const makeBuffers = () => {
@@ -196,7 +224,7 @@ export default function IsoField({
       const cellPx = Math.min(w, h) / scale;
       const k = cellPx / REF_CELL; // the original's motion, in this field's cells
       const f = dt * 60; // frames of the original's 60 Hz
-      const { ground, text } = colors();
+      const { ground, text, violet } = colors();
       const from = bufs[cur];
       const to = bufs[1 - cur];
       gl.bindFramebuffer(gl.FRAMEBUFFER, to.fbo);
@@ -222,6 +250,13 @@ export default function IsoField({
       gl.bindTexture(gl.TEXTURE_2D, to.tex);
       gl.uniform1i(v.tex, 0);
       gl.uniform2f(v.res, w, h);
+      gl.uniform3f(v.ground, ground[0], ground[1], ground[2]);
+      gl.uniform3f(v.text, text[0], text[1], text[2]);
+      gl.uniform3f(v.second, violet[0], violet[1], violet[2]);
+      // Off by about 2 CSS px across and 1.5 down, whatever the buffer's pixel ratio.
+      const px = w / Math.max(1, canvas.clientWidth);
+      gl.uniform2f(v.off, 2 * px, -1.5 * px);
+      gl.uniform1f(v.amt, second ? 0.7 : 0);
       gl.drawArrays(gl.TRIANGLES, 0, 3);
     };
 
@@ -291,7 +326,7 @@ export default function IsoField({
       gl.deleteProgram(show);
       gl.deleteBuffer(quad);
     };
-  }, [palette, scale, maxDpr]);
+  }, [palette, scale, maxDpr, second]);
 
   return <canvas ref={ref} aria-hidden className={`block h-full w-full ${className}`} />;
 }

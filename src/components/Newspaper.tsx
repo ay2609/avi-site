@@ -237,9 +237,10 @@ export default function Newspaper({
 
       {/* A seam between the letter and the work: a band of isovalues in the
           page's own tone (Oct 22; it was a strip of ASCII), the width of the
-          page. The cursor still strums it with the sound on (SoundBoard). */}
+          page, with the hub violet printed under it off register as a second
+          ink. The cursor still strums it with the sound on (SoundBoard). */}
       <div aria-hidden data-sfx="seam" className="h-[96px] overflow-hidden border-b border-dashed border-rule">
-        <IsoField palette="ink" scale={1.6} />
+        <IsoField palette="ink" scale={1.6} second />
       </div>
 
       {/* 3 — The work: equal tiles, two across (one on phones), each the same
