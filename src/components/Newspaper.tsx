@@ -206,6 +206,7 @@ export default function Newspaper({
               I&rsquo;m building <A href="https://www.bymrobotics.org/">BYM</A> (Build Young Minds), a drone
               robotics education startup. I&rsquo;m also currently working as a robotics engineering intern
               for a UMD research lab.
+              <span aria-hidden className="end-mark" />
             </p>
           </div>
         </section>
