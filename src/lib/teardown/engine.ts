@@ -418,12 +418,15 @@ export class TeardownEngine {
     const s = model.frame.scale;
     const [w, h] = spec.size;
     const geometry = new THREE.PlaneGeometry(w * s, h * s);
-    // Plane u runs along model x and v along model y; turn it so the image's
-    // top (row 0, v = 0 here) faces −x and its left faces −y.
+    // Map the image so its top (row 0, v = 0 here) faces `up`: −x (its left
+    // then faces −y), or +y (its left faces −x).
     const pos = geometry.getAttribute("position");
     const uv = geometry.getAttribute("uv");
     for (let i = 0; i < pos.count; i++) {
-      uv.setXY(i, pos.getY(i) / (h * s) + 0.5, pos.getX(i) / (w * s) + 0.5);
+      const x = pos.getX(i) / (w * s);
+      const y = pos.getY(i) / (h * s);
+      if (spec.up === "-x") uv.setXY(i, y + 0.5, x + 0.5);
+      else uv.setXY(i, x + 0.5, 0.5 - y);
     }
     const material = new THREE.MeshBasicMaterial({
       map: this.texture(this.face!),

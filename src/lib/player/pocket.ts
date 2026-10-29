@@ -111,6 +111,7 @@ export class PocketPlayer implements Screen {
       title: t.title,
       artist: t.artist,
       url: t.url,
+      cover: t.cover,
       playing: this.playing,
       elapsed: this.audio?.currentTime ?? 0,
       duration: this.audio && Number.isFinite(this.audio.duration) ? this.audio.duration : 30,

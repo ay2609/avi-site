@@ -135,19 +135,14 @@ export const CHAPTERS: Chapter[] = [
   {
     id: "face",
     headline: "Face",
-    view: { yaw: -12, pitch: -24, roll: -90, zoom: 1.5 },
+    // Sideways, plug to the left, the way it's held to look at the screen; the
+    // controls are the island under it (TeardownArticle), not labels.
+    view: { yaw: 8, pitch: -30, roll: 0, zoom: 2.3, shift: [0.04, 0.1] },
     focus: { refs: FACE },
-    lift: 0.06,
-    lifts: { OLED: 2.4 },
+    lift: 0.05,
+    lifts: { OLED: 2 },
     dim: true,
-    callouts: [
-      { ref: "OLED", text: "0.6″ · 64 × 64" },
-      { ref: "DS1", text: "FH12 · FPC" },
-      { ref: "U7", text: "TPS61040 · 12 V" },
-      { ref: "SW1", text: "Prev", press: "prev" },
-      { ref: "SW2", text: "Play / pause", press: "play" },
-      { ref: "SW3", text: "Next", press: "next" },
-    ],
+    callouts: [],
     display: true,
   },
 ];
@@ -157,6 +152,6 @@ export const PLAYER: Device = {
   chapters: CHAPTERS,
   major: /^(U|J|SW|BT|DS|OLED)\d*$/,
   // The OLED's active area, where the playlist's covers show: 10.73 mm square, set 1.6 mm in from the glass's
-  // far edge (REVISION-B Part 7), the image's top toward the plug.
-  screen: { ref: "OLED", center: [114.04, 112.5], size: [10.73, 10.73], up: "-x", screen: () => new PocketPlayer() },
+  // far edge (REVISION-B Part 7), the image upright with the stick sideways.
+  screen: { ref: "OLED", center: [114.04, 112.5], size: [10.73, 10.73], up: "+y", screen: () => new PocketPlayer() },
 };

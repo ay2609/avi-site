@@ -62,6 +62,8 @@ export interface Playing {
   artist: string;
   /** The track on Spotify. */
   url: string;
+  /** Its album cover at the screen's resolution. */
+  cover: string;
   playing: boolean;
   /** s */
   elapsed: number;
@@ -114,13 +116,14 @@ export interface Device {
   /**
    * The player: a screen on the top face of one of the board's parts, lit in
    * the chapters with `display`. Its active area in KiCad mm; `up` is the
-   * direction along the board the image's top faces ("-x": toward the plug).
+   * direction on the board the image's top faces ("-x": toward the plug; "+y":
+   * the board's top edge in model space, upright when the board lies sideways).
    */
   screen?: {
     ref: string;
     center: [number, number];
     size: [number, number];
-    up: "-x";
+    up: "-x" | "+y";
     screen: () => Screen;
   };
 }
