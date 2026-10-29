@@ -85,7 +85,7 @@ components:
 
 **Creative North Star: "The Broadsheet of One"**
 
-The site is set like the front page of a newspaper, with one person as the whole edition. A masthead carries the name at poster scale, and tiers of articles below it zig-zag the way a broadsheet does: the wide column swaps sides each tier. Every article is a picture rather than a block of text: a globe, a circuit board, a fractal. Clicking one grows it to fill the screen at its own address, and the newspaper's grid lines stretch out to the edges of the viewport around it. Esc folds it back into the page.
+The site is set like the front page of a newspaper, with one person as the whole edition. A masthead carries the name at poster scale, and tiers of articles below it zig-zag the way a broadsheet does: the wide column swaps sides each tier. Every article is a picture rather than a block of text: a globe, two circuit boards (the watch and the music player), a fractal. Clicking one grows it to fill the screen at its own address, and the newspaper's grid lines stretch out to the edges of the viewport around it. Esc folds it back into the page.
 
 The material is newsprint in negative. It's one tone in four values, with hairline dashed rules instead of boxes, no radii and no shadows. The only real colours are the work itself: the globe's violet network hubs and the fractals' matplotlib palettes. Light and dark follow the reader's system until they pick one with the plain switch in the masthead, and the pick holds across visits. The globe stays tied to it: the switch bends the globe flat for light and round for dark, and bending the globe past halfway inside its window (open, or docked) flips the switch. On the page the globe only turns and opens; the wheel scrolls past it. Motion is mechanical rather than soft: hover rings switch on in hard steps like a fluorescent tube, labels type themselves in, and an optional synthesized sound layer clicks and hums.
 
@@ -93,7 +93,7 @@ The material is newsprint in negative. It's one tone in four values, with hairli
 - Newspaper grid: masthead, tiers, dashed column rules, "Open ↗" under the globe, and no section kickers (Oct 22): headlines stand on their own.
 - Headlines are fitted to their box in container units (`cqw`), so each word fills its column.
 - Monochrome chrome: colour belongs only to the artwork.
-- Live art everywhere: WebGL and animated ASCII fields stand in for photos.
+- Live art everywhere: WebGL and animated ASCII fields stand in for photos. The one photograph (the watch on a wrist, Oct 29) comes at the end of its walkthrough, black and white until hovered.
 - Hard-step motion and typed labels; reduced-motion collapses all of it.
 
 ## Colors
@@ -129,8 +129,8 @@ One tone, four values, mirrored for paper. The tokens keep their names in both t
 
 ### Hierarchy
 - **Masthead** (400, fitted up to 18rem, line-height 0.82, uppercase, −0.03em): the name and nothing else.
-- **Headline** (400, fitted up to 4.5rem on the rail or 8rem on the lead, line-height 0.86, uppercase, −0.02em): article names on the front page and chapter names on the stage.
-- **Stage headline** (400, clamp 2.25–4.5rem, uppercase): the chapter name on an open article, which the front-page headline flies into.
+- **Headline** (400, fitted up to 4.5rem on the rail or 8rem on the lead, line-height 0.86, uppercase, −0.02em): article names on the front page and chapter names on the stage. Projects go by full names ("Custom Digital Watch", "Tiny Music Player", Oct 29); the tiles share one size, fitted so the longest spans its tile on one line (`TITLES` / `TITLE_SIZE` in Newspaper.tsx).
+- **Stage headline** (400, clamp 2.25–4.5rem, uppercase): the chapter name on an open article, which the front-page headline flies into. A long one (the first chapter's, the full name) is held to 56% of the box so it clears the index; on a phone it wraps at 1.6rem, and the flying copy wraps with it.
 - **Title** (400, clamp 2.5–5rem, line-height 0.9, sentence case): "Hi, I'm Avi."
 - **Body** (Newsreader 1.125rem/1.6, at most 36rem wide): the About letter.
 - **Dek** (Newsreader 0.95rem/1.5, dim, at most 30rem; italic in figure captions): one or two lines under a headline.
@@ -157,13 +157,13 @@ None. The system is flat: no shadows and no tonal lifting. Depth comes from laye
 
 ## Shapes
 
-Square everything: zero radius anywhere. Containers are implied by dashed 1px rules, not drawn as boxes. The only solid boxes are the hover ring (a 1px bone border bled 1px over the dashed rules) and the docked globe's frame. The hatch (45° stripes) marks space that's held open.
+Square everything: zero radius anywhere, with one exception the owner asked for: the music player's control island (and its play button and cover) is a full pill, like a phone's island. Containers are implied by dashed 1px rules, not drawn as boxes. The only solid boxes are the hover ring (a 1px bone border bled 1px over the dashed rules) and the docked globe's frame. The hatch (45° stripes) marks space that's held open.
 
 ## Components
 
 ### Project tile (front page)
 - **Character:** a newspaper story whose picture is the point.
-- **Structure:** "Open ↗" alone, set right, above the name (the number-and-stack line was removed Oct 27); the name in uppercase serif at clamp 2.4–4rem, the same in every tile; a dim line of copy; then the art at 4:3 across the foot, under a dashed rule. A new project is one more tile.
+- **Structure:** "Open ↗" alone, set right, above the name (the number-and-stack line was removed Oct 27); the full name in uppercase serif, one size in every tile (fitted to the longest); a dim line of copy that doesn't repeat the name; then the art at 4:3 across the foot, under a dashed rule. A new project is one more tile (an odd count leaves the last row's right half empty; the owner hasn't decided on that).
 - **Open cue:** "Open ↗", dim, turning bone with the ring. Every opening thing carries it (the globe's under it), because phones have no hover to discover the ring with.
 - **Interaction:** the whole section is a `role="link"`. Hover or keyboard focus flickers a solid bone ring on over its dashed rules, in hard steps over 0.3s. One click opens the article at its route.
 
@@ -171,7 +171,16 @@ Square everything: zero radius anywhere. Containers are implied by dashed 1px ru
 - The newspaper's grid grown to the viewport. Top band: the kicker on the left and "Esc — Back" on the right. Bottom band: how to work the art. The band text types itself in once everything has landed.
 
 ### Chapter index
-- A mono ordered list ("00 Watch … 04 Face") at the top right of the art, with a 1×10px bone marker beside the active entry. Entries are clickable, and inactive ones are dim.
+- A mono ordered list ("00 Watch … 05 Wrist") at the top right of the art, with a 1×10px bone marker beside the active entry. Entries are clickable, and inactive ones are dim. The first entry keeps the short name (`index` on the chapter) while the headline says the full one.
+
+### Teardown (the watch, the player)
+- A board from KiCad as line art: ink faces that only occlude, bone feature edges, orthographic. On the page it's a turntable; on the stage each scroll, swipe or key moves one chapter: the camera moves, the chapter's parts lift off the board (parts under it drop away) and the rest dims, then leaders draw and labels type in. One engine and one article for both (`src/lib/teardown/`, `TeardownArticle.tsx`); each board is a `Device` with its chapters (`src/lib/watch/chapters.ts`, `src/lib/player/chapters.ts`).
+- Long boards stand upright (the player's stick, plug at the top) so the labels keep to the sides; the player's last chapter lies it sideways.
+- **Screens:** the watch's display comes down onto the board showing its firmware's face, re-drawn; the player's OLED shows the playing track's cover at its own 64 px.
+- **Photo chapter:** a chapter can end on a photo (`photo` on the chapter): the board fades out, the photo sits framed under the headline with a mono caption below, grayscale until hovered (colour where there's no hover), filling the box on a phone.
+
+### Player island
+- The player's controls, up front, centred at the foot of the box (under it on a phone): a bone-bordered ink pill holding the cover (unsmoothed), the title in the text face (linking to the track on Spotify), artist · time in mono, then rewind, a bone play/pause disc, and skip, with a hairline of progress along its foot. Space plays too. The sound is Spotify's 30-second preview through a light "tiny player into earbuds" filter.
 
 ### Links
 - **Inline (in prose):** a dashed 1px dim underline at 0.22em offset that turns solid bone on hover.
@@ -206,7 +215,8 @@ Square everything: zero radius anywhere. Containers are implied by dashed 1px ru
 - **Do** use hard-step (`step-end`) timing for state changes that should feel electrical, and respect `prefers-reduced-motion`.
 
 ### Don't:
-- **Don't** round a corner or add a shadow.
+- **Don't** round a corner (the player's island is the one exception) or add a shadow.
+- **Don't** show a photograph in colour at rest; it's grayscale until hovered, so the page stays monochrome.
 - **Don't** set body copy in Instrument Serif.
 - **Don't** add a UI accent colour. A hover is bone or dim, never a hue.
 - **Don't** fade a hover ring in smoothly; it catches like a tube.

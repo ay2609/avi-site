@@ -21,6 +21,18 @@ The site is a Next.js app exported as plain static files (`output: "export"`, bu
 
 Cloudflare deploys `main` automatically after a push: Workers Builds runs `npm clean-install`, `npm run build` and `npx wrangler deploy`, and `wrangler.jsonc` serves `out/` as static assets with `404.html` for missing pages. aviyadava.com, www.aviyadava.com, halcyn.dev and www.halcyn.dev are custom domains on the `avi-site` Worker; `worker/index.ts` runs first and sends everything but aviyadava.com there with a 301. Other branches don't build, so a push to `main` is a release. Mail to avi@halcyn.dev is forwarded by Cloudflare Email Routing.
 
+## Adding a project
+
+A project is a tile on the front page and an article at its own route. DESIGN.md says how it should look; read it first.
+
+1. `src/lib/stage/articles.ts`: add its `ArticleId` and entry (route, aspect, kicker, controls, title).
+2. `src/components/Newspaper.tsx`: add its full name to `TITLES` and an `<Article>` tile with one line of copy.
+3. `src/components/Stage.tsx`: add its slot and layer refs and a `<Layer>` with its art; `src/lib/sound/sfx.ts`: its hover note.
+4. `src/app/(site)/<id>/page.tsx` and `opengraph-image.tsx` (an `articleCard`).
+5. For a KiCad board, make it a teardown: bake it with `scripts/glb-to-parts.py` (see `scripts/player-board.sh`), then write a `Device` with its chapters like `src/lib/player/chapters.ts`, and render it with `<TeardownArticle id=… device=…>`.
+
+The code is formatted by hand (there's no Prettier config), so match what's around it.
+
 ## Main files
 
 - `src/components/Newspaper.tsx`: the front page — masthead, articles, contact and footer.
