@@ -34,7 +34,10 @@ export interface ChapterView {
 
 export interface Chapter {
   id: string;
+  /** The box's headline; the first chapter's is the article's name, as on the page. */
   headline: string;
+  /** The chapter index's entry, when the headline is too long for it. */
+  index?: string;
   view: ChapterView;
   /** Parts lifted and drawn at full line weight. */
   focus: { sheets?: string[]; refs?: string[] };

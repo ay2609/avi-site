@@ -6,7 +6,7 @@ import IsoField from "@/lib/iso/IsoField";
 import Clock from "@/components/Clock";
 import SoundToggle from "@/components/SoundToggle";
 import ThemeSwitch from "@/components/ThemeSwitch";
-import { HIT, LABEL } from "@/components/furniture";
+import { advance, HIT, LABEL } from "@/components/furniture";
 import type { ArticleId } from "@/lib/stage/articles";
 import { useOpenOnClick } from "@/lib/stage/click";
 
@@ -14,28 +14,25 @@ import { useOpenOnClick } from "@/lib/stage/click";
  * Size text to span its container.
  *
  * Headlines are set in `cqw` against the nearest `.fit` ancestor, so one
- * component fills a 220px rail and a 900px well without per-word tuning.
- * The advance figures are for Instrument Serif capitals at the tracking used
- * below — most caps sit near 0.6em, with W and M much wider and I much
- * narrower. `max` keeps the hierarchy: the masthead outranks everything
- * however short the word is.
+ * component fills a 220px rail and a 900px well without per-word tuning (the
+ * advance figures are in furniture.ts). `max` keeps the hierarchy: the
+ * masthead outranks everything however short the word is.
  */
-const ADVANCE: Record<string, number> = {
-  " ": 0.26,
-  I: 0.3,
-  J: 0.45,
-  L: 0.52,
-  M: 0.85,
-  W: 0.9,
-};
-
 function fillSize(text: string, max: string, min = "1rem"): string {
-  const advance = [...text.toUpperCase()].reduce(
-    (sum, ch) => sum + (ADVANCE[ch] ?? 0.6),
-    0
-  );
-  return `clamp(${min}, ${((0.92 * 100) / advance).toFixed(1)}cqw, ${max})`;
+  return `clamp(${min}, ${((0.92 * 100) / advance(text)).toFixed(1)}cqw, ${max})`;
 }
+
+/**
+ * The projects' names, each a full description (Oct 29: "Custom Digital
+ * Watch", not "Watch"), at one size across the tiles: the longest one spans
+ * its tile, on one line, inside the tile's padding.
+ */
+const TITLES = {
+  watch: "Custom Digital Watch",
+  player: "Tiny Music Player",
+  fractals: "Fractals",
+} as const;
+const TITLE_SIZE = `clamp(1.5rem, ${(86 / Math.max(...Object.values(TITLES).map(advance))).toFixed(2)}cqw, 4rem)`;
 
 /** Body copy, in the text face — Instrument Serif is for titles only. */
 const PROSE = "font-text-ui text-[1.125rem] leading-[1.6] text-bone";
@@ -118,7 +115,7 @@ function Article({
         <h2
           data-headline={slot.id}
           className="font-serif-ui mt-1.5 whitespace-nowrap uppercase leading-[0.86] tracking-[-0.02em] text-bone"
-          style={{ fontSize: "clamp(2.4rem, 4.6vw, 4rem)" }}
+          style={{ fontSize: TITLE_SIZE }}
         >
           {title}
         </h2>
@@ -250,7 +247,7 @@ export default function Newspaper({
           project is one more tile. */}
       <div data-push="down" className="grid grid-cols-1 md:grid-cols-2">
         <Article
-          title="Watch"
+          title={TITLES.watch}
           dek={
             <>
               My freshman-year project: a smartwatch designed from nothing, the board in KiCad and the firmware
@@ -260,7 +257,7 @@ export default function Newspaper({
           slot={{ id: "watch", ref: slotRefs.watch, onOpen: () => onOpen("watch") }}
         />
         <Article
-          title="Fractals"
+          title={TITLES.fractals}
           dek={
             <>
               Live ports of the Python I wrote in high school, from the Mandelbrot set to chaotic attractors, in
@@ -270,11 +267,11 @@ export default function Newspaper({
           slot={{ id: "fractals", ref: slotRefs.fractals, onOpen: () => onOpen("fractals") }}
         />
         <Article
-          title="Player"
+          title={TITLES.player}
           dek={
             <>
-              The Tiny Music Player, what I&rsquo;m building now: a pocket player for lossless files and wired
-              headphones, with a tiny screen for the album art. Open it to take the board apart.
+              What I&rsquo;m building now: a pocket player for lossless files and wired headphones, with a tiny
+              screen for the album art. Open it to take the board apart.
             </>
           }
           slot={{ id: "player", ref: slotRefs.player, onOpen: () => onOpen("player") }}

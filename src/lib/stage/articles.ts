@@ -41,7 +41,7 @@ export const ARTICLES: Record<ArticleId, Article> = {
     kicker: "/Watch — ESP32 / KiCad",
     controls: "Scroll to walk through",
     touch: "Swipe up to walk through",
-    title: "Watch — Avi Yadava",
+    title: "Custom Digital Watch — Avi Yadava",
   },
   player: {
     id: "player",
@@ -50,7 +50,7 @@ export const ARTICLES: Record<ArticleId, Article> = {
     kicker: "/Player — STM32 / KiCad",
     controls: "Scroll to walk through",
     touch: "Swipe up to walk through",
-    title: "Player — Avi Yadava",
+    title: "Tiny Music Player — Avi Yadava",
   },
   fractals: {
     id: "fractals",

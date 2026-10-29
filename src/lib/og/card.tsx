@@ -86,12 +86,24 @@ export function card(children: ReactNode, right = dateline()): ImageResponse {
  * An article's preview: its label, headline and a line of copy on the left,
  * its art on the right bleeding to the rules, as the rail draws it.
  */
-export function articleCard(opts: { label: string; title: string; dek: string; path: string; art: string; artW: number; artH: number }) {
+/** `titleSize` sets a long name smaller, so it wraps a word to a line in the column (default 132). */
+export function articleCard(opts: {
+  label: string;
+  title: string;
+  titleSize?: number;
+  dek: string;
+  path: string;
+  art: string;
+  artW: number;
+  artH: number;
+}) {
   return card(
     <div style={{ display: "flex", flex: 1, marginTop: 18, borderTop: rule }}>
       <div style={{ display: "flex", flexDirection: "column", width: 470, padding: "22px 24px 26px", borderRight: rule }}>
         <div style={{ ...label, display: "flex" }}>{opts.label}</div>
-        <div style={{ ...serif, display: "flex", fontSize: 132, lineHeight: 0.86, letterSpacing: "-0.02em", marginTop: 14 }}>
+        <div
+          style={{ ...serif, display: "flex", fontSize: opts.titleSize ?? 132, lineHeight: 0.86, letterSpacing: "-0.02em", marginTop: 14 }}
+        >
           {opts.title}
         </div>
         <div style={{ display: "flex", fontFamily: "Instrument Serif", fontSize: 31, lineHeight: 1.18, color: C.dim, marginTop: 26 }}>

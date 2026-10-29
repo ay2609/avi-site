@@ -1,8 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { type CSSProperties, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 
-import { LABEL } from "@/components/furniture";
+import { advance, LABEL } from "@/components/furniture";
 import { sfx } from "@/lib/sound/sfx";
 import type { ArticleId } from "@/lib/stage/articles";
 import { gsap, prefersReducedMotion, SplitText } from "@/lib/stage/motion";
@@ -42,6 +42,20 @@ function CalloutText({ o }: { o: Callout }) {
 }
 
 const pad = (n: number) => String(n).padStart(2, "0");
+
+/**
+ * The box's headline size: up to the usual, but a long one no wider than
+ * HEADLINE_SHARE of the box, so it clears the index; on a phone a long one
+ * wraps at a smaller size.
+ */
+const HEADLINE_SHARE = 0.56;
+function headlineSize(text: string): CSSProperties {
+  const a = advance(text);
+  return {
+    "--wide": `min(clamp(2.25rem, 7cqw, 4.5rem), ${((HEADLINE_SHARE * 100) / a).toFixed(2)}cqw)`,
+    "--compact": a > 7 ? "1.6rem" : "clamp(2.25rem, 7cqw, 4.5rem)",
+  } as CSSProperties;
+}
 const clock = (s: number) => `${Math.floor(s / 60)}:${pad(Math.floor(s % 60))}`;
 
 /** The island's buttons: rewind (or the track before), play or pause, skip. */
@@ -431,12 +445,15 @@ export default function TeardownArticle({
             className="absolute left-4 top-4 @max-[560px]:top-auto @max-[560px]:bottom-[calc(100%+16px)]"
           >
             {/* The newspaper's headline flies here when the article opens (see Stage). */}
+            {/* One line, kept clear of the index; a long one (the article's
+                name) sets smaller to fit. On a phone, beside the index above
+                the box, a long one wraps instead (Stage's copy wraps with it). */}
             <h3
               data-typed
               data-flies
               data-stage-headline={id}
-              className="font-serif-ui whitespace-nowrap uppercase leading-[0.86] tracking-[-0.02em] text-bone"
-              style={{ fontSize: "clamp(2.25rem, 7cqw, 4.5rem)" }}
+              className="font-serif-ui whitespace-nowrap uppercase leading-[0.86] tracking-[-0.02em] text-bone [font-size:var(--wide)] [text-wrap:balance] @max-[560px]:max-w-[calc(100cqw-148px)] @max-[560px]:whitespace-normal @max-[560px]:[font-size:var(--compact)]"
+              style={headlineSize(c.headline)}
             >
               {c.headline}
             </h3>
@@ -462,7 +479,7 @@ export default function TeardownArticle({
                       k === chapter ? "text-bone" : "hover:text-bone"
                     }`}
                   >
-                    {pad(k)} {ch.headline}
+                    {pad(k)} {ch.index ?? ch.headline}
                   </button>
                 </li>
               ))}

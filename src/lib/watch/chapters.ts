@@ -12,7 +12,8 @@ export type FaceButton = "wake" | "sleep" | "next" | "back" | "spare";
 export const CHAPTERS: Chapter[] = [
   {
     id: "watch",
-    headline: "Watch",
+    headline: "Custom Digital Watch",
+    index: "Watch",
     view: { yaw: "spin", pitch: -8, roll: "diagonal", zoom: 1, look: [0, 0, 0] },
     focus: {},
     lift: 0,

@@ -57,7 +57,8 @@ const FACE = [
 export const CHAPTERS: Chapter[] = [
   {
     id: "player",
-    headline: "Player",
+    headline: "Tiny Music Player",
+    index: "Player",
     view: { yaw: "spin", pitch: -8, roll: "diagonal", zoom: 1.25, look: [0, 0, 0] },
     focus: {},
     lift: 0,

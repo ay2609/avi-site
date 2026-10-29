@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Player — Avi Yadava",
+  title: "Tiny Music Player — Avi Yadava",
 };
 
 /** The music player, expanded. The (site) layout reads the pathname and stages it. */

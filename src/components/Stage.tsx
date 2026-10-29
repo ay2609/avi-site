@@ -144,6 +144,14 @@ function Layer({
 }
 
 /**
+ * A stage headline that wraps (a long name, on a phone) needs a copy that
+ * wraps the same way: in a set width, which the flight then tweens.
+ */
+const wraps = (el: HTMLElement) => getComputedStyle(el).whiteSpace !== "nowrap";
+const wrapGhost = (g: HTMLElement, width: number) =>
+  Object.assign(g.style, { whiteSpace: "normal", textWrap: "balance", width: `${width}px` });
+
+/**
  * The front page and its expandable articles.
  *
  * The URL is the state: `/` is the newspaper, an article's route is that
@@ -429,13 +437,17 @@ export default function Stage() {
       // The headline: where it lands is measured now, with the art in its
       // stage box and before the Flip below puts it back visually.
       const head = headlines(id);
-      let headTo: { left: number; top: number; fontSize: string } | null = null;
+      let headTo: { left: number; top: number; fontSize: string; width?: number } | null = null;
       let ghost: HTMLDivElement | null = null;
       if (head.page && head.stage) {
         head.stage.style.visibility = "";
         const r = head.stage.getBoundingClientRect();
         headTo = { left: r.left, top: r.top, fontSize: getComputedStyle(head.stage).fontSize };
         ghost = ghostFrom(head.page, head.page.textContent ?? "");
+        if (wraps(head.stage)) {
+          wrapGhost(ghost, head.page.offsetWidth);
+          headTo.width = r.width;
+        }
         head.page.style.visibility = "hidden";
       }
 
@@ -512,6 +524,8 @@ export default function Stage() {
       if (head.page && (ghostRef.current || head.stage)) {
         ghost = ghostFrom(head.stage!, head.page.textContent ?? "");
         ghost.textContent = head.page.textContent ?? "";
+        if (head.stage && wraps(head.stage))
+          wrapGhost(ghost, parseFloat(getComputedStyle(head.stage).maxWidth) || head.stage.offsetWidth);
         if (head.stage) head.stage.style.visibility = "hidden";
         head.page.style.visibility = "hidden";
       }
@@ -568,7 +582,8 @@ export default function Stage() {
         );
       if (ghost && head.page && pageBox) {
         const fontSize = getComputedStyle(head.page).fontSize;
-        tl.to(ghost, { left: pageBox.left, top: pageBox.top, fontSize, duration: T.fly }, "lift");
+        const width = ghost.style.width ? { width: head.page.offsetWidth } : {};
+        tl.to(ghost, { left: pageBox.left, top: pageBox.top, fontSize, ...width, duration: T.fly }, "lift");
       }
       if (ruleFrom) {
         tl.add(Flip.from(ruleFrom, { duration: T.fly, ease: EASE.travel }), "lift");
