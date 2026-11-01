@@ -29,6 +29,7 @@ import {
   type Box,
   type Variant,
   EASE,
+  dockTucked,
   Flip,
   INSET_NONE,
   MINI,
@@ -142,6 +143,9 @@ function Layer({
     </div>
   );
 }
+
+/** An article's box on the stage. */
+const stageOf = (id: ArticleId) => stageBox(ARTICLES[id].aspect, ARTICLES[id].reads);
 
 /**
  * A stage headline that wraps (a long name, on a phone) needs a copy that
@@ -318,7 +322,7 @@ export default function Stage() {
       }
       // Open: the spotlight stays on the art's stage box as the window resizes.
       const el = backdrops.current.get(open);
-      if (el && !tlRef.current?.isActive()) gsap.set(el, spotFor(stageBox(ARTICLES[open].aspect)));
+      if (el && !tlRef.current?.isActive()) gsap.set(el, spotFor(stageOf(open)));
     };
     window.addEventListener("scroll", follow, { passive: true });
     window.addEventListener("resize", follow);
@@ -348,6 +352,7 @@ export default function Stage() {
     const slot = slotRefs[id].current;
     if (!layer || !slot) return;
     gsap.set(layer, { clearProps: "transform,zIndex" });
+    layer.removeAttribute("data-tucked");
     place(layer, box(slot.getBoundingClientRect()), "doc");
   }, [layerRefs, slotRefs]);
 
@@ -356,7 +361,11 @@ export default function Stage() {
     const layer = layerRefs.globe.current;
     if (!layer) return;
     gsap.set(layer, { clearProps: "transform", zIndex: 40 });
-    place(layer, miniBox(), "fixed");
+    // Beside an article with words to read, it keeps off them.
+    const open = openRef.current;
+    const stage = open && ARTICLES[open].reads ? stageOf(open) : undefined;
+    place(layer, miniBox(stage), "fixed");
+    layer.toggleAttribute("data-tucked", !!stage && dockTucked(stage));
   }, [layerRefs]);
 
   /** An article's layer, the rules and the chrome's bands in their expanded place. */
@@ -365,7 +374,7 @@ export default function Stage() {
       const layer = layerRefs[id].current;
       const chrome = chromeRef.current;
       if (!layer || !chrome) return;
-      const b = stageBox(ARTICLES[id].aspect);
+      const b = stageOf(id);
       gsap.set(layer, { clearProps: "zIndex" });
       place(layer, b, "fixed");
       placeRules(q().rules, b, true);
@@ -431,7 +440,7 @@ export default function Stage() {
       if (variant === "rule") {
         placeRules(rules, slotBox, false);
         ruleFrom = Flip.getState(Object.values(rules));
-        placeRules(rules, stageBox(ARTICLES[id].aspect), true);
+        placeRules(rules, stageOf(id), true);
       }
 
       // The headline: where it lands is measured now, with the art in its
@@ -479,7 +488,7 @@ export default function Stage() {
           {
             clipPath: INSET_NONE,
             "--backdrop": BACKDROP.opacity,
-            ...spotFor(stageBox(ARTICLES[id].aspect)),
+            ...spotFor(stageOf(id)),
             duration: T.fly,
           },
           "fly"
@@ -576,7 +585,7 @@ export default function Stage() {
       if (backdrop)
         tl.fromTo(
           backdrop,
-          { clipPath: INSET_NONE, "--backdrop": BACKDROP.opacity, ...spotFor(stageBox(ARTICLES[id].aspect)) },
+          { clipPath: INSET_NONE, "--backdrop": BACKDROP.opacity, ...spotFor(stageOf(id)) },
           { clipPath: insetTo(slotBox), "--backdrop": BACKDROP.preview, ...spotFor(slotBox), duration: T.fly },
           "lift"
         );
@@ -664,7 +673,7 @@ export default function Stage() {
                     clipPath: INSET_NONE,
                     autoAlpha: 1,
                     "--backdrop": BACKDROP.opacity,
-                    ...spotFor(stageBox(ARTICLES[id].aspect)),
+                    ...spotFor(stageOf(id)),
                   }
                 : { autoAlpha: 0 }
             );

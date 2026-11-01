@@ -10,6 +10,9 @@ import { PocketPlayer } from "./pocket";
  * (pcb/intent.json there). The cells, the jack and the microSD socket hang
  * under the board and drop away from it; the OLED glass lifts off the top.
  *
+ * The chapters follow a song: off the card, through the brain, out the jack,
+ * then what powers it all, and the screen last, because that chapter plays.
+ *
  * Along the stick (KiCad x): the USB-C plug and the screen, the brain, the
  * controls, the cells beneath, then power and audio and the jack at the end.
  * On the stage it stands up, plug at the top (roll −90), so it keeps to the
@@ -59,6 +62,14 @@ export const CHAPTERS: Chapter[] = [
     id: "player",
     headline: "Tiny Music Player",
     index: "Player",
+    story:
+      "A pocket music player for lossless files and wired headphones, with a tiny screen for the album art. It's what I'm building now: the board is designed and routed, but hasn't been made yet.",
+    facts: [
+      { name: "Processor", value: "STM32U5" },
+      { name: "Sound", value: "CS43131" },
+      { name: "Library", value: "microSD" },
+      { name: "Screen", value: '0.6" · 64 × 64' },
+    ],
     view: { yaw: "spin", pitch: -8, roll: "diagonal", zoom: 1.25, look: [0, 0, 0] },
     focus: {},
     lift: 0,
@@ -67,70 +78,78 @@ export const CHAPTERS: Chapter[] = [
     display: false,
   },
   {
-    id: "power",
-    headline: "Power",
-    view: { yaw: 34, pitch: -22, roll: -90, zoom: 1.7 },
-    focus: { refs: POWER },
-    lift: 0.1,
+    id: "library",
+    headline: "Library",
+    // Nearly edge-on, so the plug rising off the top and the card socket
+    // dropping off the bottom are both in view.
+    story:
+      "Your music lives on a microSD card as lossless files. Plug the player's USB-C end into a computer and the card shows up as a drive, so loading songs is a drag and drop. The same plug charges it.",
+    view: { yaw: 72, pitch: -12, roll: -90, zoom: 2.7 },
+    focus: { refs: LIBRARY },
+    lift: 0.08,
     dim: true,
     callouts: [
-      { ref: "BT1", text: "2 × 10440 · 700 mAh" },
-      { ref: "U3", text: "MCP73832 charger" },
-      { ref: "U11", text: "BQ29700 · cell guard" },
-      { ref: "U4", text: "TPS7A20 · 3.0 V" },
-      { ref: "U5", text: "TPS62843 · 1.8 V" },
+      { ref: "J3", name: "microSD socket", part: "Lossless" },
+      { ref: "J1", name: "USB-C plug", part: "Drive + charge" },
+      { ref: "U2", name: "Surge protection", part: "USBLC6" },
+      { ref: "U12", name: "3.3 V for USB", part: "TPS7A20" },
     ],
-    // Through the charger into the cells, and out of them through the guard.
-    trace: ["U3", "BT1", "U11"],
     display: false,
   },
   {
     id: "brain",
     headline: "Brain",
-    view: { yaw: -30, pitch: -24, roll: -90, zoom: 2.6 },
+    story:
+      "An STM32U5 sits in the middle of it all: it reads each song off the card, hands it to the sound chip, and talks USB to the computer.",
+    view: { yaw: -30, pitch: -24, roll: -90, zoom: 3.1 },
     focus: { refs: BRAIN },
     lift: 0.08,
     dim: true,
     callouts: [
-      { ref: "U1", text: "STM32U5 · Cortex-M33", side: "left" },
-      { ref: "Y1", text: "16 MHz · USB clock" },
-      { ref: "L3", text: "Core SMPS" },
-    ],
-    display: false,
-  },
-  {
-    id: "library",
-    headline: "Library",
-    // Nearly edge-on, so the plug rising off the top and the card socket
-    // dropping off the bottom are both in view.
-    view: { yaw: 72, pitch: -12, roll: -90, zoom: 2.2 },
-    focus: { refs: LIBRARY },
-    lift: 0.08,
-    dim: true,
-    callouts: [
-      { ref: "J1", text: "USB-C · drive + charge" },
-      { ref: "U2", text: "USBLC6 · ESD" },
-      { ref: "J3", text: "microSD · lossless" },
-      { ref: "U12", text: "TPS7A20 · 3.3 V USB" },
+      { ref: "U1", name: "Processor", part: "STM32U5" },
+      { ref: "Y1", name: "USB clock", part: "16 MHz" },
+      { ref: "L3", name: "Core's power coil", part: "SMPS" },
     ],
     display: false,
   },
   {
     id: "sound",
     headline: "Sound",
-    view: { yaw: -32, pitch: -22, roll: -90, zoom: 2.1 },
+    story:
+      "The music crosses to the CS43131, which turns it into an analog signal and drives your headphones directly from the jack. It has two clocks because music comes in two families of sample rate.",
+    view: { yaw: -32, pitch: -22, roll: -90, zoom: 2.7 },
     focus: { refs: SOUND },
     lift: 0.08,
     dim: true,
     callouts: [
-      { ref: "U8", text: "CS43131 · DAC + amp" },
-      { ref: "X1", text: "24.576 MHz · 48 kHz" },
-      { ref: "X2", text: "22.5792 MHz · 44.1 kHz" },
-      { ref: "U14", text: "I²S · 3.0 ↔ 1.8 V" },
-      { ref: "J2", text: "3.5 mm · 2 Vrms" },
+      { ref: "U14", name: "Level shifter", part: "3.0 ↔ 1.8 V" },
+      { ref: "U8", name: "DAC and headphone amp", part: "CS43131" },
+      { ref: "X1", name: "48 kHz clock", part: "24.576 MHz" },
+      { ref: "X2", name: "44.1 kHz clock", part: "22.5792 MHz" },
+      { ref: "J2", name: "Headphone jack", part: "3.5 mm · 2 Vrms" },
     ],
     // Samples across the level shift, into the DAC, out the jack.
     trace: ["U14", "U8", "J2"],
+    display: false,
+  },
+  {
+    id: "power",
+    headline: "Power",
+    story:
+      "Two small 10440 cells sit under the board, about 700 mAh together. A charger fills them from the USB plug, a guard chip protects them, and two regulators make the voltages the rest of the board runs on.",
+    view: { yaw: 34, pitch: -22, roll: -90, zoom: 2.3 },
+    focus: { refs: POWER },
+    lift: 0.1,
+    dim: true,
+    callouts: [
+      { ref: "U3", name: "Charger", part: "MCP73832" },
+      { ref: "BT1", name: "Two cells", part: "2 × 10440" },
+      { ref: "U11", name: "Battery guard", part: "BQ29700" },
+      { ref: "U4", name: "3.0 V regulator", part: "TPS7A20" },
+      { ref: "U5", name: "1.8 V converter", part: "TPS62843" },
+    ],
+    // Through the charger into the cells, and out of them through the guard.
+    trace: ["U3", "BT1", "U11"],
     display: false,
   },
   {
@@ -138,7 +157,9 @@ export const CHAPTERS: Chapter[] = [
     headline: "Face",
     // Sideways, plug to the left, the way it's held to look at the screen; the
     // controls are the island under it (TeardownArticle), not labels.
-    view: { yaw: 8, pitch: -30, roll: 0, zoom: 2.3, shift: [0.04, 0.1] },
+    story:
+      "A 0.6-inch colour OLED, 64 pixels a side, showing the album cover at its own low resolution. This one plays: 30-second previews of my playlist, filtered to sound like a tiny player into cheap earbuds.",
+    view: { yaw: 8, pitch: -30, roll: 0, zoom: 3.3, shift: [0.1, 0.08] },
     focus: { refs: FACE },
     lift: 0.05,
     lifts: { OLED: 2 },
@@ -152,6 +173,7 @@ export const PLAYER: Device = {
   src: "/player-parts.bin",
   chapters: CHAPTERS,
   major: /^(U|J|SW|BT|DS|OLED)\d*$/,
+  next: { id: "fractals", name: "Fractals" },
   // The OLED's active area, where the playlist's covers show: 10.73 mm square, set 1.6 mm in from the glass's
   // far edge (REVISION-B Part 7), the image upright with the stick sideways.
   screen: { ref: "OLED", center: [114.04, 112.5], size: [10.73, 10.73], up: "+y", screen: () => new PocketPlayer() },

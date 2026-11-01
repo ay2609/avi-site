@@ -81,14 +81,28 @@ export const box = (r: DOMRect): Box => ({
   height: r.height,
 });
 
+/** On a phone, how far an article with words to read sits from the top: the band with Back in it. */
+export const PHONE_BAND = 44;
+/** Shorter than this (a phone on its side), an article with words takes the whole width, whatever its aspect. */
+const SHORT = 480;
+
 /**
  * Where an article sits when expanded: the largest box of the given aspect
- * (width / height) that fits inside the gutters, centred.
+ * (width / height) that fits inside the gutters, centred. One with words to
+ * read (`reads`) sits at the top of a phone, with the rest of the screen for
+ * them, and on a short screen fills the width so they can sit beside the art.
  */
-export function stageBox(aspect = 1): Box {
-  const gutterX = window.innerWidth < NARROW ? 16 : STAGE_GUTTER;
+export function stageBox(aspect = 1, reads = false): Box {
+  const narrow = window.innerWidth < NARROW;
+  const gutterX = narrow ? 16 : STAGE_GUTTER;
   const maxW = Math.max(120, window.innerWidth - gutterX * 2);
   const maxH = Math.max(120, window.innerHeight - STAGE_GUTTER * 2);
+  if (reads && narrow) {
+    return { top: PHONE_BAND, left: gutterX, width: maxW, height: maxW / aspect };
+  }
+  if (reads && window.innerHeight < SHORT) {
+    return { top: STAGE_GUTTER, left: gutterX, width: maxW, height: maxH };
+  }
   const width = Math.min(maxW, maxH * aspect);
   const height = width / aspect;
   return {
@@ -106,9 +120,18 @@ export function stageBox(aspect = 1): Box {
  */
 export const MINI = { size: 200, phone: 120, inset: 16, bar: 24 } as const;
 
-export function miniBox(): Box {
-  const size = window.innerWidth < NARROW ? MINI.phone : MINI.size;
+/** How wide the window can be and still leave the words inside a stage box some air. */
+const dockRoom = (stage: Box) => stage.left - 16 - MINI.inset;
+
+/** Beside an article with words to read, it takes the smaller size if the larger would cover them. */
+export function miniBox(stage?: Box): Box {
+  const size = window.innerWidth < NARROW || (stage && dockRoom(stage) < MINI.size) ? MINI.phone : MINI.size;
   return { left: MINI.inset, top: window.innerHeight - MINI.inset - size, width: size, height: size };
+}
+
+/** The window would cover an article's words at any size (a phone, a small window): it steps aside. */
+export function dockTucked(stage: Box): boolean {
+  return window.innerWidth < NARROW || dockRoom(stage) < MINI.phone;
 }
 
 /**

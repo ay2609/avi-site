@@ -344,6 +344,7 @@ export class SovereignFace implements Screen {
     if (button === "sleep") {
       this.fb.fill(BG);
       this.backlight = false;
+      this.needsUpdate = true; // one more frame out, the dark one
     } else if (button === "next" || button === "back") {
       this.screen = this.screen === 0 ? 1 : 0; // two screens: up and down both toggle
       this.syncAt = Infinity;
@@ -355,7 +356,11 @@ export class SovereignFace implements Screen {
 
   /** Advance to `now`. Returns true when the framebuffer changed. */
   step(now: number, animate = true): boolean {
-    if (!this.backlight) return false;
+    if (!this.backlight) {
+      const dark = this.needsUpdate;
+      this.needsUpdate = false;
+      return dark;
+    }
     if (now - this.lastFrame < FRAME_MS) return false;
     this.lastFrame = now;
 

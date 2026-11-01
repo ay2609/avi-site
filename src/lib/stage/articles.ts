@@ -21,6 +21,8 @@ export interface Article {
   backdrop?: AsciiFieldId;
   /** `<title>` when open. */
   title: string;
+  /** It has words to read beside the art: on a phone the art goes to the top and the words fill the rest. */
+  reads?: boolean;
 }
 
 export const ARTICLES: Record<ArticleId, Article> = {
@@ -42,6 +44,7 @@ export const ARTICLES: Record<ArticleId, Article> = {
     controls: "Scroll to walk through",
     touch: "Swipe up to walk through",
     title: "Custom Digital Watch — Avi Yadava",
+    reads: true,
   },
   player: {
     id: "player",
@@ -51,6 +54,7 @@ export const ARTICLES: Record<ArticleId, Article> = {
     controls: "Scroll to walk through",
     touch: "Swipe up to walk through",
     title: "Tiny Music Player — Avi Yadava",
+    reads: true,
   },
   fractals: {
     id: "fractals",

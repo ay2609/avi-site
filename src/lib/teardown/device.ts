@@ -6,17 +6,22 @@
  *
  * Parts are named by reference designator; `sheets` pulls in every part drawn
  * on those schematic sheets (see the parts table in the board's .bin).
- * Angles are degrees. Copy is set in the site's label style (uppercase by CSS).
+ * Angles are degrees. A chapter's `story` and its key are what a reader reads:
+ * plain words first, part numbers beside them for those who want them.
  */
 
+import type { ArticleId } from "@/lib/stage/articles";
+
+/** One line of a chapter's key, numbered in the order of its story and on the board. */
 export interface Callout {
   /** A reference designator, or the display module's `ref`. */
   ref: string;
-  text: string;
-  /** A label that presses that button on the screen (the watch's face). */
+  /** What it is, in plain words. */
+  name: string;
+  /** Its part number or value, set small beside the name. */
+  part?: string;
+  /** A line that presses that button on the screen (the watch's face). */
   press?: string;
-  /** Force the label's column; by default it goes on the side its part is on. */
-  side?: "left" | "right";
 }
 
 export interface ChapterView {
@@ -38,6 +43,10 @@ export interface Chapter {
   headline: string;
   /** The chapter index's entry, when the headline is too long for it. */
   index?: string;
+  /** What this part of the thing does, in a sentence or two, for anyone. */
+  story: string;
+  /** The opening chapter's facts at a glance, set like the key. */
+  facts?: { name: string; value: string }[];
   view: ChapterView;
   /** Parts lifted and drawn at full line weight. */
   focus: { sheets?: string[]; refs?: string[] };
@@ -56,10 +65,10 @@ export interface Chapter {
   /** The screen is on (the watch: its display module is on the stage). */
   display: boolean;
   /**
-   * The real thing, at the end: a photo that takes the board's place in the
-   * box (black and white until hovered), with a caption. In public/.
+   * The real thing, at the end: a photo that takes the board's place beside
+   * the story (black and white until hovered). In public/.
    */
-  photo?: { src: string; alt: string; caption: string };
+  photo?: { src: string; alt: string };
 }
 
 /** What a screen that plays music is playing (the player's), for the article to show. */
@@ -107,6 +116,8 @@ export interface Device {
   chapters: Chapter[];
   /** Refs that rise a chapter's whole lift; the others rise LOOK.minorLift of it. */
   major: RegExp;
+  /** Where the last chapter sends the reader on to. */
+  next?: { id: ArticleId; name: string };
   /**
    * The watch: a display module kept off the board that comes down onto it in
    * the chapters with `display`. Sizes in mm; `ref` names it in callouts.

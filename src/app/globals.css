@@ -200,6 +200,25 @@ body {
   touch-action: pan-y !important;
 }
 
+/* Docked beside words it would cover (see dockTucked), the globe steps aside. */
+[data-layer="globe"] {
+  transition: opacity 0.2s ease-out;
+}
+[data-layer="globe"][data-tucked] {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* A chapter's words come straight on, so there's nothing to wait for before reading. */
+.story-in {
+  animation: story-in 0.24s ease-out both;
+}
+@keyframes story-in {
+  from {
+    opacity: 0;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

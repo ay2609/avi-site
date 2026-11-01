@@ -15,6 +15,14 @@ export const CHAPTERS: Chapter[] = [
     id: "watch",
     headline: "Custom Digital Watch",
     index: "Watch",
+    story:
+      "A smartwatch I designed from nothing: the circuit board in KiCad, the firmware in C. This walkthrough takes the board apart one system at a time and ends on the real thing.",
+    facts: [
+      { name: "Processor", value: "ESP32-S3" },
+      { name: "Screen", value: '1.69" · 240 × 280' },
+      { name: "Senses", value: "Motion, time, battery" },
+      { name: "Firmware", value: "C · ESP-IDF" },
+    ],
     view: { yaw: "spin", pitch: -8, roll: "diagonal", zoom: 1, look: [0, 0, 0] },
     focus: {},
     lift: 0,
@@ -25,17 +33,19 @@ export const CHAPTERS: Chapter[] = [
   {
     id: "power",
     headline: "Power",
-    view: { yaw: 26, pitch: -40, roll: -12, zoom: 1.55 },
+    story:
+      "Power comes in through the USB-C port, charges a small lithium battery, and leaves as a steady 3.3 volts for everything else on the board. The line follows that path.",
+    view: { yaw: 26, pitch: -40, roll: -12, zoom: 1.45 },
     focus: { sheets: ["USB-C", "LiPo Charger", "LiPo Connection", "Voltage Regulator"] },
     lift: 0.16,
     dim: true,
     callouts: [
-      { ref: "J1", text: "USB-C" },
-      { ref: "D3", text: "ESD × 3" },
-      { ref: "D2", text: "Schottky" },
-      { ref: "U3", text: "BQ24090 charger" },
-      { ref: "J2", text: "Li-Po cell" },
-      { ref: "U2", text: "TPS79533 · 3.3 V" },
+      { ref: "J1", name: "USB-C port", part: "5 V in" },
+      { ref: "D3", name: "Surge protection", part: "ESD × 3" },
+      { ref: "D2", name: "One-way diode", part: "Schottky" },
+      { ref: "U3", name: "Battery charger", part: "BQ24090" },
+      { ref: "U2", name: "3.3 V regulator", part: "TPS79533" },
+      { ref: "J2", name: "Battery connector", part: "Li-Po" },
     ],
     // The charger's output, the cell and the regulator's input are one net (the
     // BQ24090 has no separate system output), so the order along it is free:
@@ -47,29 +57,33 @@ export const CHAPTERS: Chapter[] = [
   {
     id: "brain",
     headline: "Brain",
-    view: { yaw: -24, pitch: -52, roll: 8, zoom: 1.75 },
+    story:
+      "One chip runs the whole watch: an ESP32-S3, which sets the clock over Wi-Fi, reads the sensors, watches the buttons and draws the screen. The two small buttons beside it restart and reprogram it.",
+    view: { yaw: -24, pitch: -52, roll: 8, zoom: 1.5 },
     focus: { sheets: ["ESP32-S3-WROOM-2", "MCU RST BOOT"] },
     lift: 0.14,
     dim: true,
     callouts: [
-      { ref: "U7", text: "ESP32-S3 · 8 MB flash", side: "left" },
-      { ref: "SW1", text: "Boot · IO0" },
-      { ref: "SW2", text: "Reset · EN" },
+      { ref: "U7", name: "Processor and Wi-Fi", part: "ESP32-S3" },
+      { ref: "SW2", name: "Reset button", part: "EN" },
+      { ref: "SW1", name: "Programming button", part: "IO0" },
     ],
     display: false,
   },
   {
     id: "senses",
     headline: "Senses",
-    view: { yaw: 18, pitch: -58, roll: -4, zoom: 2.1, shift: [0, -0.04] },
+    story:
+      "Three small chips tell the processor what's going on: how the watch is moving, what time it is, and how much battery is left. All three share one pair of wires, the line you see here, and answer when asked.",
+    view: { yaw: 18, pitch: -58, roll: -4, zoom: 1.8, shift: [0, -0.04] },
     focus: { sheets: ["gyro", "Clock", "ADC"] },
     lift: 0.14,
     dim: true,
     callouts: [
-      { ref: "U6", text: "ICM-42670-P · motion" },
-      { ref: "U5", text: "DS3231M · clock" },
-      { ref: "U1", text: "MCP3427 · battery" },
-      { ref: "U7", text: "Bus master", side: "left" },
+      { ref: "U7", name: "Processor", part: "ESP32-S3" },
+      { ref: "U5", name: "Clock", part: "DS3231M" },
+      { ref: "U6", name: "Motion sensor", part: "ICM-42670-P" },
+      { ref: "U1", name: "Battery reader", part: "MCP3427" },
     ],
     trace: ["U7", "U5", "U6", "U1"],
     display: false,
@@ -77,17 +91,19 @@ export const CHAPTERS: Chapter[] = [
   {
     id: "face",
     headline: "Face",
+    story:
+      "A 1.69-inch colour screen comes down onto the board showing the real watch face, redrawn here from the firmware. Its dial tilts with your pointer, as it does with your wrist on the watch. Try the buttons below.",
     view: { yaw: -14, pitch: -20, roll: 0, zoom: 1.2 },
     focus: { sheets: ["Buttons"] },
     lift: 0,
     dim: true,
     callouts: [
-      { ref: "LCD", text: "ST7789V2" },
-      { ref: "SW3", text: "IO18 · wake", press: "wake" },
-      { ref: "SW7", text: "IO36 · sleep", press: "sleep" },
-      { ref: "SW5", text: "IO35", press: "spare" },
-      { ref: "SW6", text: "IO4 · next", press: "next" },
-      { ref: "SW4", text: "IO5 · back", press: "back" },
+      { ref: "LCD", name: "Screen", part: "ST7789V2" },
+      { ref: "SW3", name: "Wake", part: "IO18", press: "wake" },
+      { ref: "SW7", name: "Sleep", part: "IO36", press: "sleep" },
+      { ref: "SW6", name: "Next screen", part: "IO4", press: "next" },
+      { ref: "SW4", name: "Back", part: "IO5", press: "back" },
+      { ref: "SW5", name: "Spare button", part: "IO35" },
     ],
     display: true,
   },
@@ -96,6 +112,7 @@ export const CHAPTERS: Chapter[] = [
     id: "wrist",
     headline: "On the Wrist",
     index: "Wrist",
+    story: "The finished watch: the board in a white printed frame on a mesh band, running the face from the last chapter.",
     view: { yaw: -14, pitch: -20, roll: 0, zoom: 1.2 },
     focus: { sheets: ["Buttons"] },
     lift: 0,
@@ -105,7 +122,6 @@ export const CHAPTERS: Chapter[] = [
     photo: {
       src: "/watch-worn.jpg",
       alt: "The watch on a wrist: the board in a white printed frame on a mesh band, two grey buttons on its side, and the display showing 12:38:58 PM in blue line type beside wireframe polyhedra, the battery at 74.2.",
-      caption: "Worn, running the face above",
     },
   },
 ];
@@ -129,4 +145,5 @@ export const WATCH: Device = {
   chapters: CHAPTERS,
   major: /^(U|J|SW)\d/,
   module: { ref: "LCD", ...DISPLAY, screen: () => new SovereignFace() },
+  next: { id: "player", name: "Tiny Music Player" },
 };

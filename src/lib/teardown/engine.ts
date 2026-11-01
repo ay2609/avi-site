@@ -33,6 +33,11 @@ export const LOOK = {
   focus: 0.8,
   dim: 0.1,
   boardDim: 0.18,
+  /** While one part is pointed at in the key: that part, and the chapter's others. */
+  pointed: 1,
+  aside: 0.26,
+  /** How fast the subject moves over for the words beside it, per second. */
+  insetRate: 7,
   /** Turntable, rad/s (negative is clockwise from above). */
   spin: -1,
   /** Passives rise this fraction of a chapter's lift; ICs and connectors rise all of it. */
@@ -179,6 +184,11 @@ export class TeardownEngine {
   private interactive = false;
   private gesture = new WheelGesture();
   private spin = 0;
+  /** The part pointed at in the key, if any. */
+  private pointed: string | null = null;
+  /** Width of the words over the box's left, px: the subject centres in what's left. */
+  private inset = 0;
+  private insetTo = 0;
   private width = 1;
   private height = 1;
   private disposed = false;
@@ -282,6 +292,17 @@ export class TeardownEngine {
 
   press(button: string): void {
     this.face?.press?.(button);
+  }
+
+  /** Draw one part at full weight and the chapter's others back, or none. */
+  point(ref: string | null): void {
+    this.pointed = ref && this.parts.some((p) => p.info.ref === ref) ? ref : null;
+  }
+
+  /** The width of whatever covers the box's left; the subject eases over to centre in the rest. */
+  setInset(px: number): void {
+    this.insetTo = px;
+    if (this.reduce) this.inset = px;
   }
 
   /** What the screen draws, for the article (the player's now-playing line). */
@@ -551,9 +572,10 @@ export class TeardownEngine {
       this.camera.updateProjectionMatrix();
     }
 
-    this.parts.forEach(({ group, edges }, i) => {
+    this.parts.forEach(({ info, group, edges }, i) => {
       group.position.z = lerp(A.lift[i], B.lift[i], f);
-      edges.opacity = lerp(A.opacity[i], B.opacity[i], f);
+      const opacity = lerp(A.opacity[i], B.opacity[i], f);
+      edges.opacity = !this.pointed ? opacity : info.ref === this.pointed ? LOOK.pointed : Math.min(opacity, LOOK.aside);
     });
 
     // The display comes down from above the frame into its place over the board.
@@ -584,7 +606,9 @@ export class TeardownEngine {
     this.roller.localToWorld(this.lookAt);
     const shiftX = lerp(A.shift[0], B.shift[0], f) * ((2 * LOOK.frustum * this.width) / this.height / zoom);
     const shiftY = lerp(A.shift[1], B.shift[1], f) * ((2 * LOOK.frustum) / zoom);
-    this.camera.position.set(this.lookAt.x - shiftX, this.lookAt.y - shiftY, 4);
+    this.inset += (this.insetTo - this.inset) * (1 - Math.exp(-dt * LOOK.insetRate));
+    const insetX = (this.inset / 2) * ((2 * LOOK.frustum) / this.height / zoom);
+    this.camera.position.set(this.lookAt.x - shiftX - insetX, this.lookAt.y - shiftY, 4);
     this.camera.updateMatrixWorld();
 
     this.renderer.render(this.scene, this.camera);
@@ -609,8 +633,10 @@ export class TeardownEngine {
       } else {
         const part = this.parts.find((q) => q.info.ref === ref);
         if (!part) continue;
+        // The top of a part on top of the board; the middle of one hanging under it, whose top is hidden.
         const { center, size } = part.info;
-        this.scratch.set(center[0], center[1], center[2] + size[2] / 2);
+        const board = this.parts[0].info;
+        this.scratch.set(center[0], center[1], center[2] + (center[2] < board.center[2] ? 0 : size[2] / 2));
         part.group.localToWorld(this.scratch);
       }
       this.scratch.project(this.camera);
