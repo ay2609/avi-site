@@ -23,6 +23,8 @@ export interface Article {
   title: string;
   /** It has words to read beside the art: on a phone the art goes to the top and the words fill the rest. */
   reads?: boolean;
+  /** Room kept under the box on a wide screen for what sits below the art, px. */
+  foot?: number;
 }
 
 export const ARTICLES: Record<ArticleId, Article> = {
@@ -64,6 +66,8 @@ export const ARTICLES: Record<ArticleId, Article> = {
     controls: "Scroll to walk through · Drag to explore",
     touch: "Swipe up · Tap for next",
     title: "Fractals — Avi Yadava",
+    reads: true,
+    foot: 136,
   },
 };
 

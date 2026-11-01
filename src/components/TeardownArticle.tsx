@@ -5,7 +5,7 @@ import { type CSSProperties, useCallback, useEffect, useLayoutEffect, useRef, us
 import { useRouter } from "next/navigation";
 
 import EndMark from "@/components/EndMark";
-import { advance, HIT, LABEL } from "@/components/furniture";
+import { advance, DATA, LABEL, WAY } from "@/components/furniture";
 import { sfx } from "@/lib/sound/sfx";
 import { ARTICLES, type ArticleId } from "@/lib/stage/articles";
 import { gsap, prefersReducedMotion, SplitText } from "@/lib/stage/motion";
@@ -29,12 +29,8 @@ const COMPACT_BELOW = 560;
 /** The words' column beside the board, px, for a box this wide: its CSS width, clamp(18rem, 33cqw, 24rem). */
 const columnWidth = (box: number) => (box < COMPACT_BELOW ? 0 : Math.min(384, Math.max(288, box * 0.33)));
 
-/** The small type that's data: part numbers, values, the index, the way on. */
-const DATA = "font-mono-ui text-[11px] uppercase tracking-[0.12em]";
 /** A number, in the key and on the board: the same little tile in both. */
 const TILE = "font-mono-ui flex shrink-0 items-center justify-center text-[10px] font-normal leading-none tabular-nums";
-/** The way on: a label underlined like the links in the prose, with a thumb's hit area. */
-const WAY = `${DATA} ${HIT} cursor-pointer whitespace-nowrap transition-colors`;
 
 const pad = (n: number) => String(n).padStart(2, "0");
 
@@ -491,7 +487,8 @@ export default function TeardownArticle({
         ref={overlayRef}
         aria-hidden={!visible}
         className="fit pointer-events-none absolute inset-0"
-        style={{ visibility: visible ? "visible" : "hidden" }}
+        // Closed, what's laid out under the box mustn't add to the length of the front page.
+        style={{ visibility: visible ? "visible" : "hidden", overflow: open ? "visible" : "hidden" }}
       >
         {/* The words, in a column beside the board. Positions come from container
             queries, not state, so the stage can measure where the headline will

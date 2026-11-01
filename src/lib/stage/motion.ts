@@ -91,8 +91,10 @@ const SHORT = 480;
  * (width / height) that fits inside the gutters, centred. One with words to
  * read (`reads`) sits at the top of a phone, with the rest of the screen for
  * them, and on a short screen fills the width so they can sit beside the art.
+ * `foot` keeps room under the box, for what sits below the art; on a short
+ * screen the box keeps its shape at the left, with that beside it instead.
  */
-export function stageBox(aspect = 1, reads = false): Box {
+export function stageBox(aspect = 1, reads = false, foot = 0): Box {
   const narrow = window.innerWidth < NARROW;
   const gutterX = narrow ? 16 : STAGE_GUTTER;
   const maxW = Math.max(120, window.innerWidth - gutterX * 2);
@@ -101,7 +103,15 @@ export function stageBox(aspect = 1, reads = false): Box {
     return { top: PHONE_BAND, left: gutterX, width: maxW, height: maxW / aspect };
   }
   if (reads && window.innerHeight < SHORT) {
-    return { top: STAGE_GUTTER, left: gutterX, width: maxW, height: maxH };
+    if (!foot) return { top: STAGE_GUTTER, left: gutterX, width: maxW, height: maxH };
+    const side = Math.max(120, window.innerHeight - PHONE_BAND - 12);
+    return { top: PHONE_BAND, left: 16, width: side, height: side };
+  }
+  if (foot) {
+    const room = Math.max(120, window.innerHeight - STAGE_GUTTER - foot);
+    const width = Math.min(maxW, room * aspect);
+    const height = width / aspect;
+    return { top: STAGE_GUTTER + (room - height) / 2, left: (window.innerWidth - width) / 2, width, height };
   }
   const width = Math.min(maxW, maxH * aspect);
   const height = width / aspect;

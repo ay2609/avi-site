@@ -172,7 +172,17 @@ export class FractalEngine {
     if (dir) this.step(dir);
   }
 
+  /** One picture on, or back: through a chapter's presets, then into the next chapter's first (or the last one's last). */
   step(dir: number): void {
+    const list = CHAPTERS[this.chapter].presets;
+    const at = this.presetIndex() + dir;
+    if (list && at >= 0 && at < list.length) {
+      this.setPreset(at);
+      return;
+    }
+    const next = CHAPTERS[this.chapter + dir];
+    if (!next) return;
+    if (next.presets) this.presets[next.id] = dir > 0 ? 0 : next.presets.length - 1;
     this.go(this.chapter + dir);
   }
 

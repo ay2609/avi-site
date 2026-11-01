@@ -2,6 +2,9 @@
 export const LABEL =
   "font-mono-ui text-[10px] uppercase tracking-[0.18em] text-dim";
 
+/** The small type that's data, in a walkthrough: part numbers, values, the index, the way on. */
+export const DATA = "font-mono-ui text-[11px] uppercase tracking-[0.12em]";
+
 /**
  * How wide a line of Instrument Serif capitals is, in em, at the tracking the
  * headlines use — most caps sit near 0.6em, with W and M much wider and I much
@@ -26,3 +29,6 @@ export function advance(text: string): number {
  */
 export const HIT =
   "relative after:absolute after:-inset-x-2 after:-inset-y-[15px] after:content-['']";
+
+/** A walkthrough's way on: a label with a thumb's hit area. Its colour belongs to the place it's used. */
+export const WAY = `${DATA} ${HIT} cursor-pointer whitespace-nowrap transition-colors`;

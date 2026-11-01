@@ -1,6 +1,6 @@
 /**
- * The fractals walkthrough, chapter by chapter: the headline and presets over
- * each picture. The pictures themselves are set up in engine.ts from the same ids
+ * The fractals walkthrough, chapter by chapter: each a headline, a line saying
+ * what's on screen, and its pictures, set in a contact sheet under the picture. The pictures themselves are set up in engine.ts from the same ids
  * (the cover in cover.ts); the maths is in systems.ts.
  *
  * Sep 29 (Avi): ITERATE and RESOLVE are gone, and so are the figures and the
@@ -14,11 +14,11 @@ import type { CliffordId, FlowId } from "./systems";
 
 export interface Preset {
   id: string;
-  /** The preset's row — or, inside a group, its chip. */
+  /** Its name: on its own, or after its group's. */
   label: string;
-  /** Consecutive presets with the same group share one row: the group's name, then their labels. */
+  /** The family it belongs to, named before it. */
   group?: string;
-  /** The label is maths: set as written rather than in the furniture's capitals. */
+  /** The label is maths: set in italics, as written. */
   math?: boolean;
   params: FractalParams;
   /** Fraotic: the flow whose basin this is, or the Clifford map. */
@@ -29,6 +29,8 @@ export interface Preset {
 export interface Chapter {
   id: "fractals" | "julia" | "fraotic";
   headline: string;
+  /** What's on screen, in one line. */
+  line: string;
   presets?: Preset[];
 }
 
@@ -403,21 +405,35 @@ const FRAOTIC: Preset[] = [
   },
 ];
 
+const more = JULIA.length + FRAOTIC.length;
+
 export const CHAPTERS: Chapter[] = [
-  { id: "fractals", headline: "Fractals" },
-  { id: "julia", headline: "Julia", presets: JULIA },
-  { id: "fraotic", headline: "Fraotic", presets: FRAOTIC },
+  {
+    id: "fractals",
+    headline: "Fractals",
+    line: `The Mandelbrot set, ported from Python I wrote in high school. ${more} more follow.`,
+  },
+  {
+    id: "julia",
+    headline: "Julia",
+    line: "Repeat a formula at every point; colour is how long it takes to settle or escape.",
+    presets: JULIA,
+  },
+  {
+    id: "fraotic",
+    headline: "Fraotic",
+    line: "How long each point takes to fall into a chaotic orbit, or to fly away from it.",
+    presets: FRAOTIC,
+  },
 ];
 
 export const LAST_CHAPTER = CHAPTERS.length - 1;
 
-/** A chapter's presets as its list shows them: one row per preset, or per run of a group. */
-export interface PresetRow {
-  label: string;
-  math?: boolean;
-  /** Indices into the chapter's presets. */
-  items: number[];
-}
+/** A preset's whole name: its group's, if it has one, then its own. */
+export const presetName = (p: Preset) => (p.group ? `${p.group} ${p.label}` : p.label);
+
+/** Every picture with a preset, in the order of scripts/fractal-thumbs.mjs's sheet. */
+export const THUMBS = { src: "/fractal-thumbs.jpg", across: 8, order: [...JULIA, ...FRAOTIC].map((p) => p.id) };
 
 /** What a drag on the picture moves: Julia's c, a flow's slice, or nothing. */
 export function dragOf(p: Preset | undefined): "c" | "slice" | null {
@@ -425,14 +441,4 @@ export function dragOf(p: Preset | undefined): "c" | "slice" | null {
   if (p.flow) return "slice";
   const m = p.params.mode;
   return p.params.c && (m === "escape" || m === "sine" || m === "thorn") ? "c" : null;
-}
-
-export function presetRows(presets: Preset[]): PresetRow[] {
-  const rows: PresetRow[] = [];
-  presets.forEach((p, k) => {
-    const last = rows[rows.length - 1];
-    if (p.group && last && presets[last.items[0]].group === p.group) last.items.push(k);
-    else rows.push(p.group ? { label: p.group, items: [k] } : { label: p.label, math: p.math, items: [k] });
-  });
-  return rows;
 }

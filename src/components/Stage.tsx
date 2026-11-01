@@ -145,7 +145,7 @@ function Layer({
 }
 
 /** An article's box on the stage. */
-const stageOf = (id: ArticleId) => stageBox(ARTICLES[id].aspect, ARTICLES[id].reads);
+const stageOf = (id: ArticleId) => stageBox(ARTICLES[id].aspect, ARTICLES[id].reads, ARTICLES[id].foot);
 
 /**
  * A stage headline that wraps (a long name, on a phone) needs a copy that

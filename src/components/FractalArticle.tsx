@@ -1,61 +1,86 @@
 "use client";
 
-import { Fragment, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import { ChapterEnd } from "@/components/EndMark";
-import { LABEL } from "@/components/furniture";
+import { DATA, WAY } from "@/components/furniture";
 import AsciiPanel from "@/lib/ascii/AsciiPanel";
-import { CHAPTERS, dragOf, LAST_CHAPTER, presetRows } from "@/lib/fractals/chapters";
+import { CHAPTERS, dragOf, LAST_CHAPTER, type Preset, presetName, THUMBS } from "@/lib/fractals/chapters";
 import { FractalEngine } from "@/lib/fractals/engine";
 import { sfx } from "@/lib/sound/sfx";
+import { ARTICLES } from "@/lib/stage/articles";
 import { gsap, prefersReducedMotion, SplitText, stageBox } from "@/lib/stage/motion";
 
 /** Height of one row of the chapter index, px — the marker moves in these. */
-const INDEX_ROW = 16;
+const INDEX_ROW = 22;
 /** Finger travel that counts as a swipe to the next chapter, px. */
 const SWIPE = 40;
 /** Movement before a touch decides whether it is a swipe or a drag, px. */
 const DECIDE = 8;
-/** Box width below which the furniture moves outside the box (as the watch). */
-const COMPACT_BELOW = 560;
+/** Box width below which the headline and index go under the box: a phone, not just a small window. */
+const COMPACT_BELOW = 420;
 /**
- * Side band (stage edge to the box) at and above which the presets and the
- * index leave the picture for the bands either side of it, where they read in
- * the page's own contrast. Narrower, they sit over the picture on scrims.
+ * Side band (stage edge to the box) at and above which the index leaves the
+ * picture for the band beside it, where it reads in the page's own contrast.
+ * Narrower, it sits over the picture on a scrim.
  */
 const COLUMNS_FROM = 240;
-/** A preset label that is maths: as written, not in the furniture's capitals. */
-const MATH = "normal-case tracking-[0.06em] text-[11px]";
+/** Most pictures in a row of the contact sheet, under a phone-sized box. */
+const SHEET_ACROSS = 8;
+/** What a drag does to the picture on screen. */
+const DRAG_HINT = { c: "Drag to change it", slice: "Drag to turn the slice" } as const;
 
 const pad = (n: number) => String(n).padStart(2, "0");
+
+/** One picture, from the contact sheet's one image; in light mode inverted as the picture itself is. */
+function Thumb({ preset, on }: { preset: Preset; on: boolean }) {
+  const at = THUMBS.order.indexOf(preset.id);
+  const down = Math.ceil(THUMBS.order.length / THUMBS.across);
+  const column = at % THUMBS.across;
+  const row = Math.floor(at / THUMBS.across);
+  return (
+    <span
+      aria-hidden
+      className="invert-on-light block aspect-square w-full"
+      style={
+        on
+          ? {
+              backgroundImage: `url(${THUMBS.src})`,
+              backgroundSize: `${THUMBS.across * 100}% ${down * 100}%`,
+              backgroundPosition: `${(column / (THUMBS.across - 1)) * 100}% ${(row / Math.max(1, down - 1)) * 100}%`,
+            }
+          : undefined
+      }
+    />
+  );
+}
 
 /**
  * Fractals as an article. On the front page it is the Mandelbrot set in ASCII,
  * its iterations rising and falling, each character in the colour its cell has
  * in the cover; opened, the characters give way to that picture in pixels and a
- * walkthrough in four chapters (src/lib/fractals/chapters.ts) — each scroll or
- * swipe is one, each a live port of Avi's own code.
+ * walkthrough of every picture (src/lib/fractals/chapters.ts), each a live port
+ * of Avi's own code. Each scroll or swipe is one picture, so none can be missed;
+ * under the picture, its chapter's contact sheet shows all of them at once.
  */
 export default function FractalArticle({ open, landed }: { open: boolean; landed: boolean }) {
   const hostRef = useRef<HTMLDivElement>(null);
   const glRef = useRef<HTMLCanvasElement>(null);
   const drawRef = useRef<HTMLCanvasElement>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
+  const deckRef = useRef<HTMLDivElement>(null);
   const markerRef = useRef<HTMLDivElement>(null);
   const engineRef = useRef<FractalEngine | null>(null);
 
   const [chapter, setChapter] = useState(0);
   const [preset, setPreset] = useState(0);
   const compactRef = useRef(false);
-  /** The presets and index in the side bands rather than over the picture. */
+  /** A small box (phones): the headline and index go under it, and the sheet takes rows. */
+  const [compact, setCompact] = useState(false);
+  /** The index in the side band rather than over the picture. */
   const [columns, setColumns] = useState(false);
-
-  const chapterRef = useRef(0);
-  const presetRef = useRef(0);
-  useLayoutEffect(() => {
-    chapterRef.current = chapter;
-    presetRef.current = preset;
-  }, [chapter, preset]);
+  /** The picture the pointer is over in the sheet: its name shows until it leaves. */
+  const [hovered, setHovered] = useState<number | null>(null);
 
   const stateRef = useRef({ open, landed });
   useLayoutEffect(() => {
@@ -98,9 +123,10 @@ export default function FractalArticle({ open, landed }: { open: boolean; landed
     const check = () => {
       const w = el.clientWidth;
       compactRef.current = w > 0 && w < COMPACT_BELOW;
+      setCompact(compactRef.current);
       // From the stage box, not this one: on the page the overlay is the slot's size.
-      const b = stageBox(1);
-      el.style.setProperty("--band", `${b.left}px`);
+      const { aspect, reads, foot } = ARTICLES.fractals;
+      const b = stageBox(aspect, reads, foot);
       setColumns(b.left >= COLUMNS_FROM && b.width >= COMPACT_BELOW);
     };
     check();
@@ -119,8 +145,14 @@ export default function FractalArticle({ open, landed }: { open: boolean; landed
     if (!open || !landed) return;
     const engine = () => engineRef.current;
     const host = hostRef.current;
+    /** What's under the picture is taller than its room (a small screen): a scroll over it scrolls it. */
+    const overDeck = (e: Event) => {
+      const deck = deckRef.current;
+      return !!deck && deck.scrollHeight > deck.clientHeight + 2 && deck.contains(e.target as Node);
+    };
 
     const onWheel = (e: WheelEvent) => {
+      if (overDeck(e)) return;
       e.preventDefault();
       const scale = e.deltaMode === 1 ? 40 : e.deltaMode === 2 ? window.innerHeight : 1;
       engine()?.wheel((Math.abs(e.deltaY) >= Math.abs(e.deltaX) ? e.deltaY : e.deltaX) * scale);
@@ -137,12 +169,12 @@ export default function FractalArticle({ open, landed }: { open: boolean; landed
       e.preventDefault();
     };
 
-    // Touch: a vertical swipe is a scroll (one chapter); a horizontal one drags, where a
-    // chapter takes a drag. A tap on a phone steps through that chapter's presets.
+    // Touch: a vertical swipe is a scroll (one picture); a horizontal one drags, where a
+    // picture takes a drag. A tap on a phone's picture is the next one too.
     let touch: { x: number; y: number; axis: "x" | "y" | null; swiped: boolean } | null = null;
     const onTouchStart = (e: TouchEvent) => {
       const t = e.touches[0];
-      if (t) touch = { x: t.clientX, y: t.clientY, axis: null, swiped: false };
+      touch = t && !overDeck(e) ? { x: t.clientX, y: t.clientY, axis: null, swiped: false } : null;
     };
     const onTouchMove = (e: TouchEvent) => {
       const t = e.touches[0];
@@ -191,11 +223,9 @@ export default function FractalArticle({ open, landed }: { open: boolean; landed
       last = null;
       engine()?.dragEnd();
     };
-    // Phones have no preset list: a tap on the picture moves to the next preset.
     const onClick = (e: MouseEvent) => {
       if (!compactRef.current || (e.target as HTMLElement).closest("button")) return;
-      const presets = CHAPTERS[chapterRef.current].presets;
-      if (presets) engine()?.setPreset(presetRef.current + 1);
+      engine()?.step(1);
     };
 
     window.addEventListener("wheel", onWheel, { passive: false });
@@ -247,9 +277,8 @@ export default function FractalArticle({ open, landed }: { open: boolean; landed
     };
   }, []);
 
-  // On landing the headline is already in place — it flew there — so only the rest is typed.
-  // A new chapter types in again; a new preset only moves the marker (the typed text
-  // itself never changes while it is split into characters).
+  // On landing the headline is already in place — it flew there — so nothing is typed.
+  // A new chapter types its headline in; the words beside it come straight on.
   const wasVisible = useRef(false);
   useLayoutEffect(() => {
     const landing = visible && !wasVisible.current;
@@ -262,14 +291,17 @@ export default function FractalArticle({ open, landed }: { open: boolean; landed
   const c = CHAPTERS[chapter];
   const go = (k: number) => engineRef.current?.go(k);
   const pick = (k: number) => engineRef.current?.setPreset(k);
-  const draggable = visible && dragOf(c.presets?.[preset]) !== null;
+  const step = (dir: number) => engineRef.current?.step(dir);
   const list = c.presets ?? [];
-  const rows = presetRows(list);
+  const current = c.presets?.[preset];
+  const draggable = visible && dragOf(current) !== null;
+  const dragHint = current && dragOf(current) ? DRAG_HINT[dragOf(current)!] : null;
   const tab = visible ? 0 : -1;
-  const presetClass = (k: number, math?: boolean) =>
-    `pointer-events-auto cursor-pointer transition-colors ${math ? MATH : "uppercase tracking-[0.18em]"} ${
-      k === preset ? "text-bone" : "hover:text-bone"
-    }`;
+  const showing = hovered !== null && list[hovered] ? hovered : preset;
+  const name = list[showing];
+  const atFirst = chapter === 0;
+  const atEnd = chapter === LAST_CHAPTER && preset === list.length - 1;
+  const atChapterEnd = !current || preset === list.length - 1;
 
   return (
     <div className="relative h-full w-full">
@@ -299,32 +331,26 @@ export default function FractalArticle({ open, landed }: { open: boolean; landed
         ref={overlayRef}
         aria-hidden={!visible}
         className="fit pointer-events-none absolute inset-0"
-        style={{ visibility: visible ? "visible" : "hidden" }}
+        // Closed, what's laid out under the box mustn't add to the length of the front page.
+        style={{ visibility: visible ? "visible" : "hidden", overflow: open ? "visible" : "hidden" }}
       >
-        {/* Scrim: the pictures run to the edges; the type needs a little ink behind it. */}
-        <div className="absolute inset-x-0 top-0 h-[28%] bg-gradient-to-b from-ink/60 to-transparent @max-[560px]:hidden" />
-        {/* …and the index and the preset list a lot more, when they sit over the picture: some
-            pictures (prism, the sine Julia) are nearly white. */}
+        {/* Scrim: the pictures run to the edges; the headline needs a little ink behind it. */}
+        <div className="absolute inset-x-0 top-0 h-[28%] bg-gradient-to-b from-ink/60 to-transparent @max-[419px]:hidden" />
+        {/* …and the index a lot more, when it sits over the picture: some pictures
+            (prism, the sine Julia) are nearly white. */}
         <div
-          className={`absolute right-0 top-0 h-[9rem] max-h-full w-[16rem] max-w-full @max-[560px]:hidden ${columns ? "hidden" : ""}`}
+          className={`absolute right-0 top-0 h-[9rem] max-h-full w-[16rem] max-w-full @max-[419px]:hidden ${columns ? "hidden" : ""}`}
           style={{
             background:
               "radial-gradient(farthest-side at 100% 0, color-mix(in srgb, var(--ink) 85%, transparent), color-mix(in srgb, var(--ink) 75%, transparent) 60%, transparent)",
           }}
         />
-        {c.presets && !columns && (
-          <div
-            className="absolute left-0 top-0 h-[32rem] max-h-full w-[30rem] max-w-full @max-[560px]:hidden"
-            style={{
-              background:
-                "radial-gradient(farthest-side at 0 0, color-mix(in srgb, var(--ink) 85%, transparent), color-mix(in srgb, var(--ink) 75%, transparent) 65%, transparent)",
-            }}
-          />
-        )}
 
         <div data-chapter-copy key={c.id} className="contents">
-          {/* Headline, top left. */}
-          <div className="absolute left-4 top-4 @max-[560px]:top-auto @max-[560px]:bottom-[calc(100%+16px)]">
+          {/* Headline, top left of the picture; under it on a phone, beside it on a short screen. */}
+          <div
+            className={`absolute left-4 top-4 @max-[419px]:top-[calc(100%+14px)] [@media(max-height:479px)]:!left-[calc(100%+16px)] [@media(max-height:479px)]:!top-0`}
+          >
             {/* The newspaper's FRACTALS flies here when the article opens (see Stage). */}
             <h3
               data-typed
@@ -336,112 +362,151 @@ export default function FractalArticle({ open, landed }: { open: boolean; landed
               {c.headline}
             </h3>
           </div>
-          {/* The presets: under the headline — or, with room, in the band left of the picture,
-              hard against its rule. One row per preset; a group's variants share a row as chips. */}
-          {c.presets && (
-            <div
-              className={
-                columns
-                  ? "absolute right-[calc(100%+16px)] top-4 @max-[560px]:hidden"
-                  : "absolute left-4 @max-[560px]:hidden"
-              }
-              style={
-                columns
-                  ? { width: "calc(var(--band) - 32px)" }
-                  : { top: "calc(16px + clamp(2.25rem, 7cqw, 4.5rem) * 0.86 + 16px)" }
-              }
-            >
-              <ul className={LABEL}>
-                {rows.map((row) => {
-                  const active = row.items.includes(preset);
-                  return (
-                    <li
-                      key={row.items[0]}
-                      className={`flex items-baseline ${columns ? "flex-wrap" : "whitespace-nowrap"}`}
-                      style={{ minHeight: INDEX_ROW }}
-                    >
-                      <span aria-hidden className={`w-[1.6em] shrink-0 text-bone ${active ? "" : "invisible"}`}>
-                        <span data-typed>▸</span>
-                      </span>
-                      {row.items.length === 1 ? (
-                        <button
-                          type="button"
-                          tabIndex={tab}
-                          aria-current={active || undefined}
-                          onClick={() => pick(row.items[0])}
-                          className={presetClass(row.items[0], row.math)}
-                        >
-                          <span data-typed>{row.label}</span>
-                        </button>
-                      ) : (
-                        <>
-                          {/* The group's name opens it at its first variant; inside it, it stays put. */}
-                          <button
-                            type="button"
-                            tabIndex={tab}
-                            onClick={() => !active && pick(row.items[0])}
-                            className={`pointer-events-auto mr-[1.2em] uppercase tracking-[0.18em] transition-colors ${
-                              active ? "text-bone" : "cursor-pointer hover:text-bone"
-                            }`}
-                          >
-                            <span data-typed>{row.label}</span>
-                          </button>
-                          {row.items.map((k, j) => (
-                            <Fragment key={k}>
-                              {j > 0 && (
-                                <span aria-hidden className="px-[0.6em]">
-                                  <span data-typed>·</span>
-                                </span>
-                              )}
-                              <button
-                                type="button"
-                                tabIndex={tab}
-                                aria-current={k === preset || undefined}
-                                aria-label={`${row.label} ${list[k].label}`}
-                                onClick={() => pick(k)}
-                                className={presetClass(k, list[k].math)}
-                              >
-                                <span data-typed>{list[k].label}</span>
-                              </button>
-                            </Fragment>
-                          ))}
-                        </>
-                      )}
-                    </li>
-                  );
-                })}
-              </ul>
-            </div>
-          )}
         </div>
 
-        {/* Index, top right — or in the band right of the picture: the chapters, with a marker that travels. */}
+        {/* Index, top right — or in the band right of the picture: the chapters and how many pictures
+            each holds, with a marker that travels. */}
         <nav
-          className={`absolute top-4 @max-[560px]:top-auto @max-[560px]:bottom-[calc(100%+16px)] ${
+          aria-label="Chapters"
+          className={`absolute top-4 @max-[419px]:left-auto @max-[419px]:right-4 @max-[419px]:top-[calc(100%+12px)] [@media(max-height:479px)]:!top-0 [@media(max-height:479px)]:!right-[calc(100cqw+32px-100vw)] ${
             columns ? "left-[calc(100%+16px)] w-max" : "right-4"
           }`}
         >
           <div className="relative pl-4">
-            <div ref={markerRef} aria-hidden className="absolute left-0 top-[3px] h-[10px] w-px bg-bone" />
-            <ol className={LABEL}>
+            <div ref={markerRef} aria-hidden className="absolute left-0 top-[2px] h-3 w-px bg-bone" />
+            <ol className={`${DATA} text-dim`}>
               {CHAPTERS.map((ch, k) => (
                 <li key={ch.id} style={{ height: INDEX_ROW }}>
                   <button
                     type="button"
-                    tabIndex={visible ? 0 : -1}
+                    tabIndex={tab}
                     onClick={() => go(k)}
-                    className={`pointer-events-auto relative cursor-pointer uppercase tracking-[0.18em] transition-colors ${
+                    aria-current={k === chapter ? "step" : undefined}
+                    className={`pointer-events-auto relative cursor-pointer uppercase transition-colors ${
                       k === chapter ? "text-bone" : "hover:text-bone"
                     }`}
                   >
                     {pad(k)} {ch.headline}
-                    {k === LAST_CHAPTER && chapter === LAST_CHAPTER && <ChapterEnd />}
+                    {ch.presets && <span className="ml-[0.8em] tabular-nums opacity-70">{ch.presets.length}</span>}
+                    {k === LAST_CHAPTER && atEnd && <ChapterEnd />}
                   </button>
                 </li>
               ))}
             </ol>
           </div>
         </nav>
+
+        {/* What's on screen, its name, and the chapter's contact sheet: under the picture, below the
+            headline on a phone, beside the picture on a short screen. Its height is the article's `foot`. */}
+        <div
+          ref={deckRef}
+          data-deck
+          className={`pointer-events-auto absolute inset-x-0 top-full flex h-[136px] flex-col gap-2 overflow-y-auto px-4 pb-3 pt-3 @max-[600px]:gap-1 @max-[600px]:pb-1.5 @max-[600px]:pt-2 @max-[419px]:h-[calc(100dvh-44px-100cqw)] @max-[419px]:gap-2 @max-[419px]:pb-3 @max-[419px]:pt-[5.5rem] [@media(max-height:479px)]:!inset-x-auto [@media(max-height:479px)]:!left-full [@media(max-height:479px)]:!top-0 [@media(max-height:479px)]:!h-full [@media(max-height:479px)]:!w-[calc(100vw-100cqw-16px)] [@media(max-height:479px)]:!pt-[5.5rem]`}
+        >
+          <p key={c.id} className="story-in font-text-ui m-0 shrink-0 text-[1.0625rem] leading-snug text-bone @max-[600px]:text-[0.95rem] @max-[419px]:text-[1.0625rem]">
+            {c.line}
+          </p>
+
+          <div className="flex min-h-5 shrink-0 items-baseline gap-3">
+            {name ? (
+              <>
+                <span className={`${DATA} tabular-nums text-dim`}>
+                  {pad(showing + 1)} / {pad(list.length)}
+                </span>
+                <span
+                  aria-live="polite"
+                  className={`font-text-ui truncate text-[1rem] leading-tight text-bone ${name.math ? "italic" : ""}`}
+                >
+                  {presetName(name)}
+                </span>
+              </>
+            ) : (
+              <span className="font-text-ui truncate text-[1rem] leading-tight text-bone">Mandelbrot</span>
+            )}
+            <span className="ml-auto flex shrink-0 items-baseline gap-5">
+              {dragHint && (
+                <span className={`${DATA} whitespace-nowrap text-dim @max-[419px]:hidden`}>{dragHint}</span>
+              )}
+              {!atFirst && (
+                <button
+                  type="button"
+                  tabIndex={tab}
+                  aria-label="Previous picture"
+                  onClick={() => step(-1)}
+                  className={`${WAY} text-dim hover:text-bone`}
+                >
+                  ←
+                </button>
+              )}
+              {!atEnd && (
+                <button type="button" tabIndex={tab} onClick={() => step(1)} className={`${WAY} text-bone hover:text-dim`}>
+                  <span className="border-b border-dashed border-dim pb-px">
+                    Next{atChapterEnd ? ` — ${CHAPTERS[chapter + 1].headline}` : ""}
+                  </span>{" "}
+                  →
+                </button>
+              )}
+            </span>
+          </div>
+
+          {dragHint && <p className={`${DATA} m-0 shrink-0 text-dim @min-[420px]:hidden`}>{dragHint}</p>}
+
+          {/* All of the chapter's pictures at once, the one on screen ringed. */}
+          {current ? (
+            <ol
+              aria-label={`${c.headline}: pictures`}
+              className="m-0 grid shrink-0 list-none gap-1 p-0"
+              style={{
+                gridTemplateColumns: compact
+                  ? `repeat(${SHEET_ACROSS}, minmax(0, 1fr))`
+                  : `repeat(${list.length}, minmax(0, 48px))`,
+              }}
+            >
+              {list.map((p, k) => (
+                <li key={p.id}>
+                  <button
+                    type="button"
+                    tabIndex={tab}
+                    aria-label={presetName(p)}
+                    aria-current={k === preset || undefined}
+                    title={presetName(p)}
+                    onClick={() => pick(k)}
+                    onPointerEnter={(e) => e.pointerType === "mouse" && setHovered(k)}
+                    onPointerLeave={(e) => e.pointerType === "mouse" && setHovered(null)}
+                    className={`block w-full cursor-pointer outline-offset-1 ${
+                      k === preset ? "outline outline-1 outline-bone" : "hover:outline hover:outline-1 hover:outline-dim"
+                    }`}
+                  >
+                    <Thumb preset={p} on={visible} />
+                  </button>
+                </li>
+              ))}
+            </ol>
+          ) : (
+            // The opening picture has no others of its own: the sheet says where the rest are.
+            <ol className="m-0 flex shrink-0 list-none gap-5 p-0">
+              {CHAPTERS.map(
+                (ch, k) =>
+                  ch.presets && (
+                    <li key={ch.id}>
+                      <button
+                        type="button"
+                        tabIndex={tab}
+                        onClick={() => go(k)}
+                        className="group flex cursor-pointer items-center gap-2.5 text-left"
+                      >
+                        <span className="block w-10 shrink-0 group-hover:outline group-hover:outline-1 group-hover:outline-offset-1 group-hover:outline-dim">
+                          <Thumb preset={ch.presets[0]} on={visible} />
+                        </span>
+                        <span className="font-text-ui text-[1rem] leading-tight text-bone">{ch.headline}</span>
+                        <span className={`${DATA} tabular-nums text-dim`}>{ch.presets.length}</span>
+                      </button>
+                    </li>
+                  )
+              )}
+            </ol>
+          )}
+        </div>
       </div>
     </div>
   );

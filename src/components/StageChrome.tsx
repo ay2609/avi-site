@@ -70,16 +70,22 @@ export default function StageChrome({
             bottom: 0,
           }}
         >
-          <span data-typed className="whitespace-nowrap max-sm:hidden pointer-coarse:hidden">
+          {/* With something set under the art, that says how it works instead. */}
+          <span
+            data-typed
+            className={`whitespace-nowrap max-sm:hidden pointer-coarse:hidden ${article.foot ? "hidden" : ""}`}
+          >
             {article.controls}
           </span>
           {/* An article with words on a phone has them in this band's place, with its own way on. */}
-          <span
-            data-typed
-            className={`hidden whitespace-nowrap pointer-coarse:inline ${article.reads ? "max-sm:pointer-coarse:hidden" : ""}`}
-          >
-            {article.touch}
-          </span>
+          {!article.foot && (
+            <span
+              data-typed
+              className={`hidden whitespace-nowrap pointer-coarse:inline ${article.reads ? "max-sm:pointer-coarse:hidden" : ""}`}
+            >
+              {article.touch}
+            </span>
+          )}
         </div>
       </div>
     </div>
