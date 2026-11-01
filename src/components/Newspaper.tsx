@@ -282,8 +282,10 @@ export default function Newspaper({
         />
       </div>
 
-      {/* 5 — The footer: a bar with the links, set right. */}
-      <footer data-push="down" className="flex justify-end gap-7 border-b border-dashed border-rule px-4 py-4">
+      {/* 5 — The footer: a bar with the links, set right, and the mark closing the page. */}
+      <footer data-push="down" className="flex items-center justify-end gap-7 border-b border-dashed border-rule px-4 py-4">
+        {/* The edition ends here. */}
+        <EndMark size={11} className="mr-auto text-dim" />
         {LINKS.map(([name, href]) => (
           <a
             key={name}

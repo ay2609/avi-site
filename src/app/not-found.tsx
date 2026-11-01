@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import EndMark from "@/components/EndMark";
 import { advance, HIT, LABEL } from "@/components/furniture";
 
 export const metadata: Metadata = { title: "Misprint — Avi Yadava" };
@@ -44,6 +45,7 @@ export default function NotFound() {
             front page
           </Link>{" "}
           has everything in this edition.
+          <EndMark className="ml-[0.45em]" />
         </p>
       </section>
     </main>

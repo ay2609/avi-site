@@ -2,6 +2,7 @@
 
 import { Fragment, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 
+import { ChapterEnd } from "@/components/EndMark";
 import { LABEL } from "@/components/furniture";
 import AsciiPanel from "@/lib/ascii/AsciiPanel";
 import { CHAPTERS, dragOf, LAST_CHAPTER, presetRows } from "@/lib/fractals/chapters";
@@ -429,11 +430,12 @@ export default function FractalArticle({ open, landed }: { open: boolean; landed
                     type="button"
                     tabIndex={visible ? 0 : -1}
                     onClick={() => go(k)}
-                    className={`pointer-events-auto cursor-pointer uppercase tracking-[0.18em] transition-colors ${
+                    className={`pointer-events-auto relative cursor-pointer uppercase tracking-[0.18em] transition-colors ${
                       k === chapter ? "text-bone" : "hover:text-bone"
                     }`}
                   >
                     {pad(k)} {ch.headline}
+                    {k === LAST_CHAPTER && chapter === LAST_CHAPTER && <ChapterEnd />}
                   </button>
                 </li>
               ))}

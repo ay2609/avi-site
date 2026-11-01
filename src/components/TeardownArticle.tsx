@@ -2,6 +2,7 @@
 
 import { type CSSProperties, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 
+import { ChapterEnd } from "@/components/EndMark";
 import { advance, LABEL } from "@/components/furniture";
 import { sfx } from "@/lib/sound/sfx";
 import type { ArticleId } from "@/lib/stage/articles";
@@ -482,11 +483,12 @@ export default function TeardownArticle({
                     type="button"
                     tabIndex={visible ? 0 : -1}
                     onClick={() => go(k)}
-                    className={`pointer-events-auto cursor-pointer uppercase tracking-[0.18em] transition-colors ${
+                    className={`pointer-events-auto relative cursor-pointer uppercase tracking-[0.18em] transition-colors ${
                       k === chapter ? "text-bone" : "hover:text-bone"
                     }`}
                   >
                     {pad(k)} {ch.index ?? ch.headline}
+                    {k === LAST_CHAPTER && chapter === LAST_CHAPTER && <ChapterEnd />}
                   </button>
                 </li>
               ))}
