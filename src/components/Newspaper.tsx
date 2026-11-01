@@ -4,6 +4,7 @@ import type { ReactNode, Ref } from "react";
 
 import IsoField from "@/lib/iso/IsoField";
 import Clock from "@/components/Clock";
+import EndMark from "@/components/EndMark";
 import SoundToggle from "@/components/SoundToggle";
 import ThemeSwitch from "@/components/ThemeSwitch";
 import { advance, HIT, LABEL } from "@/components/furniture";
@@ -207,7 +208,7 @@ export default function Newspaper({
               I&rsquo;m building <A href="https://www.bymrobotics.org/">BYM</A> (Build Young Minds), a drone
               robotics education startup. I&rsquo;m also currently working as a robotics engineering intern
               for a UMD research lab.
-              <span aria-hidden className="end-mark" />
+              <EndMark className="ml-[0.45em]" />
             </p>
           </div>
         </section>
