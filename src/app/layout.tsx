@@ -26,8 +26,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    // The prepaint script sets a style on <html> before React hydrates.
-    <html lang="en" className={`${serif.variable} ${text.variable} ${mono.variable}`} suppressHydrationWarning>
+    // Light by default, even with no script; the prepaint script sets a reader's pick before React hydrates.
+    <html
+      lang="en"
+      data-theme="light"
+      className={`${serif.variable} ${text.variable} ${mono.variable}`}
+      suppressHydrationWarning
+    >
       <head>
         <script dangerouslySetInnerHTML={{ __html: PREPAINT }} />
       </head>

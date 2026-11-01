@@ -9,17 +9,16 @@ import { BEND_KEY, THEME_KEY } from "./prepaint";
  *
  * The theme is `data-theme` on <html>, which swaps the CSS tokens
  * (globals.css); the WebGL scenes and the tinted ASCII subscribe and fade
- * their own colours over FLIP_S. A first visit follows the system; the
- * switch in the masthead picks one and it's remembered. The inline script in
+ * their own colours over FLIP_S. A first visit is light (Nov 1; it followed
+ * the system); the switch in the masthead picks one and it's remembered. The inline script in
  * the root layout applies it before the first paint (prepaint.ts) — keep the
  * two in step.
  *
  * The globe throws it too, inside its window (open, or docked): it publishes
  * its bend — 0 perspective, 1 orthographic — here every frame, and crossing
  * FLIP_ON flips to light, crossing back under FLIP_OFF to dark (the gap keeps
- * it from flickering at the line). The other way round, the switch (or the
- * system, until the reader picks) bends the globe to match: flat for light,
- * round for dark.
+ * it from flickering at the line). The other way round, the switch bends the
+ * globe to match: flat for light, round for dark.
  */
 export type Theme = "dark" | "light";
 
@@ -79,8 +78,6 @@ let theme: Theme | null = null;
 const themeSubs = new Set<() => void>();
 let flipTimer: ReturnType<typeof setTimeout> | undefined;
 
-const SYSTEM_LIGHT = "(prefers-color-scheme: light)";
-
 /** The reader's last pick — or, from before the switch, the side their saved bend was on. */
 function remembered(): Theme | null {
   try {
@@ -93,16 +90,8 @@ function remembered(): Theme | null {
 
 export function getTheme(): Theme {
   if (theme === null) {
-    if (typeof window === "undefined") return "dark";
-    const system = window.matchMedia(SYSTEM_LIGHT);
-    theme = remembered() ?? (system.matches ? "light" : "dark");
-    // Until the reader picks one, follow the system as it changes.
-    system.addEventListener("change", (e) => {
-      if (remembered()) return;
-      const next = e.matches ? "light" : "dark";
-      setTheme(next);
-      requestBend(next);
-    });
+    if (typeof window === "undefined") return "light";
+    theme = remembered() ?? "light";
   }
   return theme;
 }
@@ -154,7 +143,7 @@ export function onTheme(f: () => void): () => void {
 }
 
 export function useTheme(): Theme {
-  return useSyncExternalStore(onTheme, getTheme, () => "dark");
+  return useSyncExternalStore(onTheme, getTheme, () => "light");
 }
 
 /**

@@ -10,8 +10,8 @@ const OPTIONS: readonly [Theme, string][] = [
 
 /**
  * The masthead's light and dark: two words, the current one lit and marked
- * with a filled dot. A first visit follows the system (see lib/theme); a
- * choice here is remembered, and the globe bends to match it.
+ * with a filled dot. A first visit is light (see lib/theme); a choice here is
+ * remembered, and the globe bends to match it.
  */
 export default function ThemeSwitch() {
   const theme = useTheme();
