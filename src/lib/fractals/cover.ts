@@ -44,6 +44,13 @@ function paletteBytes(id: PaletteId): Uint8Array {
   return bytes;
 }
 
+/** A palette's colour at t (0–1). */
+export function paletteRGB(id: PaletteId, t: number): RGB {
+  const bytes = paletteBytes(id);
+  const i = Math.round(Math.min(Math.max(t, 0), 1) * 255) * 3;
+  return [bytes[i], bytes[i + 1], bytes[i + 2]];
+}
+
 /**
  * Light mode's slice of the palette. Sunburst darkens steadily from white to
  * black, so on paper it runs backwards over its saturated middle: the set's

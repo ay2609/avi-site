@@ -32,6 +32,7 @@ const TITLES = {
   watch: "Custom Digital Watch",
   player: "Tiny Music Player",
   fractals: "Fractals",
+  attractors: "Chaotic Attractors",
 } as const;
 const TITLE_SIZE = `clamp(1.5rem, ${(86 / Math.max(...Object.values(TITLES).map(advance))).toFixed(2)}cqw, 4rem)`;
 
@@ -264,8 +265,8 @@ export default function Newspaper({
           title={TITLES.fractals}
           dek={
             <>
-              Live ports of the Python I wrote in high school, from the Mandelbrot set to chaotic attractors, in
-              the colour maps I picked back then.
+              Live ports of the Python I wrote in high school, from the Mandelbrot set to the Julia sets, in the
+              colour maps I picked back then.
             </>
           }
           slot={{ id: "fractals", ref: slotRefs.fractals, onOpen: () => onOpen("fractals") }}
@@ -279,6 +280,16 @@ export default function Newspaper({
             </>
           }
           slot={{ id: "player", ref: slotRefs.player, onOpen: () => onOpen("player") }}
+        />
+        <Article
+          title={TITLES.attractors}
+          dek={
+            <>
+              The same Python, turned on chaos: how long each point takes to fall into systems like the Lorenz
+              butterfly. Open it to turn them.
+            </>
+          }
+          slot={{ id: "attractors", ref: slotRefs.attractors, onOpen: () => onOpen("attractors") }}
         />
       </div>
 

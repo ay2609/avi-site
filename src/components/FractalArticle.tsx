@@ -1,14 +1,15 @@
 "use client";
 
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import { type CSSProperties, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 
-import { ChapterEnd } from "@/components/EndMark";
-import { DATA, WAY } from "@/components/furniture";
+import EndMark from "@/components/EndMark";
+import { advance, DATA, WAY } from "@/components/furniture";
 import AsciiPanel from "@/lib/ascii/AsciiPanel";
-import { CHAPTERS, dragOf, LAST_CHAPTER, type Preset, presetName, THUMBS } from "@/lib/fractals/chapters";
+import { type Collection, dragOf, type Preset, presetName, THUMBS } from "@/lib/fractals/chapters";
 import { FractalEngine } from "@/lib/fractals/engine";
 import { sfx } from "@/lib/sound/sfx";
-import { ARTICLES } from "@/lib/stage/articles";
+import { ARTICLES, type ArticleId } from "@/lib/stage/articles";
 import { gsap, prefersReducedMotion, SplitText, stageBox } from "@/lib/stage/motion";
 
 /** Height of one row of the chapter index, px — the marker moves in these. */
@@ -25,6 +26,8 @@ const COMPACT_BELOW = 420;
  * Narrower, it sits over the picture on a scrim.
  */
 const COLUMNS_FROM = 240;
+/** The front page's ASCII, px: finer than the panels' 10, for the detail in these two. */
+const ASCII_SIZE = 8;
 /** Most pictures in a row of the contact sheet, under a phone-sized box. */
 const SHEET_ACROSS = 8;
 /** What a drag does to the picture on screen. */
@@ -56,14 +59,27 @@ function Thumb({ preset, on }: { preset: Preset; on: boolean }) {
 }
 
 /**
- * Fractals as an article. On the front page it is the Mandelbrot set in ASCII,
- * its iterations rising and falling, each character in the colour its cell has
- * in the cover; opened, the characters give way to that picture in pixels and a
- * walkthrough of every picture (src/lib/fractals/chapters.ts), each a live port
- * of Avi's own code. Each scroll or swipe is one picture, so none can be missed;
+ * Pictures from one shader as an article: the fractals and the chaotic
+ * attractors, each a Collection (src/lib/fractals/chapters.ts). On the front
+ * page it is an ASCII field (the Mandelbrot set, the Lorenz orbit); opened, the
+ * characters give way to the picture in pixels and a walkthrough of every
+ * picture, each a live port of Avi's own code. Each scroll or swipe is one picture, so none can be missed;
  * under the picture, its chapter's contact sheet shows all of them at once.
  */
-export default function FractalArticle({ open, landed }: { open: boolean; landed: boolean }) {
+export default function FractalArticle({
+  id,
+  collection,
+  open,
+  landed,
+}: {
+  id: ArticleId;
+  collection: Collection;
+  open: boolean;
+  landed: boolean;
+}) {
+  const router = useRouter();
+  const CHAPTERS = collection.chapters;
+  const LAST_CHAPTER = CHAPTERS.length - 1;
   const hostRef = useRef<HTMLDivElement>(null);
   const glRef = useRef<HTMLCanvasElement>(null);
   const drawRef = useRef<HTMLCanvasElement>(null);
@@ -93,7 +109,7 @@ export default function FractalArticle({ open, landed }: { open: boolean; landed
     const gl = glRef.current;
     const draw = drawRef.current;
     if (!gl || !draw) return;
-    const engine = new FractalEngine(gl, draw, {
+    const engine = new FractalEngine(gl, draw, CHAPTERS, {
       onProgress: (p) => {
         if (markerRef.current) markerRef.current.style.transform = `translateY(${p * INDEX_ROW}px)`;
       },
@@ -111,7 +127,7 @@ export default function FractalArticle({ open, landed }: { open: boolean; landed
       engine.dispose();
       engineRef.current = null;
     };
-  }, []);
+  }, [CHAPTERS]);
 
   useEffect(() => {
     engineRef.current?.setOpen(open, landed);
@@ -125,7 +141,7 @@ export default function FractalArticle({ open, landed }: { open: boolean; landed
       compactRef.current = w > 0 && w < COMPACT_BELOW;
       setCompact(compactRef.current);
       // From the stage box, not this one: on the page the overlay is the slot's size.
-      const { aspect, reads, foot } = ARTICLES.fractals;
+      const { aspect, reads, foot } = ARTICLES[id];
       const b = stageBox(aspect, reads, foot);
       setColumns(b.left >= COLUMNS_FROM && b.width >= COMPACT_BELOW);
     };
@@ -137,7 +153,7 @@ export default function FractalArticle({ open, landed }: { open: boolean; landed
       ro.disconnect();
       window.removeEventListener("resize", check);
     };
-  }, []);
+  }, [id]);
 
   // --- Input while on stage -----------------------------------------------------------
 
@@ -250,7 +266,7 @@ export default function FractalArticle({ open, landed }: { open: boolean; landed
       host?.removeEventListener("pointercancel", onUp);
       host?.removeEventListener("click", onClick);
     };
-  }, [open, landed]);
+  }, [open, landed, LAST_CHAPTER]);
 
   // --- Typing in -----------------------------------------------------------------------
 
@@ -288,7 +304,11 @@ export default function FractalArticle({ open, landed }: { open: boolean; landed
     return type(copy, 0.45, landing ? "[data-flies]" : undefined);
   }, [visible, chapter, type]);
 
+  /** One chapter has no need of an index. */
+  const indexed = CHAPTERS.length > 1;
   const c = CHAPTERS[chapter];
+  /** On a phone, where the words start: below the headline and the index beside it. */
+  const under = 24 + Math.max(36, indexed ? CHAPTERS.length * INDEX_ROW : 0);
   const go = (k: number) => engineRef.current?.go(k);
   const pick = (k: number) => engineRef.current?.setPreset(k);
   const step = (dir: number) => engineRef.current?.step(dir);
@@ -299,9 +319,10 @@ export default function FractalArticle({ open, landed }: { open: boolean; landed
   const tab = visible ? 0 : -1;
   const showing = hovered !== null && list[hovered] ? hovered : preset;
   const name = list[showing];
-  const atFirst = chapter === 0;
-  const atEnd = chapter === LAST_CHAPTER && preset === list.length - 1;
+  const atFirst = chapter === 0 && (!current || preset === 0);
+  const atEnd = chapter === LAST_CHAPTER && (!current || preset === list.length - 1);
   const atChapterEnd = !current || preset === list.length - 1;
+  const onward = collection.next;
 
   return (
     <div className="relative h-full w-full">
@@ -316,7 +337,7 @@ export default function FractalArticle({ open, landed }: { open: boolean; landed
           className="absolute inset-0 transition-opacity duration-300 ease-out"
           style={{ opacity: open ? 0 : 1 }}
         >
-          <AsciiPanel field="mandel" />
+          <AsciiPanel field={collection.field} style={{ fontSize: ASCII_SIZE }} />
         </div>
         <canvas
           ref={glRef}
@@ -335,11 +356,11 @@ export default function FractalArticle({ open, landed }: { open: boolean; landed
         style={{ visibility: visible ? "visible" : "hidden", overflow: open ? "visible" : "hidden" }}
       >
         {/* Scrim: the pictures run to the edges; the headline needs a little ink behind it. */}
-        <div className="absolute inset-x-0 top-0 h-[28%] bg-gradient-to-b from-ink/60 to-transparent @max-[419px]:hidden" />
+        <div className="absolute inset-x-0 top-0 h-[24%] bg-gradient-to-b from-ink/90 via-ink/60 to-transparent @max-[419px]:hidden" />
         {/* …and the index a lot more, when it sits over the picture: some pictures
             (prism, the sine Julia) are nearly white. */}
         <div
-          className={`absolute right-0 top-0 h-[9rem] max-h-full w-[16rem] max-w-full @max-[419px]:hidden ${columns ? "hidden" : ""}`}
+          className={`absolute right-0 top-0 h-[9rem] max-h-full w-[16rem] max-w-full @max-[419px]:hidden ${columns || !indexed ? "hidden" : ""}`}
           style={{
             background:
               "radial-gradient(farthest-side at 100% 0, color-mix(in srgb, var(--ink) 85%, transparent), color-mix(in srgb, var(--ink) 75%, transparent) 60%, transparent)",
@@ -351,13 +372,13 @@ export default function FractalArticle({ open, landed }: { open: boolean; landed
           <div
             className={`absolute left-4 top-4 @max-[419px]:top-[calc(100%+14px)] [@media(max-height:479px)]:!left-[calc(100%+16px)] [@media(max-height:479px)]:!top-0`}
           >
-            {/* The newspaper's FRACTALS flies here when the article opens (see Stage). */}
+            {/* The newspaper's headline flies here when the article opens (see Stage). */}
             <h3
               data-typed
               data-flies
-              data-stage-headline="fractals"
+              data-stage-headline={id}
               className="font-serif-ui whitespace-nowrap uppercase leading-[0.86] tracking-[-0.02em] text-bone"
-              style={{ fontSize: "clamp(2.25rem, 7cqw, 4.5rem)" }}
+              style={{ fontSize: `min(clamp(2.25rem, 7cqw, 4.5rem), ${(92 / advance(c.headline)).toFixed(2)}cqw)` }}
             >
               {c.headline}
             </h3>
@@ -366,42 +387,44 @@ export default function FractalArticle({ open, landed }: { open: boolean; landed
 
         {/* Index, top right — or in the band right of the picture: the chapters and how many pictures
             each holds, with a marker that travels. */}
-        <nav
-          aria-label="Chapters"
-          className={`absolute top-4 @max-[419px]:left-auto @max-[419px]:right-4 @max-[419px]:top-[calc(100%+12px)] [@media(max-height:479px)]:!top-0 [@media(max-height:479px)]:!right-[calc(100cqw+32px-100vw)] ${
-            columns ? "left-[calc(100%+16px)] w-max" : "right-4"
-          }`}
-        >
-          <div className="relative pl-4">
-            <div ref={markerRef} aria-hidden className="absolute left-0 top-[2px] h-3 w-px bg-bone" />
-            <ol className={`${DATA} text-dim`}>
-              {CHAPTERS.map((ch, k) => (
-                <li key={ch.id} style={{ height: INDEX_ROW }}>
-                  <button
-                    type="button"
-                    tabIndex={tab}
-                    onClick={() => go(k)}
-                    aria-current={k === chapter ? "step" : undefined}
-                    className={`pointer-events-auto relative cursor-pointer uppercase transition-colors ${
-                      k === chapter ? "text-bone" : "hover:text-bone"
-                    }`}
-                  >
-                    {pad(k)} {ch.headline}
-                    {ch.presets && <span className="ml-[0.8em] tabular-nums opacity-70">{ch.presets.length}</span>}
-                    {k === LAST_CHAPTER && atEnd && <ChapterEnd />}
-                  </button>
-                </li>
-              ))}
-            </ol>
-          </div>
-        </nav>
+        {indexed && (
+          <nav
+            aria-label="Chapters"
+            className={`absolute top-4 @max-[419px]:left-auto @max-[419px]:right-4 @max-[419px]:top-[calc(100%+12px)] [@media(max-height:479px)]:!top-0 [@media(max-height:479px)]:!right-[calc(100cqw+32px-100vw)] ${
+              columns ? "left-[calc(100%+16px)] w-max" : "right-4"
+            }`}
+          >
+            <div className="relative pl-4">
+              <div ref={markerRef} aria-hidden className="absolute left-0 top-[2px] h-3 w-px bg-bone" />
+              <ol className={`${DATA} text-dim`}>
+                {CHAPTERS.map((ch, k) => (
+                  <li key={ch.id} style={{ height: INDEX_ROW }}>
+                    <button
+                      type="button"
+                      tabIndex={tab}
+                      onClick={() => go(k)}
+                      aria-current={k === chapter ? "step" : undefined}
+                      className={`pointer-events-auto relative cursor-pointer uppercase transition-colors ${
+                        k === chapter ? "text-bone" : "hover:text-bone"
+                      }`}
+                    >
+                      {pad(k)} {ch.headline}
+                      {ch.presets && <span className="ml-[0.8em] tabular-nums opacity-70">{ch.presets.length}</span>}
+                    </button>
+                  </li>
+                ))}
+              </ol>
+            </div>
+          </nav>
+        )}
 
         {/* What's on screen, its name, and the chapter's contact sheet: under the picture, below the
             headline on a phone, beside the picture on a short screen. Its height is the article's `foot`. */}
         <div
           ref={deckRef}
           data-deck
-          className={`pointer-events-auto absolute inset-x-0 top-full flex h-[136px] flex-col gap-2 overflow-y-auto px-4 pb-3 pt-3 @max-[600px]:gap-1 @max-[600px]:pb-1.5 @max-[600px]:pt-2 @max-[419px]:h-[calc(100dvh-44px-100cqw)] @max-[419px]:gap-2 @max-[419px]:pb-3 @max-[419px]:pt-[5.5rem] [@media(max-height:479px)]:!inset-x-auto [@media(max-height:479px)]:!left-full [@media(max-height:479px)]:!top-0 [@media(max-height:479px)]:!h-full [@media(max-height:479px)]:!w-[calc(100vw-100cqw-16px)] [@media(max-height:479px)]:!pt-[5.5rem]`}
+          className={`pointer-events-auto absolute inset-x-0 top-full flex h-[136px] flex-col gap-2 overflow-y-auto px-4 pb-3 pt-3 @max-[600px]:gap-1 @max-[600px]:pb-1.5 @max-[600px]:pt-2 @max-[419px]:h-[calc(100dvh-44px-100cqw)] @max-[419px]:gap-2 @max-[419px]:pb-3 @max-[419px]:pt-[var(--under)] [@media(max-height:479px)]:!inset-x-auto [@media(max-height:479px)]:!left-full [@media(max-height:479px)]:!top-0 [@media(max-height:479px)]:!h-full [@media(max-height:479px)]:!w-[calc(100vw-100cqw-16px)] [@media(max-height:479px)]:!pt-[var(--under)]`}
+          style={{ "--under": `${under}px` } as CSSProperties}
         >
           <p key={c.id} className="story-in font-text-ui m-0 shrink-0 text-[1.0625rem] leading-snug text-bone @max-[600px]:text-[0.95rem] @max-[419px]:text-[1.0625rem]">
             {c.line}
@@ -418,6 +441,7 @@ export default function FractalArticle({ open, landed }: { open: boolean; landed
                   className={`font-text-ui truncate text-[1rem] leading-tight text-bone ${name.math ? "italic" : ""}`}
                 >
                   {presetName(name)}
+                  {atEnd && showing === preset && <EndMark className="ml-[0.45em]" />}
                 </span>
               </>
             ) : (
@@ -438,13 +462,24 @@ export default function FractalArticle({ open, landed }: { open: boolean; landed
                   ←
                 </button>
               )}
-              {!atEnd && (
+              {!atEnd ? (
                 <button type="button" tabIndex={tab} onClick={() => step(1)} className={`${WAY} text-bone hover:text-dim`}>
                   <span className="border-b border-dashed border-dim pb-px">
                     Next{atChapterEnd ? ` — ${CHAPTERS[chapter + 1].headline}` : ""}
                   </span>{" "}
                   →
                 </button>
+              ) : (
+                onward && (
+                  <button
+                    type="button"
+                    tabIndex={tab}
+                    onClick={() => router.replace(ARTICLES[onward.id].route)}
+                    className={`${WAY} text-bone hover:text-dim`}
+                  >
+                    <span className="border-b border-dashed border-dim pb-px">{onward.name}</span> →
+                  </button>
+                )
               )}
             </span>
           </div>

@@ -8,7 +8,12 @@
  * Sep 30: so are the captions, the chapter counter and the preset notes.
  * Oct 1: Julia and Fraotic carry the rest of his sets — every one a picture he
  * rendered, with his view, count and colouring (see fractals-inventory.md).
+ * Nov 1: Fraotic became its own article, Chaotic Attractors; a Collection is
+ * what one article walks through.
  */
+import type { AsciiFieldId } from "@/lib/ascii/fields";
+import type { ArticleId } from "@/lib/stage/articles";
+
 import type { FractalParams } from "./renderer";
 import type { CliffordId, FlowId } from "./systems";
 
@@ -281,30 +286,7 @@ const JULIA: Preset[] = [
 const fled = (max: number) => ({ palette: "gothic", gamma: 2, max, alpha: 0.75 }) as const;
 
 const FRAOTIC: Preset[] = [
-  {
-    id: "thomas",
-    group: "Thomas",
-    label: "b .208",
-    math: true,
-    flow: "thomas",
-    params: { mode: "flow", iters: 1000, max: 612, gamma: 3.2, palette: "gothic" },
-  },
-  {
-    id: "thomas-1998",
-    group: "Thomas",
-    label: "b .1998",
-    math: true,
-    flow: "thomas1998",
-    params: { mode: "flow", iters: 1000, max: 194, gamma: 3.2, palette: "gothic" },
-  },
-  {
-    id: "thomas-32899",
-    group: "Thomas",
-    label: "b .329",
-    math: true,
-    flow: "thomas32899",
-    params: { mode: "flow", iters: 1000, max: 294, gamma: 3.2, palette: "gothic" },
-  },
+  // First: the butterfly is the one anyone knows, and the tile on the page.
   {
     id: "lorenz",
     group: "Lorenz",
@@ -328,6 +310,30 @@ const FRAOTIC: Preset[] = [
       palette: "ember",
       escape: fled(211),
     },
+  },
+  {
+    id: "thomas",
+    group: "Thomas",
+    label: "b .208",
+    math: true,
+    flow: "thomas",
+    params: { mode: "flow", iters: 1000, max: 612, gamma: 3.2, palette: "gothic" },
+  },
+  {
+    id: "thomas-1998",
+    group: "Thomas",
+    label: "b .1998",
+    math: true,
+    flow: "thomas1998",
+    params: { mode: "flow", iters: 1000, max: 194, gamma: 3.2, palette: "gothic" },
+  },
+  {
+    id: "thomas-32899",
+    group: "Thomas",
+    label: "b .329",
+    math: true,
+    flow: "thomas32899",
+    params: { mode: "flow", iters: 1000, max: 294, gamma: 3.2, palette: "gothic" },
   },
   // Clifford_Boundary.py — never-arrived is the top of the scale, as his array started full.
   {
@@ -405,34 +411,48 @@ const FRAOTIC: Preset[] = [
   },
 ];
 
-const more = JULIA.length + FRAOTIC.length;
+export interface Collection {
+  chapters: Chapter[];
+  /** The ASCII field on the front page. */
+  field: AsciiFieldId;
+  /** The article the last picture leads on to. */
+  next?: { id: ArticleId; name: string };
+}
 
-export const CHAPTERS: Chapter[] = [
-  {
-    id: "fractals",
-    headline: "Fractals",
-    line: `The Mandelbrot set, ported from Python I wrote in high school. ${more} more follow.`,
-  },
-  {
-    id: "julia",
-    headline: "Julia",
-    line: "Repeat a formula at every point; colour is how long it takes to settle or escape.",
-    presets: JULIA,
-  },
-  {
-    id: "fraotic",
-    headline: "Fraotic",
-    line: "How long each point takes to fall into a chaotic orbit, or to fly away from it.",
-    presets: FRAOTIC,
-  },
-];
+export const FRACTALS: Collection = {
+  chapters: [
+    {
+      id: "fractals",
+      headline: "Fractals",
+      line: `The Mandelbrot set, ported from Python I wrote in high school. ${JULIA.length} more follow.`,
+    },
+    {
+      id: "julia",
+      headline: "Julia",
+      line: "Repeat a formula at every point; colour is how long it takes to settle or escape.",
+      presets: JULIA,
+    },
+  ],
+  field: "mandel",
+  next: { id: "attractors", name: "Chaotic Attractors" },
+};
 
-export const LAST_CHAPTER = CHAPTERS.length - 1;
+export const ATTRACTORS: Collection = {
+  chapters: [
+    {
+      id: "fraotic",
+      headline: "Chaotic Attractors",
+      line: "How long each point takes to fall into a chaotic orbit, or to fly away from it.",
+      presets: FRAOTIC,
+    },
+  ],
+  field: "attractor",
+};
 
 /** A preset's whole name: its group's, if it has one, then its own. */
 export const presetName = (p: Preset) => (p.group ? `${p.group} ${p.label}` : p.label);
 
-/** Every picture with a preset, in the order of scripts/fractal-thumbs.mjs's sheet. */
+/** Every picture with a preset, in the order of scripts/fractal-thumbs.mjs's sheet: re-run it if this changes. */
 export const THUMBS = { src: "/fractal-thumbs.jpg", across: 8, order: [...JULIA, ...FRAOTIC].map((p) => p.id) };
 
 /** What a drag on the picture moves: Julia's c, a flow's slice, or nothing. */

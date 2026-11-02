@@ -37,12 +37,3 @@ export default function EndMark({
     </svg>
   );
 }
-
-/**
- * A walkthrough's end: beside the last entry of its chapter index, once the
- * reader gets there. Set just outside the entry (which needs `relative`), so
- * the index doesn't shift when it comes on.
- */
-export function ChapterEnd() {
-  return <EndMark size={9} className="absolute left-full top-1/2 ml-[6px] -translate-y-1/2" />;
-}

@@ -12,7 +12,7 @@ export default function Image() {
   return articleCard({
     label: "/Project — Python / NumPy",
     title: "Fractals",
-    dek: "Live ports of the Python I wrote in high school, from the Mandelbrot set to chaotic attractors.",
+    dek: "Live ports of the Python I wrote in high school, from the Mandelbrot set to the Julia sets.",
     path: "/fractals",
     art: fractalArt(540),
     artW: 540,

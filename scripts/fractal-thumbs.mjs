@@ -28,14 +28,13 @@ const browser = await chromium.launch({
 });
 const page = await browser.newPage({ viewport: { width: 1000, height: 900 } });
 await page.addInitScript(() => localStorage.setItem("avi-site:theme", "dark"));
-await page.goto(`${base}/fractals`, { waitUntil: "networkidle" });
-await page.waitForTimeout(SETTLE);
-
-const layer = page.locator('[data-layer="fractals"]');
 let n = 0;
-for (const chapter of [1, 2]) {
+for (const [article, chapter] of [["fractals", 1], ["attractors", 0]]) {
+  await page.goto(`${base}/${article}`, { waitUntil: "networkidle" });
+  await page.waitForTimeout(SETTLE);
   await page.keyboard.press(String(chapter));
   await page.waitForTimeout(SETTLE);
+  const layer = page.locator(`[data-layer="${article}"]`);
   const tiles = layer.locator('[data-deck] ol[aria-label] button');
   const count = await tiles.count();
   for (let k = 0; k < count; k++) {

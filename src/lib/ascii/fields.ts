@@ -18,7 +18,8 @@
  * that the panel paints its characters with instead of the one text colour.
  */
 
-import { COVER, COVER_VIEW, coverRGB, escapeStep } from "@/lib/fractals/cover";
+import { COVER, COVER_VIEW, coverRGB, escapeStep, paletteRGB } from "@/lib/fractals/cover";
+import { FLOWS, traceFlow } from "@/lib/fractals/systems";
 
 export type AsciiFieldId =
   | "terrain"
@@ -31,6 +32,7 @@ export type AsciiFieldId =
   | "scan"
   | "crate"
   | "mandel"
+  | "attractor"
   | "seam";
 
 /** x, y are in [0, 1] over the square inscribed in the panel; t is seconds. */
@@ -272,6 +274,89 @@ const mandel: AsciiField = (x, y, t) => {
 /** A cell's escape step doesn't depend on how many steps run, so its colour is the cover's, fixed. */
 const mandelTint: AsciiTint = (x, y, theme) => coverRGB(escapeStep(...mandelC(x, y), COVER.iters), theme);
 
+/**
+ * The Lorenz attractor at ASCII resolution — the attractors article on the
+ * front page: its orbit from the side that shows the butterfly's two wings,
+ * swaying slowly about its vertical, as a drag turns the article's slice. A
+ * line would alias at this resolution, so it's the orbit's density, which keeps
+ * the wings and the eyes in them.
+ */
+const ORBIT_GRID = 112;
+const ORBIT_POINTS = 14000;
+/** Lorenz's x and y move together, so it's widest from the side along x + y, and edge-on (a thin V) from across it. It sways about the first. */
+const ORBIT_FACING = Math.PI / 4;
+const ORBIT_SWAY = 0.4;
+const ORBIT_PERIOD = 28;
+/** How far the grid runs past the square each side: a 4:3 panel's field reaches about 0.17 out. */
+const ORBIT_MARGIN = 0.2;
+let orbit: { xyz: Float64Array; center: [number, number, number]; reach: number } | null = null;
+const orbitDensity = new Float32Array(ORBIT_GRID * ORBIT_GRID);
+const orbitSpill = new Float32Array(ORBIT_GRID * ORBIT_GRID);
+let orbitAt = NaN;
+
+function plotOrbit(t: number): void {
+  const flow = FLOWS.lorenz;
+  if (!orbit) {
+    const all = traceFlow(flow, flow.trace);
+    const skip = Math.max(1, Math.floor(all.length / 3 / ORBIT_POINTS));
+    const xyz = new Float64Array(Math.floor(all.length / 3 / skip) * 3);
+    for (let i = 0; i < xyz.length / 3; i++) xyz.set(all.subarray(i * skip * 3, i * skip * 3 + 3), i * 3);
+    const range = [0, 1, 2].map((k) => {
+      let [lo, hi] = [Infinity, -Infinity];
+      for (let i = k; i < xyz.length; i += 3) [lo, hi] = [Math.min(lo, xyz[i]), Math.max(hi, xyz[i])];
+      return [lo, hi];
+    });
+    const center = range.map(([lo, hi]) => (lo + hi) / 2) as [number, number, number];
+    // To the height of the panel's square; the wings run past its sides, where a 4:3 panel still has room.
+    const reach = (range[2][1] - range[2][0]) / 2;
+    orbit = { xyz, center, reach };
+  }
+  const th = ORBIT_FACING + ORBIT_SWAY * Math.sin((TAU * t) / ORBIT_PERIOD);
+  // Across: x, turned toward y. Up: z, the system's own axis.
+  const A = [Math.cos(th), Math.sin(th), 0];
+  const V = [0, 0, 1];
+  const { xyz, center, reach } = orbit;
+  orbitSpill.fill(0);
+  for (let i = 0; i < xyz.length; i += 3) {
+    const dx = xyz[i] - center[0];
+    const dy = xyz[i + 1] - center[1];
+    const dz = xyz[i + 2] - center[2];
+    const px = 0.5 + (dx * A[0] + dy * A[1] + dz * A[2]) / (reach * 2.15);
+    const py = 0.5 - (dx * V[0] + dy * V[1] + dz * V[2]) / (reach * 2.15);
+    const col = Math.floor(((px + ORBIT_MARGIN) / (1 + ORBIT_MARGIN * 2)) * ORBIT_GRID);
+    const row = Math.floor(py * ORBIT_GRID);
+    if (col >= 0 && row >= 0 && col < ORBIT_GRID && row < ORBIT_GRID) orbitSpill[row * ORBIT_GRID + col] += 1;
+  }
+  let most = 1;
+  for (let row = 0; row < ORBIT_GRID; row++) {
+    for (let col = 0; col < ORBIT_GRID; col++) {
+      let sum = 0;
+      // A row of type is about two of these tall and one wide: spread to match, so no row of the orbit falls between.
+      for (let b = Math.max(0, row - 1); b <= Math.min(ORBIT_GRID - 1, row + 1); b++) {
+        sum += orbitSpill[b * ORBIT_GRID + col];
+      }
+      orbitDensity[row * ORBIT_GRID + col] = sum;
+      most = Math.max(most, sum);
+    }
+  }
+  for (let i = 0; i < orbitDensity.length; i++) orbitDensity[i] = Math.min(1, Math.pow(orbitDensity[i] / (most * 0.55), 0.85));
+  orbitAt = t;
+}
+
+const attractor: AsciiField = (x, y, t) => {
+  if (t !== orbitAt) plotOrbit(t);
+  const across = (x + ORBIT_MARGIN) / (1 + ORBIT_MARGIN * 2);
+  if (across < 0 || y < 0 || across >= 1 || y >= 1) return 0;
+  return orbitDensity[Math.floor(y * ORBIT_GRID) * ORBIT_GRID + Math.floor(across * ORBIT_GRID)];
+};
+
+/** Its wings in the first picture's twilight, blue into red: the palette's dark ends on paper, its pale middle on ink. */
+const attractorTint: AsciiTint = (x, _y, theme) => {
+  const s = clamp01(x);
+  if (theme === "dark") return paletteRGB("twilight", 0.25 + 0.5 * s);
+  return paletteRGB("twilight", s < 0.5 ? 0.06 + 0.2 * s : 0.74 + 0.2 * s);
+};
+
 export const ASCII_FIELDS: Record<AsciiFieldId, AsciiField> = {
   terrain,
   flow,
@@ -283,6 +368,7 @@ export const ASCII_FIELDS: Record<AsciiFieldId, AsciiField> = {
   scan,
   crate,
   mandel,
+  attractor,
   seam,
 };
 
@@ -299,8 +385,10 @@ export const ASCII_RAMPS: Record<AsciiFieldId, string> = {
   seam: " .:-=+*#",
   crate: " .:-=+*#%@",
   mandel: " .:-=+*#%@",
+  attractor: " .:-=+*#%@",
 };
 
 export const ASCII_TINTS: Partial<Record<AsciiFieldId, AsciiTint>> = {
   mandel: mandelTint,
+  attractor: attractorTint,
 };

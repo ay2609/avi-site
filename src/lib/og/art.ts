@@ -3,6 +3,7 @@ import { join } from "node:path";
 
 import { ASCII_FIELDS, ASCII_RAMPS, type AsciiFieldId } from "@/lib/ascii/fields";
 import { COVER_VIEW, COVER, coverRGB, escapeStep } from "@/lib/fractals/cover";
+import { FLOWS, traceFlow } from "@/lib/fractals/systems";
 import { WORLD_GRAPH } from "@/lib/three/network/world-graph";
 import { decodeBoardModel } from "@/lib/teardown/model";
 
@@ -60,6 +61,40 @@ function canvas(w: number, h: number, bg: RGB = INK) {
     return pngDataUrl(w, h, out);
   };
   return { W, H, px, mix, read };
+}
+
+// --- The Lorenz attractor ---------------------------------------------------------
+
+/** The Lorenz orbit, as the attractors article's first picture slices it: bone on ink. */
+export function attractorArt(size: number): string {
+  const c = canvas(size, size);
+  const flow = FLOWS.lorenz;
+  const { u: U, v: V } = flow.slice;
+  const pts = traceFlow(flow, flow.trace);
+  const n = pts.length / 3;
+  const across = new Float64Array(n);
+  const up = new Float64Array(n);
+  let [x0, x1, y0, y1] = [Infinity, -Infinity, Infinity, -Infinity];
+  for (let i = 0; i < n; i++) {
+    const [x, y, z] = [pts[i * 3], pts[i * 3 + 1], pts[i * 3 + 2]];
+    across[i] = x * U[0] + y * U[1] + z * U[2];
+    up[i] = x * V[0] + y * V[1] + z * V[2];
+    [x0, x1, y0, y1] = [Math.min(x0, across[i]), Math.max(x1, across[i]), Math.min(y0, up[i]), Math.max(y1, up[i])];
+  }
+  const scale = (c.W * 0.84) / Math.max(x1 - x0, y1 - y0);
+  const px = (i: number): [number, number] => [
+    c.W / 2 + (across[i] - (x0 + x1) / 2) * scale,
+    c.H / 2 - (up[i] - (y0 + y1) / 2) * scale,
+  ];
+  for (let i = 1; i < n; i++) {
+    const [ax, ay] = px(i - 1);
+    const [bx, by] = px(i);
+    const steps = Math.max(1, Math.ceil(Math.hypot(bx - ax, by - ay)));
+    for (let s = 0; s < steps; s++) {
+      c.mix(Math.round(ax + ((bx - ax) * s) / steps), Math.round(ay + ((by - ay) * s) / steps), BONE, 0.14);
+    }
+  }
+  return c.read();
 }
 
 // --- The fractal cover -----------------------------------------------------------

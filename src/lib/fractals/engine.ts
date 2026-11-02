@@ -8,7 +8,7 @@
  * (WheelGesture). A drag moves the one thing a picture is about — a Julia's c,
  * or a basin's slice — where it has one (dragOf in chapters.ts).
  */
-import { CHAPTERS, dragOf, LAST_CHAPTER, type Preset } from "./chapters";
+import { type Chapter, dragOf, type Preset } from "./chapters";
 import { COVER } from "./cover";
 import { FractalRenderer, type FractalParams } from "./renderer";
 import { WheelGesture } from "@/lib/stage/wheel";
@@ -67,7 +67,7 @@ export class FractalEngine {
   private progress = 0;
   private travelFrom = 0;
   private travelStart = 0;
-  private presets: Record<string, number> = { julia: 0, fraotic: 0 };
+  private presets: Record<string, number> = {};
   private juliaC: Vec2 | null = null;
   private angle = 0;
   private dragging = false;
@@ -84,6 +84,7 @@ export class FractalEngine {
   constructor(
     private glCanvas: HTMLCanvasElement,
     private overlay: HTMLCanvasElement,
+    private chapters: Chapter[],
     private cb: EngineCallbacks
   ) {
     this.ctx = overlay.getContext("2d");
@@ -138,7 +139,8 @@ export class FractalEngine {
   private drawCoverStill(): void {
     const r = this.renderer;
     if (!r) return;
-    r.render({ ...COVER, cells: TUNE.flightCells, iters: TUNE.flightIters });
+    const still = this.sceneParams();
+    if (still) r.render({ ...still, cells: TUNE.flightCells, ...(still === COVER ? { iters: TUNE.flightIters } : {}) });
     this.ctx?.clearRect(0, 0, this.overlay.width, this.overlay.height);
   }
 
@@ -174,13 +176,13 @@ export class FractalEngine {
 
   /** One picture on, or back: through a chapter's presets, then into the next chapter's first (or the last one's last). */
   step(dir: number): void {
-    const list = CHAPTERS[this.chapter].presets;
+    const list = this.chapters[this.chapter].presets;
     const at = this.presetIndex() + dir;
     if (list && at >= 0 && at < list.length) {
       this.setPreset(at);
       return;
     }
-    const next = CHAPTERS[this.chapter + dir];
+    const next = this.chapters[this.chapter + dir];
     if (!next) return;
     if (next.presets) this.presets[next.id] = dir > 0 ? 0 : next.presets.length - 1;
     this.go(this.chapter + dir);
@@ -188,7 +190,7 @@ export class FractalEngine {
 
   go(k: number): void {
     if (this.mode !== "stage") return;
-    const next = clamp(Math.round(k), 0, LAST_CHAPTER);
+    const next = clamp(Math.round(k), 0, this.chapters.length - 1);
     if (next === this.chapter) return;
     this.setChapter(next, false);
     this.start();
@@ -207,7 +209,7 @@ export class FractalEngine {
     this.angle = 0;
     if (changed || instant) {
       this.cb.onChapter(k);
-      this.presets = instant ? { julia: 0, fraotic: 0 } : this.presets;
+      this.presets = instant ? {} : this.presets;
       this.cb.onPreset(this.presetIndex());
     }
     this.resolve =
@@ -216,7 +218,7 @@ export class FractalEngine {
   }
 
   private get id() {
-    return CHAPTERS[this.chapter].id;
+    return this.chapters[this.chapter].id;
   }
 
   private presetIndex(): number {
@@ -224,12 +226,12 @@ export class FractalEngine {
   }
 
   private preset(): Preset | null {
-    const list = CHAPTERS[this.chapter].presets;
+    const list = this.chapters[this.chapter].presets;
     return list ? list[this.presetIndex()] : null;
   }
 
   setPreset(i: number): void {
-    const list = CHAPTERS[this.chapter].presets;
+    const list = this.chapters[this.chapter].presets;
     if (!list || this.mode !== "stage") return;
     const next = ((i % list.length) + list.length) % list.length;
     if (next === this.presetIndex()) return;

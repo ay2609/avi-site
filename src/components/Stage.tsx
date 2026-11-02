@@ -20,6 +20,7 @@ import { LABEL } from "@/components/furniture";
 import FractalArticle from "@/components/FractalArticle";
 import TeardownArticle from "@/components/TeardownArticle";
 import GlobeCanvas from "@/lib/three/GlobeCanvas";
+import { ATTRACTORS, FRACTALS } from "@/lib/fractals/chapters";
 import { PLAYER } from "@/lib/player/chapters";
 import { WATCH } from "@/lib/watch/chapters";
 import { ARTICLES, ARTICLE_IDS, type ArticleId, articleForPath } from "@/lib/stage/articles";
@@ -184,12 +185,14 @@ export default function Stage() {
     watch: { current: null },
     player: { current: null },
     fractals: { current: null },
+    attractors: { current: null },
   }).current;
   const layerRefs = useRef<Record<ArticleId, RefObject<HTMLDivElement | null>>>({
     globe: { current: null },
     watch: { current: null },
     player: { current: null },
     fractals: { current: null },
+    attractors: { current: null },
   }).current;
 
   const openRef = useRef<ArticleId | null>(openId);
@@ -802,7 +805,24 @@ export default function Stage() {
       >
         {/* Avi's fractal work — ASCII on the page, a walkthrough of live
             ports of his code on the stage (src/lib/fractals). */}
-        <FractalArticle open={openId === "fractals"} landed={landedId === "fractals"} />
+        <FractalArticle id="fractals" collection={FRACTALS} open={openId === "fractals"} landed={landedId === "fractals"} />
+      </Layer>
+      <Layer
+        id="attractors"
+        layerRef={layerRefs.attractors}
+        open={openId === "attractors"}
+        staged={staged.id === "attractors"}
+        ring={false}
+        onOpen={() => open("attractors")}
+        onHover={(on) => hover("attractors", on)}
+      >
+        {/* His chaotic systems, the same way: the Lorenz orbit in ASCII on the page. */}
+        <FractalArticle
+          id="attractors"
+          collection={ATTRACTORS}
+          open={openId === "attractors"}
+          landed={landedId === "attractors"}
+        />
       </Layer>
     </div>
   );
