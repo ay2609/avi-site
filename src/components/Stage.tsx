@@ -16,7 +16,6 @@ import Backdrop, { BACKDROP, spotFor } from "@/components/Backdrop";
 import LiveIcon from "@/components/LiveIcon";
 import SoundBoard from "@/components/SoundBoard";
 import StageChrome from "@/components/StageChrome";
-import { LABEL } from "@/components/furniture";
 import FractalArticle from "@/components/FractalArticle";
 import TeardownArticle from "@/components/TeardownArticle";
 import GlobeCanvas from "@/lib/three/GlobeCanvas";
@@ -30,16 +29,13 @@ import {
   type Box,
   type Variant,
   EASE,
-  dockTucked,
   Flip,
   INSET_NONE,
-  MINI,
   SplitText,
   T,
   box,
   gsap,
   insetTo,
-  miniBox,
   place,
   prefersReducedMotion,
   pushDistance,
@@ -69,8 +65,7 @@ function Layer({
   open,
   staged,
   ring,
-  docked = false,
-  framed = false,
+  covered = false,
   onOpen,
   onHover,
   children,
@@ -78,14 +73,8 @@ function Layer({
   id: ArticleId;
   layerRef: RefObject<HTMLDivElement | null>;
   open: boolean;
-  /**
-   * The globe, docked in its window while another article is open: it keeps
-   * its input to itself (the article listens on the window for wheel and
-   * swipes) and a click doesn't open it.
-   */
-  docked?: boolean;
-  /** Docked and landed: the window's frame shows. */
-  framed?: boolean;
+  /** Another article has landed over it: the globe stops drawing until it's seen again. */
+  covered?: boolean;
   /** Dressed on the stage — open, or still closing. Above the chrome; the rest sit beneath it. */
   staged: boolean;
   /**
@@ -100,8 +89,7 @@ function Layer({
   onHover?: (on: boolean) => void;
   children: ReactNode;
 }) {
-  const click = useOpenOnClick(open || docked ? undefined : onOpen);
-  const keep = docked ? (e: { stopPropagation(): void }) => e.stopPropagation() : undefined;
+  const click = useOpenOnClick(open ? undefined : onOpen);
   const mirror = (on: boolean) => {
     const section = document.querySelector<HTMLElement>(`[data-article="${id}"]`);
     if (!section) return;
@@ -113,14 +101,10 @@ function Layer({
       ref={layerRef}
       data-layer={id}
       data-open={open}
-      data-docked={docked}
-      data-framed={framed}
-      className={`group invisible absolute ${staged ? "z-30" : "z-10"} ${open || docked ? "" : "cursor-pointer"}`}
+      data-covered={covered}
+      className={`group invisible absolute ${staged ? "z-30" : "z-10"} ${open ? "" : "cursor-pointer"}`}
       onPointerDownCapture={click.onPointerDownCapture}
       onClick={click.onClick}
-      onWheel={keep}
-      onTouchStart={keep}
-      onTouchMove={keep}
       onPointerEnter={() => {
         mirror(true);
         onHover?.(true);
@@ -138,7 +122,7 @@ function Layer({
            rules are elsewhere. */
         <div
           aria-hidden
-          className="ring-flicker pointer-events-none absolute -inset-px border border-bone group-data-[open=true]:hidden group-data-[docked=true]:hidden"
+          className="ring-flicker pointer-events-none absolute -inset-px border border-bone group-data-[open=true]:hidden"
         />
       )}
     </div>
@@ -355,21 +339,8 @@ export default function Stage() {
     const slot = slotRefs[id].current;
     if (!layer || !slot) return;
     gsap.set(layer, { clearProps: "transform,zIndex" });
-    layer.removeAttribute("data-tucked");
     place(layer, box(slot.getBoundingClientRect()), "doc");
   }, [layerRefs, slotRefs]);
-
-  /** The globe in its window, bottom left, over everything (another article is open). */
-  const placeMini = useCallback(() => {
-    const layer = layerRefs.globe.current;
-    if (!layer) return;
-    gsap.set(layer, { clearProps: "transform", zIndex: 40 });
-    // Beside an article with words to read, it keeps off them.
-    const open = openRef.current;
-    const stage = open && ARTICLES[open].reads ? stageOf(open) : undefined;
-    place(layer, miniBox(stage), "fixed");
-    layer.toggleAttribute("data-tucked", !!stage && dockTucked(stage));
-  }, [layerRefs]);
 
   /** An article's layer, the rules and the chrome's bands in their expanded place. */
   const placeStage = useCallback(
@@ -392,10 +363,9 @@ export default function Stage() {
   const placeAll = useCallback(() => {
     for (const id of ARTICLE_IDS) {
       if (id === openRef.current) placeStage(id);
-      else if (id === "globe" && openRef.current) placeMini();
       else placeHome(id);
     }
-  }, [placeHome, placeStage, placeMini]);
+  }, [placeHome, placeStage]);
 
   useLayoutEffect(() => {
     const replace = () => {
@@ -433,11 +403,6 @@ export default function Stage() {
       const state = Flip.getState(layer);
       chrome.style.visibility = "visible";
       placeStage(id);
-
-      // Another article: the globe flies from the page to its window.
-      const globe = id === "globe" ? null : layerRefs.globe.current;
-      const globeFrom = globe ? Flip.getState(globe) : null;
-      if (globe) placeMini();
 
       let ruleFrom: Flip.FlipState | null = null;
       if (variant === "rule") {
@@ -478,7 +443,6 @@ export default function Stage() {
       });
       tl.addLabel("fly", T.flyAt).addLabel("land", T.landAt);
       tl.add(Flip.from(state, { duration: T.fly, ease: EASE.travel }), "fly");
-      if (globeFrom) tl.add(Flip.from(globeFrom, { duration: T.fly, ease: EASE.travel }), "fly");
       tl.fromTo(chrome, { clipPath: insetTo(slotBox) }, { clipPath: INSET_NONE, duration: T.fly }, "fly");
       if (ghost && headTo) tl.to(ghost, { ...headTo, duration: T.fly }, "fly");
       for (const [other, el] of backdrops.current) if (other !== id) gsap.set(el, { autoAlpha: 0 });
@@ -515,7 +479,7 @@ export default function Stage() {
       tl.call(() => sfx.chatter(cs.length, T.type), undefined, "land");
       return tl;
     },
-    [layerRefs, slotRefs, q, chars, placeStage, placeMini, placeRules, headlines, ghostFrom]
+    [layerRefs, slotRefs, q, chars, placeStage, placeRules, headlines, ghostFrom]
   );
 
   /** The close, from the stage back home. Plays immediately. */
@@ -543,8 +507,6 @@ export default function Stage() {
       }
 
       const state = Flip.getState(layer);
-      const globe = id === "globe" ? null : layerRefs.globe.current;
-      const globeFrom = globe ? Flip.getState(globe) : null;
       const ruleFrom = variant === "rule" ? Flip.getState(Object.values(rules)) : null;
       // The slot sits inside sections the rule variant has pushed away —
       // measure with the push undone, then put it back so the timeline can
@@ -555,10 +517,6 @@ export default function Stage() {
       }));
       gsap.set(pushed, { x: 0, y: 0 });
       placeHome(id);
-      if (globe) {
-        placeHome("globe");
-        gsap.set(globe, { zIndex: 40 }); // over the chrome until it lands (placeAll clears it)
-      }
       const pageBox = head.page?.getBoundingClientRect();
       pushed.forEach((el, i) => gsap.set(el, offsets[i]));
       if (ruleFrom) placeRules(rules, slotBox, false);
@@ -583,7 +541,6 @@ export default function Stage() {
       tl.addLabel("lift", 0).addLabel("fly", T.flyAt);
       tl.to(cs, { autoAlpha: 0, duration: 0.01, stagger: { each: 0.15 / cs.length, from: "end" } }, "lift");
       tl.add(Flip.from(state, { duration: T.fly, ease: EASE.travel }), "lift");
-      if (globeFrom) tl.add(Flip.from(globeFrom, { duration: T.fly, ease: EASE.travel }), "lift");
       tl.fromTo(chrome, { clipPath: INSET_NONE }, { clipPath: insetTo(slotBox), duration: T.fly }, "lift");
       if (backdrop)
         tl.fromTo(
@@ -744,29 +701,10 @@ export default function Stage() {
         open={openId === "globe"}
         staged={staged.id === "globe"}
         ring
-        docked={openId !== null && openId !== "globe"}
-        framed={landedId !== null && landedId !== "globe"}
+        covered={landedId !== null && landedId !== "globe"}
         onOpen={() => open("globe")}
         onHover={(on) => hover("globe", on)}
       >
-        {/* Its window while docked: a hairline frame and a title bar above the
-            box, shown once the article has landed. Behind the canvas, so the
-            globe sits on the page's ground. */}
-        <div
-          aria-hidden
-          className="pointer-events-none absolute -inset-px -z-10 border border-bone bg-ink opacity-0 transition-opacity duration-200 ease-out group-data-[framed=true]:opacity-100"
-          style={{ top: -MINI.bar - 1 }}
-        >
-          <div
-            className={`${LABEL} flex items-center justify-between gap-2 border-b border-bone px-2`}
-            style={{ height: MINI.bar }}
-          >
-            <span>/Globe</span>
-            {/* Only while the pointer is over it, so it doesn't argue with the
-                article's own "scroll to walk through". */}
-            <span className="opacity-0 transition-opacity group-hover:opacity-100 max-sm:hidden">Scroll to bend</span>
-          </div>
-        </div>
         <GlobeCanvas />
       </Layer>
       <Layer

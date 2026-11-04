@@ -124,27 +124,6 @@ export function stageBox(aspect = 1, reads = false, foot = 0): Box {
 }
 
 /**
- * The globe's window while another article is open — docked bottom left, over
- * everything, so light and dark are always one scroll away (after stripe.dev's
- * floating FIG windows). `bar` is its title bar, which sits above the box.
- */
-export const MINI = { size: 200, phone: 120, inset: 16, bar: 24 } as const;
-
-/** How wide the window can be and still leave the words inside a stage box some air. */
-const dockRoom = (stage: Box) => stage.left - 16 - MINI.inset;
-
-/** Beside an article with words to read, it takes the smaller size if the larger would cover them. */
-export function miniBox(stage?: Box): Box {
-  const size = window.innerWidth < NARROW || (stage && dockRoom(stage) < MINI.size) ? MINI.phone : MINI.size;
-  return { left: MINI.inset, top: window.innerHeight - MINI.inset - size, width: size, height: size };
-}
-
-/** The window would cover an article's words at any size (a phone, a small window): it steps aside. */
-export function dockTucked(stage: Box): boolean {
-  return window.innerWidth < NARROW || dockRoom(stage) < MINI.phone;
-}
-
-/**
  * Pin an element to a viewport box. "doc" keeps it in the document (it
  * scrolls with the page); "fixed" pins it to the viewport.
  */

@@ -28,7 +28,7 @@ interface Hit {
 }
 
 const PRESSABLE =
-  'button, a[href], [role="link"], [data-article], [data-layer]:not([data-open="true"]):not([data-docked="true"])';
+  'button, a[href], [role="link"], [data-article], [data-layer]:not([data-open="true"])';
 
 /** The seam ripples once each time the cursor crosses into a new thirteenth of it. */
 const FRETS = 13;
@@ -45,7 +45,7 @@ function resolve(target: EventTarget | null): Hit | null {
 
   const layer = target.closest<HTMLElement>("[data-layer]");
   if (layer) {
-    if (layer.dataset.open === "true" || layer.dataset.docked === "true") return null;
+    if (layer.dataset.open === "true") return null;
     const id = layer.dataset.layer!;
     return { key: `article:${id}`, enter: () => sfx.ping(ARTICLE_NOTES[id]) };
   }

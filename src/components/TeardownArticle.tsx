@@ -352,7 +352,6 @@ export default function TeardownArticle({
       engine()?.wheel((Math.abs(e.deltaY) >= Math.abs(e.deltaX) ? e.deltaY : e.deltaX) * scale);
     };
     const onKey = (e: KeyboardEvent) => {
-      if (e.defaultPrevented) return; // Space over the docked globe pauses it instead
       const k = e.key;
       // On a screen that plays, Space is its play button.
       if (k === " " && CHAPTERS[shown.current.chapter].display && engine()?.screen?.status) {

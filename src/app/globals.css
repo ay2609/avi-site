@@ -193,20 +193,20 @@ body {
 
 /*
  * The globe on the page lets a vertical swipe scroll past it and orbits on a
- * sideways drag; open, or docked in its window, it keeps every touch.
+ * sideways drag; open, it keeps every touch.
  * (OrbitControls sets touch-action: none inline.)
  */
-[data-layer="globe"][data-open="false"][data-docked="false"] canvas {
+[data-layer="globe"][data-open="false"] canvas {
   touch-action: pan-y !important;
 }
 
-/* Docked beside words it would cover (see dockTucked), the globe steps aside. */
-[data-layer="globe"] {
-  transition: opacity 0.2s ease-out;
-}
-[data-layer="globe"][data-tucked] {
-  opacity: 0;
-  pointer-events: none;
+/* Keyboard focus in the page's own ink, not the browser's blue. A layer, so a control's own focus state wins. */
+@layer base {
+  button:focus-visible,
+  a:focus-visible {
+    outline: 1px solid var(--bone);
+    outline-offset: 3px;
+  }
 }
 
 /* A chapter's words come straight on, so there's nothing to wait for before reading. */

@@ -3,14 +3,15 @@
 import type { Ref } from "react";
 
 import { HIT, LABEL } from "@/components/furniture";
+import ThemeSwitch from "@/components/ThemeSwitch";
 import type { Article } from "@/lib/stage/articles";
 
 /**
  * The periphery of an expanded article: the newspaper's grid, grown to the
  * viewport. The article's box is `--sx --sy --sw --sh` (set by the stage);
  * its four edges extend as dashed hairlines to the screen edges, which
- * leaves four bands around it: the kicker and Esc above, the controls below,
- * and nothing at the sides. Touch screens get their own words for both: no
+ * leaves four bands around it: the kicker, light and dark, and Esc above, the
+ * controls below, and nothing at the sides. Touch screens get their own words for both: no
  * Esc key to name, and swipes rather than a wheel.
  *
  * Rule geometry is set from JS (see Stage.placeRules) so the rule variant can
@@ -38,19 +39,23 @@ export default function StageChrome({
       <div data-rule="y1" className={`${rule} border-l`} />
 
       <div key={article.id} className="contents">
-        {/* Top band */}
+        {/* Top band: where the box is narrow (a phone), the kicker gives way so the switch and Back fit. */}
         <div
-          className={`${band} items-center justify-between gap-4 px-4`}
+          className={`${band} @container items-center gap-6 px-4`}
           style={{ left: "var(--sx)", width: "var(--sw)", top: 0, height: "var(--sy)" }}
         >
-          <span data-typed className="whitespace-nowrap">
+          <span data-typed className="whitespace-nowrap @max-[479px]:hidden">
             {article.kicker}
           </span>
+          {/* Not typed: its words change, and the typing splits them. */}
+          <div className="ml-auto @max-[479px]:ml-0">
+            <ThemeSwitch />
+          </div>
           <button
             data-typed
             type="button"
             onClick={onClose}
-            className={`${HIT} cursor-pointer whitespace-nowrap uppercase text-bone transition-colors hover:text-dim`}
+            className={`${HIT} cursor-pointer whitespace-nowrap uppercase text-bone transition-colors hover:text-dim @max-[479px]:ml-auto`}
           >
             <span className="pointer-coarse:hidden">Esc — </span>
             <span className="hidden pointer-coarse:inline">← </span>
@@ -58,9 +63,8 @@ export default function StageChrome({
           </button>
         </div>
 
-        {/* Bottom band — how to work the art, set right: the docked globe's
-            window sits bottom left. The mouse's words are too long for a
-            phone's band, so a narrow window with a mouse shows none. */}
+        {/* Bottom band — how to work the art, set right. The mouse's words are
+            too long for a phone's band, so a narrow window with a mouse shows none. */}
         <div
           className={`${band} items-center justify-end gap-4 px-4`}
           style={{

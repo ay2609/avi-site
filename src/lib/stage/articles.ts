@@ -15,7 +15,7 @@ export interface Article {
   kicker: string;
   /** Bottom band, right: how to work the art (Esc is the button in the top band). */
   controls: string;
-  /** The same, for a touch screen, short enough to clear the docked globe. */
+  /** The same, for a touch screen, short enough for a phone's band. */
   touch: string;
   /** A near-invisible animated ASCII field behind the whole stage. */
   backdrop?: AsciiFieldId;

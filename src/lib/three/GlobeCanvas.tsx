@@ -85,8 +85,8 @@ const FIELD_TEXTURE = {
 interface GlobeCanvasProps {
   /**
    * "hover" — the globe takes the space bar whenever the cursor is over it,
-   * and the wheel too once it's open full screen or docked in its window. On
-   * the page the wheel stays the page's: there it only turns and opens.
+   * and the wheel too once it's open full screen. On the page the wheel stays
+   * the page's: there it only turns and opens.
    * "always" — takes both unconditionally, for a full-screen presentation.
    */
   interaction?: "hover" | "always";
@@ -250,10 +250,10 @@ export default function GlobeCanvas({
       if (interaction !== "always") setEngaged(false);
     };
 
-    /** Sitting in the page (not open, not docked): the wheel scrolls the page past it. */
+    /** Sitting in the page, not open: the wheel scrolls the page past it. */
     const onPage = () => {
       const layer = host.closest<HTMLElement>("[data-layer]");
-      return !!layer && layer.dataset.open !== "true" && layer.dataset.docked !== "true";
+      return !!layer && layer.dataset.open !== "true";
     };
 
     const handleWheel = (event: WheelEvent) => {
@@ -322,6 +322,8 @@ export default function GlobeCanvas({
     const tickManager = new TickManager();
 
     const render = (data: TickData) => {
+      // Under another open article nobody can see it: it picks up where it was when it's back.
+      if (host.closest<HTMLElement>("[data-layer]")?.dataset.covered === "true") return;
       const now = data.timestamp;
       const deltaSeconds = Math.max(data.timeDiff, 0) * 0.001;
       const blendAlpha =

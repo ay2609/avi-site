@@ -10,11 +10,11 @@ import { BEND_KEY, THEME_KEY } from "./prepaint";
  * The theme is `data-theme` on <html>, which swaps the CSS tokens
  * (globals.css); the WebGL scenes and the tinted ASCII subscribe and fade
  * their own colours over FLIP_S. A first visit is light (Nov 1; it followed
- * the system); the switch in the masthead picks one and it's remembered. The inline script in
+ * the system); the switch, in the masthead and on every open article, picks one and it's remembered. The inline script in
  * the root layout applies it before the first paint (prepaint.ts) — keep the
  * two in step.
  *
- * The globe throws it too, inside its window (open, or docked): it publishes
+ * The globe throws it too, once it's open: it publishes
  * its bend — 0 perspective, 1 orthographic — here every frame, and crossing
  * FLIP_ON flips to light, crossing back under FLIP_OFF to dark (the gap keeps
  * it from flickering at the line). The other way round, the switch bends the
@@ -104,7 +104,7 @@ function chooseTheme(next: Theme): void {
   } catch {}
 }
 
-/** The masthead's switch: the theme, remembered, and the globe bends to match. */
+/** The switch: the theme, remembered, and the globe bends to match. */
 export function switchTheme(next: Theme): void {
   chooseTheme(next);
   requestBend(next);
