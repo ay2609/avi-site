@@ -83,6 +83,7 @@ export interface FrameInfo {
 }
 
 interface Pose {
+  elevation: number;
   yaw: number | null; // null = the turntable
   pitch: number;
   roll: number;
@@ -149,6 +150,7 @@ export class TeardownEngine {
   private readonly scene = new THREE.Scene();
   private readonly camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.01, 100);
   private readonly renderer: THREE.WebGLRenderer;
+  private readonly elevator = new THREE.Group();
   private readonly spinner = new THREE.Group();
   private readonly tilter = new THREE.Group();
   private readonly roller = new THREE.Group();
@@ -208,9 +210,10 @@ export class TeardownEngine {
     Object.assign(this.renderer.domElement.style, { position: "absolute", inset: "0" });
     host.appendChild(this.renderer.domElement);
 
+    this.elevator.add(this.spinner);
     this.spinner.add(this.tilter);
     this.tilter.add(this.roller);
-    this.scene.add(this.spinner);
+    this.scene.add(this.elevator);
 
     this.resize();
     this.resizeObserver = new ResizeObserver(this.resize);
@@ -491,9 +494,10 @@ export class TeardownEngine {
     else if (chapter.display && this.device.module) look.copy(this.displayHome);
     else if (n) look.divideScalar(n);
 
-    const { yaw, pitch, roll, zoom, shift = [0, 0] } = chapter.view;
+    const { yaw, pitch, roll, zoom, elevation = 0, shift = [0, 0] } = chapter.view;
     const [hx, hy] = model.halfExtent;
     return {
+      elevation: elevation * DEG,
       yaw: yaw === "spin" ? null : yaw * DEG,
       pitch: pitch * DEG,
       roll: roll === "diagonal" ? Math.atan2(hx, hy) : roll * DEG,
@@ -563,6 +567,7 @@ export class TeardownEngine {
     const A = this.poses[a];
     const B = this.poses[b];
 
+    this.elevator.rotation.x = lerp(A.elevation, B.elevation, f);
     this.spinner.rotation.y = lerp(A.yaw ?? this.spin, B.yaw ?? this.spin, f);
     this.tilter.rotation.x = lerp(A.pitch, B.pitch, f);
     this.roller.rotation.z = lerp(A.roll, B.roll, f);
@@ -636,7 +641,11 @@ export class TeardownEngine {
         // The top of a part on top of the board; the middle of one hanging under it, whose top is hidden.
         const { center, size } = part.info;
         const board = this.parts[0].info;
-        this.scratch.set(center[0], center[1], center[2] + (center[2] < board.center[2] ? 0 : size[2] / 2));
+        const at = this.device.anchors?.[ref];
+        if (at) {
+          const { center: c, scale } = this.model!.frame;
+          this.scratch.set((at[0] - c[0]) * scale, (at[1] - c[1]) * scale, (at[2] - c[2]) * scale);
+        } else this.scratch.set(center[0], center[1], center[2] + (center[2] < board.center[2] ? 0 : size[2] / 2));
         part.group.localToWorld(this.scratch);
       }
       this.scratch.project(this.camera);

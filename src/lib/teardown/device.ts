@@ -31,6 +31,11 @@ export interface ChapterView {
   /** Rotation in the board's own plane; "diagonal" stands the board's diagonal upright. */
   roll: number | "diagonal";
   zoom: number;
+  /**
+   * The camera's height over the turntable, applied outside the yaw: with pitch −90 (the subject
+   * upright) yaw turns it about its own up and this looks down on it (or up, negative). Default 0.
+   */
+  elevation?: number;
   /** Where the camera looks, in model space; default: the lifted parts' centre. */
   look?: [number, number, number];
   /** Shifts the subject within the box, in fractions of the box (x right, y up). */
@@ -116,6 +121,11 @@ export interface Device {
   chapters: Chapter[];
   /** Refs that rise a chapter's whole lift; the others rise LOOK.minorLift of it. */
   major: RegExp;
+  /**
+   * Where a part's number stands, in the model's mm, for parts whose middle is the wrong place
+   * (the drone's ring, whose middle is empty). Default: the top of the part, or the middle of one under the board.
+   */
+  anchors?: Record<string, readonly [number, number, number]>;
   /** Where the last chapter sends the reader on to. */
   next?: { id: ArticleId; name: string };
   /**

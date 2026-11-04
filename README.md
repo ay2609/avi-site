@@ -2,7 +2,7 @@
 
 My personal website, live at [aviyadava.com](https://aviyadava.com/) (halcyn.dev redirects there).
 
-It's laid out like the front page of a newspaper where every article is a picture. Spin the globe and bend its projection (bend it past halfway and the whole page turns to paper, and stays that way next visit), open the watch to take my smartwatch's board apart one chapter at a time, do the same with the Tiny Music Player I'm building now, or open Fractals to walk through live ports of the code I wrote in high school, from the Mandelbrot set to chaotic attractors. Clicking an article grows it to full screen at its own address, and Esc folds it back into the page. Every article opens from the keyboard too, and motion respects reduced-motion settings.
+It's laid out like the front page of a newspaper where every article is a picture. Spin the globe and bend its projection (bend it past halfway and the whole page turns to paper, and stays that way next visit), open the watch to take my smartwatch's board apart one chapter at a time, do the same with the Tiny Music Player I'm building now and the classroom drone I specified for BYM, or open Fractals to walk through live ports of the code I wrote in high school, from the Mandelbrot set to chaotic attractors. Clicking an article grows it to full screen at its own address, and Esc folds it back into the page. Every article opens from the keyboard too, and motion respects reduced-motion settings.
 
 ## Development
 
@@ -41,6 +41,7 @@ The code is formatted by hand (there's no Prettier config), so match what's arou
 - `src/components/Backdrop.tsx`: the faint ASCII field behind the open globe.
 - `src/components/TeardownArticle.tsx` and `src/lib/teardown/`: a board taken apart in chapters — the engine, the parts decoder and the device type the watch and the player share.
 - `src/lib/watch/`: the watch's five chapters, and a re-creation of the watch face my firmware draws.
+- `src/lib/drone/`: BYM's classroom drone in seven chapters, drawn from a model of its MicoAir MVD30 frame and parts (`scripts/drone-model.py`, built from MicoAir's dimension drawings, since there's no CAD of the kit), ending on a photo of a built one.
 - `src/lib/player/`: the Tiny Music Player's six chapters, and its last one working: a playlist from Spotify (`playlist.json`, written by `scripts/spotify-playlist.py` from a public playlist's link) with each album cover on the 64 × 64 OLED and the 30-second previews played through a small "tiny player into earbuds" filter. The board lies sideways there, and an island under it rewinds, plays or pauses, and skips (Space plays too).
 - `src/components/FractalArticle.tsx` and `src/lib/fractals/`: the fractals and chaotic attractors, two articles from one component and one WebGL shader porting my Python: the Mandelbrot cover and the Julia presets, then the Lorenz and other chaotic systems.
 - `src/lib/ascii/`: the animated ASCII fields on the page.

@@ -31,6 +31,7 @@ function fillSize(text: string, max: string, min = "1rem"): string {
 const TITLES = {
   watch: "Custom Digital Watch",
   player: "Tiny Music Player",
+  drone: "Classroom Drone",
   fractals: "Fractals",
   attractors: "Chaotic Attractors",
 } as const;
@@ -290,6 +291,16 @@ export default function Newspaper({
             </>
           }
           slot={{ id: "attractors", ref: slotRefs.attractors, onOpen: () => onOpen("attractors") }}
+        />
+        <Article
+          title={TITLES.drone}
+          dek={
+            <>
+              A small drone I specified for BYM&rsquo;s classrooms: it flies indoors near students and holds
+              still on its own. Open it to take it apart.
+            </>
+          }
+          slot={{ id: "drone", ref: slotRefs.drone, onOpen: () => onOpen("drone") }}
         />
       </div>
 

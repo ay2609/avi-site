@@ -20,6 +20,7 @@ import FractalArticle from "@/components/FractalArticle";
 import TeardownArticle from "@/components/TeardownArticle";
 import GlobeCanvas from "@/lib/three/GlobeCanvas";
 import { ATTRACTORS, FRACTALS } from "@/lib/fractals/chapters";
+import { DRONE } from "@/lib/drone/chapters";
 import { PLAYER } from "@/lib/player/chapters";
 import { WATCH } from "@/lib/watch/chapters";
 import { ARTICLES, ARTICLE_IDS, type ArticleId, articleForPath } from "@/lib/stage/articles";
@@ -168,6 +169,7 @@ export default function Stage() {
     globe: { current: null },
     watch: { current: null },
     player: { current: null },
+    drone: { current: null },
     fractals: { current: null },
     attractors: { current: null },
   }).current;
@@ -175,6 +177,7 @@ export default function Stage() {
     globe: { current: null },
     watch: { current: null },
     player: { current: null },
+    drone: { current: null },
     fractals: { current: null },
     attractors: { current: null },
   }).current;
@@ -731,6 +734,18 @@ export default function Stage() {
       >
         {/* The music player's board, the same way (src/lib/player). */}
         <TeardownArticle id="player" device={PLAYER} open={openId === "player"} landed={landedId === "player"} />
+      </Layer>
+      <Layer
+        id="drone"
+        layerRef={layerRefs.drone}
+        open={openId === "drone"}
+        staged={staged.id === "drone"}
+        ring={false}
+        onOpen={() => open("drone")}
+        onHover={(on) => hover("drone", on)}
+      >
+        {/* BYM's classroom drone, the same way, from a model of its frame and parts (src/lib/drone). */}
+        <TeardownArticle id="drone" device={DRONE} open={openId === "drone"} landed={landedId === "drone"} />
       </Layer>
       <Layer
         id="fractals"

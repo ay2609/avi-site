@@ -488,6 +488,7 @@ export const ARTICLE_NOTES: Record<string, number> = {
   globe: note(5),
   watch: note(7),
   player: note(8),
+  drone: note(11),
   fractals: note(9),
   attractors: note(10),
 };
