@@ -495,7 +495,7 @@ export default function TeardownArticle({
         <article
           ref={storyRef}
           data-story
-          className="pointer-events-auto absolute inset-y-0 left-0 flex w-[clamp(18rem,33cqw,24rem)] flex-col overflow-y-auto border-r border-dashed border-rule bg-ink px-4 pt-4 @max-[559px]:inset-y-auto @max-[559px]:top-full @max-[559px]:h-[calc(100dvh-44px-75cqw)] @max-[559px]:w-full @max-[559px]:border-r-0 @max-[559px]:pt-2"
+          className="pointer-events-auto absolute bottom-0 left-px top-px flex w-[clamp(18rem,33cqw,24rem)] flex-col overflow-y-auto border-r border-dashed border-rule bg-ink px-4 pt-4 @max-[559px]:inset-y-auto @max-[559px]:left-0 @max-[559px]:top-full @max-[559px]:h-[calc(100dvh-44px-75cqw)] @max-[559px]:w-full @max-[559px]:border-r-0 @max-[559px]:pt-2"
         >
           {/* The chapters as ticks, on a phone: the index's job in a line, tall enough for a thumb. */}
           {compact && (
@@ -560,6 +560,8 @@ export default function TeardownArticle({
                     <span
                       aria-hidden
                       className={`${TILE} h-4 w-4 ${pointed && pointed !== o.ref ? "border border-rule text-dim" : "bg-bone text-ink"}`}
+        {/* In from the box's top and left by a pixel: the stage's rules on those edges lie just inside it, and the
+            column's ground would hide them. */}
                     >
                       {k + 1}
                     </span>

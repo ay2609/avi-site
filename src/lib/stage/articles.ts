@@ -11,8 +11,6 @@ export interface Article {
   route: string;
   /** Width / height of its box, on the page and on the stage. */
   aspect: number;
-  /** Top band, left. */
-  kicker: string;
   /** Bottom band, right: how to work the art (Esc is the button in the top band). */
   controls: string;
   /** The same, for a touch screen, short enough for a phone's band. */
@@ -32,7 +30,6 @@ export const ARTICLES: Record<ArticleId, Article> = {
     id: "globe",
     route: "/globe",
     aspect: 1,
-    kicker: "/Globe — Three.js / GLSL",
     controls: "Drag to orbit · Scroll to bend; past halfway, paper · Space to pause",
     touch: "Drag to orbit",
     backdrop: "crate",
@@ -42,7 +39,6 @@ export const ARTICLES: Record<ArticleId, Article> = {
     id: "watch",
     route: "/watch",
     aspect: 4 / 3,
-    kicker: "/Watch — ESP32 / KiCad",
     controls: "Scroll to walk through",
     touch: "Swipe up to walk through",
     title: "Custom Digital Watch — Avi Yadava",
@@ -52,7 +48,6 @@ export const ARTICLES: Record<ArticleId, Article> = {
     id: "player",
     route: "/player",
     aspect: 4 / 3,
-    kicker: "/Player — STM32 / KiCad",
     controls: "Scroll to walk through",
     touch: "Swipe up to walk through",
     title: "Tiny Music Player — Avi Yadava",
@@ -62,7 +57,6 @@ export const ARTICLES: Record<ArticleId, Article> = {
     id: "drone",
     route: "/drone",
     aspect: 4 / 3,
-    kicker: "/Drone — ArduPilot / MAVLink",
     controls: "Scroll to walk through",
     touch: "Swipe up to walk through",
     title: "Classroom Drone — Avi Yadava",
@@ -72,7 +66,6 @@ export const ARTICLES: Record<ArticleId, Article> = {
     id: "fractals",
     route: "/fractals",
     aspect: 1,
-    kicker: "/Fractals — NumPy / GLSL",
     controls: "Scroll to walk through · Drag to explore",
     touch: "Swipe up · Tap for next",
     title: "Fractals — Avi Yadava",
@@ -83,7 +76,6 @@ export const ARTICLES: Record<ArticleId, Article> = {
     id: "attractors",
     route: "/attractors",
     aspect: 1,
-    kicker: "/Attractors — NumPy / GLSL",
     controls: "Scroll to walk through · Drag to explore",
     touch: "Swipe up · Tap for next",
     title: "Chaotic Attractors — Avi Yadava",
