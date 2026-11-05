@@ -26,10 +26,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    // Light by default, even with no script; the prepaint script sets a reader's pick before React hydrates.
+    // Dark by default, even with no script; the prepaint script sets a reader's pick before React hydrates.
     <html
       lang="en"
-      data-theme="light"
+      data-theme="dark"
       className={`${serif.variable} ${text.variable} ${mono.variable}`}
       suppressHydrationWarning
     >

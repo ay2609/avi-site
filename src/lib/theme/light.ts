@@ -9,8 +9,8 @@ import { BEND_KEY, THEME_KEY } from "./prepaint";
  *
  * The theme is `data-theme` on <html>, which swaps the CSS tokens
  * (globals.css); the WebGL scenes and the tinted ASCII subscribe and fade
- * their own colours over FLIP_S. A first visit is light (Nov 1; it followed
- * the system); the switch, in the masthead and on every open article, picks one and it's remembered. The inline script in
+ * their own colours over FLIP_S. A first visit is dark (Nov 4; it was light
+ * from Nov 1, and followed the system before that); the switch, in the masthead and on every open article, picks one and it's remembered. The inline script in
  * the root layout applies it before the first paint (prepaint.ts) — keep the
  * two in step.
  *
@@ -90,8 +90,8 @@ function remembered(): Theme | null {
 
 export function getTheme(): Theme {
   if (theme === null) {
-    if (typeof window === "undefined") return "light";
-    theme = remembered() ?? "light";
+    if (typeof window === "undefined") return "dark";
+    theme = remembered() ?? "dark";
   }
   return theme;
 }
@@ -143,7 +143,7 @@ export function onTheme(f: () => void): () => void {
 }
 
 export function useTheme(): Theme {
-  return useSyncExternalStore(onTheme, getTheme, () => "light");
+  return useSyncExternalStore(onTheme, getTheme, () => "dark");
 }
 
 /**
