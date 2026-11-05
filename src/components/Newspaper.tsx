@@ -250,14 +250,25 @@ export default function Newspaper({
 
       {/* 3 — The work: equal tiles, two across (one on phones), each the same
           anatomy — name, a line, its art at 4:3 — so a new
-          project is one more tile. */}
+          project is one more tile. The owner's order (Nov 4): drone, watch;
+          fractals, player; attractors alone at the foot. */}
       <div data-push="down" className="grid grid-cols-1 md:grid-cols-2">
+        <Article
+          title={TITLES.drone}
+          dek={
+            <>
+              The drone we teach with at BYM, the drone education company I co-own. I specified every part: it
+              flies indoors near students and holds still on its own.
+            </>
+          }
+          slot={{ id: "drone", ref: slotRefs.drone, onOpen: () => onOpen("drone") }}
+        />
         <Article
           title={TITLES.watch}
           dek={
             <>
               My freshman-year project: a smartwatch designed from nothing, the board in KiCad and the firmware
-              in C. Open it to take it apart.
+              in C.
             </>
           }
           slot={{ id: "watch", ref: slotRefs.watch, onOpen: () => onOpen("watch") }}
@@ -277,7 +288,7 @@ export default function Newspaper({
           dek={
             <>
               What I&rsquo;m building now: a pocket player for lossless files and wired headphones, with a tiny
-              screen for the album art. Open it to take the board apart.
+              screen for the album art.
             </>
           }
           slot={{ id: "player", ref: slotRefs.player, onOpen: () => onOpen("player") }}
@@ -286,21 +297,11 @@ export default function Newspaper({
           title={TITLES.attractors}
           dek={
             <>
-              The same Python, turned on chaos: how long each point takes to fall into systems like the Lorenz
-              butterfly. Open it to turn them.
+              Mathematically defined objects which attract points; each frame coloured like the fractals, by how
+              fast a point reaches the attractor.
             </>
           }
           slot={{ id: "attractors", ref: slotRefs.attractors, onOpen: () => onOpen("attractors") }}
-        />
-        <Article
-          title={TITLES.drone}
-          dek={
-            <>
-              A small drone I specified for BYM&rsquo;s classrooms: it flies indoors near students and holds
-              still on its own. Open it to take it apart.
-            </>
-          }
-          slot={{ id: "drone", ref: slotRefs.drone, onOpen: () => onOpen("drone") }}
         />
       </div>
 

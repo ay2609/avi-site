@@ -173,7 +173,7 @@ export const PLAYER: Device = {
   src: "/player-parts.bin",
   chapters: CHAPTERS,
   major: /^(U|J|SW|BT|DS|OLED)\d*$/,
-  next: { id: "drone", name: "Classroom Drone" },
+  next: { id: "attractors", name: "Chaotic Attractors" },
   // The OLED's active area, where the playlist's covers show: 10.73 mm square, set 1.6 mm in from the glass's
   // far edge (REVISION-B Part 7), the image upright with the stick sideways.
   screen: { ref: "OLED", center: [114.04, 112.5], size: [10.73, 10.73], up: "+y", screen: () => new PocketPlayer() },

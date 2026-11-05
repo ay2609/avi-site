@@ -8,7 +8,7 @@ import EndMark from "@/components/EndMark";
 import { advance, DATA, LABEL, WAY } from "@/components/furniture";
 import { sfx } from "@/lib/sound/sfx";
 import { ARTICLES, type ArticleId } from "@/lib/stage/articles";
-import { gsap, prefersReducedMotion, SplitText } from "@/lib/stage/motion";
+import { gsap, prefersReducedMotion, SplitText, stageBox, T } from "@/lib/stage/motion";
 import type { Device, Playing } from "@/lib/teardown/device";
 import { type Anchor, type FrameInfo, TeardownEngine } from "@/lib/teardown/engine";
 
@@ -131,6 +131,29 @@ function Closed({ text }: { text: string }) {
       </span>
     </>
   );
+}
+
+/** The cover photo's aspect (the watch's photo shares it). */
+const COVER_ASPECT = 1512 / 1209;
+/** The cover filling its box, as it does on the page. */
+const FILL: CSSProperties = { top: 0, left: 0, right: 0, bottom: 0 };
+/** The stage's travel ease, expo.inOut, as CSS. */
+const TRAVEL_CSS = "cubic-bezier(0.87, 0, 0.13, 1)";
+
+/**
+ * Where the cover sits on the stage, as fractions of the stage box: beside the column (its CSS clamp), with 16px of
+ * air, at the photo's aspect. In fractions, it travels there inside the box as the box flies out, rather than fill
+ * the box in flight and jump on landing (Nov 4). On a phone it fills the box either way.
+ */
+function coverSpot(id: ArticleId): CSSProperties {
+  const a = ARTICLES[id];
+  const { width: W, height: H } = stageBox(a.aspect, a.reads, a.foot);
+  if (W < 560) return FILL;
+  const rem = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+  const left = Math.min(24 * rem, Math.max(18 * rem, 0.33 * W)) + 16;
+  const top = H - 16 - (W - left - 16) / COVER_ASPECT;
+  const pc = (v: number, of: number) => `${(v / of) * 100}%`;
+  return { top: pc(top, H), left: pc(left, W), right: pc(16, W), bottom: pc(16, H) };
 }
 
 /**
@@ -411,6 +434,25 @@ export default function TeardownArticle({
 
   const visible = open && landed;
 
+  // The cover's place in flight: filling the box on the page, easing into its landed spot as the box flies out,
+  // and back as it flies home, on the flight's own timing. Placed outright on a direct load or with reduced motion.
+  // Always placed by all four edges (never `top: auto`, which can't be animated), and placed again on a resize.
+  const coverRef = useRef<HTMLElement>(null);
+  const coverSeen = useRef(false);
+  useLayoutEffect(() => {
+    const el = coverRef.current;
+    if (!el) return;
+    const instant = !coverSeen.current || (open && landed) || prefersReducedMotion();
+    coverSeen.current = true;
+    const [s, delay] = open ? [T.fly, T.flyAt] : [T.fly / T.closeSpeed, 0];
+    const move = ["top", "left", "right", "bottom"].map((k) => `${k} ${s}s ${TRAVEL_CSS} ${delay}s`).join(", ");
+    Object.assign(el.style, open ? coverSpot(id) : FILL, { transition: instant ? "opacity 0.5s" : `${move}, opacity 0.5s` });
+    if (!open) return;
+    const onResize = () => Object.assign(el.style, coverSpot(id), { transition: "opacity 0.5s" });
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, [open, landed, id]);
+
   /** Type in every `[data-typed]` under `root` (except `skip`), over `seconds`. */
   const type = useCallback((root: Element | null, seconds: number, skip?: string) => {
     if (!root) return () => {};
@@ -465,6 +507,8 @@ export default function TeardownArticle({
   const c = CHAPTERS[chapter];
   const photo = CHAPTERS.find((ch) => ch.photo)?.photo;
   const showPhoto = visible && !!c.photo;
+  // The cover: on the tile, through the flight, and beside the opening chapter's words.
+  const showCover = !!device.cover && chapter === 0;
   const go = (k: number) => engineRef.current?.go(k);
   const press = (button: string) => engineRef.current?.press(button);
   const point = (ref: string, on: boolean) =>
@@ -475,12 +519,36 @@ export default function TeardownArticle({
 
   return (
     <div className="relative h-full w-full">
-      {/* The board fades out under the last chapter's photo (the watch's). */}
+      {/* The board fades out under the last chapter's photo (the watch's), and under a cover (the drone's). */}
       <div
         ref={hostRef}
         className="absolute inset-0 overflow-hidden transition-opacity duration-500"
-        style={{ opacity: showPhoto ? 0 : 1 }}
+        style={{ opacity: showPhoto || showCover ? 0 : 1 }}
       />
+
+      {/* The cover photo: the whole box on the page and in flight; once landed, where a chapter's photo sits. */}
+      {device.cover && (
+        // Placed from script (coverSpot), so it needs no container of its own.
+        <div className="pointer-events-none absolute inset-0">
+          <figure
+            ref={coverRef}
+            aria-hidden={!showCover}
+            className={`pointer-events-none absolute m-0 ${showCover ? "opacity-100" : "opacity-0"}`}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element -- a static export: no image optimiser */}
+            <img
+              src={device.cover.src}
+              alt={device.cover.alt}
+              width={1512}
+              height={1209}
+              decoding="async"
+              className={`h-full w-full object-cover grayscale transition-[filter] duration-700 [@media(hover:none)]:grayscale-0 ${
+                visible ? `border border-rule hover:grayscale-0 ${showCover ? "pointer-events-auto" : ""}` : ""
+              }`}
+            />
+          </figure>
+        </div>
+      )}
 
       <div
         ref={overlayRef}
@@ -492,6 +560,8 @@ export default function TeardownArticle({
         {/* The words, in a column beside the board. Positions come from container
             queries, not state, so the stage can measure where the headline will
             land the moment the box is placed. */}
+        {/* In from the box's top and left by a pixel: the stage's rules on those edges lie just inside it, and the
+            column's ground would hide them. */}
         <article
           ref={storyRef}
           data-story
@@ -560,8 +630,6 @@ export default function TeardownArticle({
                     <span
                       aria-hidden
                       className={`${TILE} h-4 w-4 ${pointed && pointed !== o.ref ? "border border-rule text-dim" : "bg-bone text-ink"}`}
-        {/* In from the box's top and left by a pixel: the stage's rules on those edges lie just inside it, and the
-            column's ground would hide them. */}
                     >
                       {k + 1}
                     </span>

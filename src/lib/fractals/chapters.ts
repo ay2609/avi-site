@@ -434,7 +434,7 @@ export const FRACTALS: Collection = {
     },
   ],
   field: "mandel",
-  next: { id: "attractors", name: "Chaotic Attractors" },
+  next: { id: "player", name: "Tiny Music Player" },
 };
 
 export const ATTRACTORS: Collection = {

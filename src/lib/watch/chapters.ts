@@ -145,5 +145,5 @@ export const WATCH: Device = {
   chapters: CHAPTERS,
   major: /^(U|J|SW)\d/,
   module: { ref: "LCD", ...DISPLAY, screen: () => new SovereignFace() },
-  next: { id: "player", name: "Tiny Music Player" },
+  next: { id: "fractals", name: "Fractals" },
 };

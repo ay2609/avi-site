@@ -126,6 +126,11 @@ export interface Device {
    * (the drone's ring, whose middle is empty). Default: the top of the part, or the middle of one under the board.
    */
   anchors?: Record<string, readonly [number, number, number]>;
+  /**
+   * A photo of the real thing as its cover (the drone's): it fills the tile on the front page in place of the
+   * turntable, and sits beside the opening chapter's words, black and white until hovered. In public/.
+   */
+  cover?: { src: string; alt: string };
   /** Where the last chapter sends the reader on to. */
   next?: { id: ArticleId; name: string };
   /**

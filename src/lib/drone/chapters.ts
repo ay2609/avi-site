@@ -3,7 +3,8 @@ import type { Chapter, Device } from "@/lib/teardown/device";
 /**
  * The drone walkthrough: seven chapters over BYM's classroom drone, from the
  * design write-up (the brief, the frame, what lifts it, the brain, holding
- * still, the radios, how it got here). There's no CAD of the kit, so the model
+ * still, the radios, how it got here). The page's order since Nov 4 puts it first:
+ * drone, watch, fractals, player, attractors, and the walkthroughs lead on in that order. There's no CAD of the kit, so the model
  * is drawn from the parts' specs by scripts/drone-model.py: a MicoAir MVD30
  * Headless frame (136 mm wheelbase, its ring 193 × 181 × 26 mm), four 1407
  * motors under 3-inch tri-blades, the 36 mm H743 AIO on the stack, the 2S pack
@@ -26,7 +27,7 @@ export const CHAPTERS: Chapter[] = [
     headline: "Classroom Drone",
     index: "Drone",
     story:
-      "A small drone I specified for BYM, Build Young Minds, to teach with. It flies indoors near students, holds still on its own, and tells a laptop what it knows. BYM ordered twenty kits of it.",
+      "The drone we teach with at BYM (Build Young Minds), the drone education company I co-own. I specified every part: it flies indoors near students, holds still on its own, and tells a laptop what it knows. Our first order was twenty kits.",
     facts: [
       { name: "Flight time", value: "About 15 min" },
       { name: "Weight", value: "About 290 g" },
@@ -106,7 +107,7 @@ export const CHAPTERS: Chapter[] = [
     id: "radios",
     headline: "Radios",
     story:
-      "It flies two ways, on two radios. A student flies it by hand over ExpressLRS. Over the LoRa telemetry link, the ground station BYM wrote flies it on its own and reads back its state twice a second.",
+      "It flies two ways, on two radios. A student flies it by hand over ExpressLRS. Over the LoRa telemetry link, the ground station we wrote flies it on its own and reads back its state twice a second.",
     view: { yaw: 150, pitch: -90, roll: 0, elevation: -32, zoom: 1.5 },
     focus: { refs: ["RX", "FC", "TEL"] },
     lift: 0.08,
@@ -122,22 +123,17 @@ export const CHAPTERS: Chapter[] = [
     display: false,
   },
   {
-    // The model stays posed, faded out under the photo of a built kit.
     id: "first",
     headline: "First Build",
     index: "First",
     story:
-      "This is the second design. The first was bigger, on a 3D-printed frame with 7-inch props, and flew well: stable, about 20 minutes. I shrank it for safety near students, onto a bought frame BYM could build in numbers.",
+      "This is our second design. The first was bigger, on a 3D-printed frame with 7-inch props, and flew well: stable, about 20 minutes. I shrank it for safety near students, onto a bought frame we could build in numbers.",
     view: { yaw: 145, pitch: -90, roll: 0, elevation: 30, zoom: 1.2 },
     focus: {},
     lift: 0,
-    dim: true,
+    dim: false,
     callouts: [],
     display: false,
-    photo: {
-      src: "/drone-desk.jpg",
-      alt: "A built kit drone on a desk: a clear moulded ring around four props, the flight controller and a battery lead in the middle, beside a white one-handed transmitter.",
-    },
   },
 ];
 
@@ -153,5 +149,10 @@ export const DRONE: Device = {
     P2: [-80.2, 52, 4.2],
     M2: [-51, 45, 26],
   },
-  next: { id: "fractals", name: "Fractals" },
+  // A built kit, on the front page and beside the opening words (Nov 4).
+  cover: {
+    src: "/drone-desk.jpg",
+    alt: "A built kit drone on a desk: a clear moulded ring around four props, the flight controller and a battery lead in the middle, beside a white one-handed transmitter.",
+  },
+  next: { id: "watch", name: "Custom Digital Watch" },
 };
