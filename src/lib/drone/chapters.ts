@@ -27,7 +27,7 @@ export const CHAPTERS: Chapter[] = [
     headline: "Classroom Drone",
     index: "Drone",
     story:
-      "The drone we teach with at BYM (Build Young Minds), the drone education company I co-own. I specified every part: it flies indoors near students, holds still on its own, and tells a laptop what it knows. Our first order was twenty kits.",
+      "The drone we teach with at BYM (Build Young Minds), the drone education company I co-founded. I specified every part: it flies indoors near students, holds still on its own, and tells a laptop what it knows. Our first order was twenty kits.",
     facts: [
       { name: "Flight time", value: "About 15 min" },
       { name: "Weight", value: "About 290 g" },

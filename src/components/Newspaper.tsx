@@ -257,8 +257,7 @@ export default function Newspaper({
           title={TITLES.drone}
           dek={
             <>
-              The drone we teach with at BYM, the drone education company I co-own. I specified every part: it
-              flies indoors near students and holds still on its own.
+              The drone I spec&rsquo;d for BYM, the drone education company I co-founded.
             </>
           }
           slot={{ id: "drone", ref: slotRefs.drone, onOpen: () => onOpen("drone") }}

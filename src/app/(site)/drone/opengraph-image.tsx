@@ -13,7 +13,7 @@ export default function Image() {
     label: "/Project — ArduPilot / MAVLink",
     title: "Classroom Drone",
     titleSize: 92,
-    dek: "The drone we teach with at BYM, the drone education company I co-own: it flies indoors and holds still on its own.",
+    dek: "The drone I spec’d for BYM, the drone education company I co-founded.",
     path: "/drone",
     art: boardArt("public/drone-parts.bin", 560, 540, -28, 52),
     artW: 560,
