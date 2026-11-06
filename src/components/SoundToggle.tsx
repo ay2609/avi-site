@@ -1,19 +1,17 @@
 "use client";
 
-import { useEffect, useRef, useSyncExternalStore } from "react";
+import { useSyncExternalStore } from "react";
 
-import { HIT, LABEL } from "@/components/furniture";
+import EndMark from "@/components/EndMark";
 import { prefersReducedMotion } from "@/lib/stage/motion";
 import { sfx } from "@/lib/sound/sfx";
 
-/** The meter's characters, quiet to loud — the ASCII fields' own ramp. */
-const RAMP = ".:-=+*#%";
-const CELLS = 10;
-
 /**
- * The masthead's sound switch, with a meter that reads what's actually
- * coming out of the speakers: one character per 70ms, scrolling left.
- * Turning it on flickers the name like a tube catching.
+ * The sound switch is the end mark at the foot of the page (Nov 6; it was a
+ * "Sound — Off" label with a level meter in the masthead). Off, it's the mark
+ * as it was; on, it inverts, the mark cut out of a bone square like the
+ * walkthroughs' key tiles. Turning it on flickers the name like a tube
+ * catching.
  */
 export default function SoundToggle() {
   const on = useSyncExternalStore(
@@ -21,36 +19,6 @@ export default function SoundToggle() {
     () => sfx.enabled,
     () => false
   );
-  const meterRef = useRef<HTMLSpanElement>(null);
-
-  useEffect(() => {
-    const el = meterRef.current;
-    if (!el) return;
-    const idle = RAMP[0].repeat(CELLS);
-    if (!on) {
-      el.textContent = idle;
-      return;
-    }
-    const history: number[] = new Array(CELLS).fill(0);
-    let buf: Float32Array<ArrayBuffer> | null = null;
-    const id = window.setInterval(() => {
-      const a = sfx.analyser;
-      let level = 0;
-      if (a) {
-        if (!buf || buf.length !== a.fftSize) buf = new Float32Array(a.fftSize);
-        a.getFloatTimeDomainData(buf);
-        let sum = 0;
-        for (let i = 0; i < buf.length; i++) sum += buf[i] * buf[i];
-        const rms = Math.sqrt(sum / buf.length);
-        // Gated under the echo's tail, then a curve so quiet ticks still register.
-        level = rms < 0.003 ? 0 : Math.min(1, Math.sqrt(rms) * 2.2);
-      }
-      history.shift();
-      history.push(level);
-      el.textContent = history.map((v) => RAMP[Math.round(v * (RAMP.length - 1))]).join("");
-    }, 70);
-    return () => window.clearInterval(id);
-  }, [on]);
 
   const toggle = () => {
     const next = !sfx.enabled;
@@ -63,20 +31,19 @@ export default function SoundToggle() {
     );
   };
 
+  // The square bleeds 4px past the mark on every side, so the bar keeps its height; the ::after makes it 44px to tap.
   return (
     <button
       type="button"
       onClick={toggle}
       aria-pressed={on}
-      title="Every sound on this page is synthesized live in your browser"
-      className={`${LABEL} ${HIT} flex items-baseline gap-3 transition-colors hover:text-bone`}
+      aria-label="Sound"
+      title={`Sound ${on ? "on" : "off"}: every sound on this page is synthesized live in your browser`}
+      className={`relative -m-1 flex cursor-pointer p-1 after:absolute after:-inset-3 after:content-[''] ${
+        on ? "bg-bone text-ink" : "text-bone hover:text-dim"
+      }`}
     >
-      <span>
-        Sound — <span className={on ? "text-bone" : ""}>{on ? "On" : "Off"}</span>
-      </span>
-      <span ref={meterRef} aria-hidden className={`whitespace-pre ${on ? "text-bone" : "opacity-50"}`}>
-        {RAMP[0].repeat(CELLS)}
-      </span>
+      <EndMark size={20} className="block" />
     </button>
   );
 }

@@ -175,7 +175,6 @@ export default function Newspaper({
       >
         {/* Above the name, whose glyphs overhang its box and would take the clicks. */}
         <div className={`${LABEL} relative z-10 flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2`}>
-          <SoundToggle />
           <ThemeSwitch />
           {/* Ticks aloud while hovered, with the sound on. */}
           <Clock className="text-bone" data-sfx="clock" />
@@ -304,10 +303,13 @@ export default function Newspaper({
         />
       </div>
 
-      {/* 5 — The footer: a bar with the links, set right, and the mark closing the page. */}
+      {/* 5 — The footer: a bar with the links, set right, and the mark closing the page, which is also the
+          sound switch (Nov 6). */}
       <footer data-push="down" className="flex items-center justify-end gap-7 border-b border-dashed border-rule px-4 py-3.5">
         {/* The edition ends here. */}
-        <EndMark size={20} className="mr-auto text-bone" />
+        <div className="mr-auto flex">
+          <SoundToggle />
+        </div>
         {LINKS.map(([name, href]) => (
           <a
             key={name}
