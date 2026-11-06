@@ -34,6 +34,7 @@ uniform vec2 uRes;
 uniform float uTime;
 uniform float uCellPx;  // the noise's cell, in buffer pixels
 uniform vec2 uShift;    // how far the last frame moves this frame, px
+uniform vec2 uOrigin;   // where this canvas sits in a field larger than it, px (0 for a field of its own)
 uniform float uKeep;    // how much of the last frame survives this frame
 uniform vec3 uGround;
 uniform vec3 uText;
@@ -56,7 +57,7 @@ float noise(vec3 x) { return (noise3(x) + noise3(x + 11.5)) / 2.0; }
 
 void main() {
   vec2 U = gl_FragCoord.xy;
-  float n = noise(vec3(U / uCellPx, 0.1 * uTime));
+  float n = noise(vec3((U + uOrigin) / uCellPx, 0.1 * uTime));
   float v = sin(6.28 * 10.0 * n);
   v = smoothstep(1.0, 0.0, 0.5 * abs(v) / fwidth(v));
 
@@ -84,14 +85,17 @@ uniform vec3 uText;
 uniform vec3 uSecond;
 uniform vec2 uOff;
 uniform float uAmt;
+uniform float uStrength;
 out vec4 outColor;
 float cover(vec3 c) { return clamp(distance(c, uGround) / distance(uText, uGround), 0.0, 1.0); }
 void main() {
   vec2 U = gl_FragCoord.xy;
   vec3 c = texture(uTex, U / uRes).rgb;
-  if (uAmt <= 0.0) { outColor = vec4(c, 1.0); return; }
-  float sliver = cover(texture(uTex, (U - uOff) / uRes).rgb) - cover(c);
-  outColor = vec4(mix(c, uSecond, uAmt * smoothstep(0.08, 0.45, sliver)), 1.0);
+  if (uAmt > 0.0) {
+    float sliver = cover(texture(uTex, (U - uOff) / uRes).rgb) - cover(c);
+    c = mix(c, uSecond, uAmt * smoothstep(0.08, 0.45, sliver));
+  }
+  outColor = vec4(mix(uGround, c, uStrength), 1.0);
 }`;
 
 /** The original at its 60 Hz: a pixel of shift and exp(-33/470) of fade a frame, at 470/8 px a cell. */
@@ -127,6 +131,10 @@ export default function IsoField({
   scale = 3,
   maxDpr = 1.5,
   second = false,
+  cell,
+  strength = 1,
+  anchored = false,
+  depth = 1,
   className = "",
 }: {
   palette?: IsoPalette;
@@ -134,6 +142,17 @@ export default function IsoField({
   second?: boolean;
   /** Noise cells across the field's short side: fewer is bigger, calmer contours. */
   scale?: number;
+  /**
+   * The noise's cell in CSS px, in place of `scale`, so fields of different shapes share one texture (the stage's
+   * margins match the seam's 60 px: 96 / 1.6).
+   */
+  cell?: number;
+  /** How far the picture stands off the page's ground, 0–1: 1 is the seam; less is quieter. */
+  strength?: number;
+  /** Draw the part of one viewport-wide field under this canvas, so fields side by side continue each other. */
+  anchored?: boolean;
+  /** How long each line's trail is, 0–1: 1 is the seam's terraces, 0 flat contour lines. */
+  depth?: number;
   /** Pixel ratio ceiling: a large field at full ratio costs more than it shows. */
   maxDpr?: number;
   className?: string;
@@ -162,12 +181,13 @@ export default function IsoField({
     const U = (p: WebGLProgram, n: string) => gl.getUniformLocation(p, n);
     const s = {
       prev: U(step, "uPrev"), res: U(step, "uRes"), time: U(step, "uTime"), cell: U(step, "uCellPx"),
+      origin: U(step, "uOrigin"),
       shift: U(step, "uShift"), keep: U(step, "uKeep"), ground: U(step, "uGround"), text: U(step, "uText"),
       palette: U(step, "uPalette"),
     };
     const v = {
       tex: U(show, "uTex"), res: U(show, "uRes"), ground: U(show, "uGround"), text: U(show, "uText"),
-      second: U(show, "uSecond"), off: U(show, "uOff"), amt: U(show, "uAmt"),
+      second: U(show, "uSecond"), off: U(show, "uOff"), amt: U(show, "uAmt"), strength: U(show, "uStrength"),
     };
 
     // Two buffers, flip-flopped: each step reads one and writes the other.
@@ -221,7 +241,7 @@ export default function IsoField({
 
     /** One feedback step of `dt` seconds at time `t`, then (unless warming up) the result to the screen. */
     const frame = (t: number, dt: number, present = true) => {
-      const cellPx = Math.min(w, h) / scale;
+      const cellPx = cell ? cell * (w / Math.max(1, canvas.clientWidth)) : Math.min(w, h) / scale;
       const k = cellPx / REF_CELL; // the original's motion, in this field's cells
       const f = dt * 60; // frames of the original's 60 Hz
       const { ground, text, violet } = colors();
@@ -236,8 +256,15 @@ export default function IsoField({
       gl.uniform2f(s.res, w, h);
       gl.uniform1f(s.time, t);
       gl.uniform1f(s.cell, cellPx);
-      gl.uniform2f(s.shift, k * f, k * f * Math.sin(t));
-      gl.uniform1f(s.keep, Math.exp(-REF_FADE * f));
+      // Anchored to the viewport, several canvases are windows onto one field rather than copies of one picture.
+      if (anchored) {
+        const r = canvas.getBoundingClientRect();
+        const px = w / Math.max(1, canvas.clientWidth);
+        gl.uniform2f(s.origin, r.left * px, (window.innerHeight - r.bottom) * px);
+      } else gl.uniform2f(s.origin, 0, 0);
+      // `depth` shortens the trail (and the shift that draws it out) that stacks the contours into terraces.
+      gl.uniform2f(s.shift, k * f * depth, k * f * depth * Math.sin(t));
+      gl.uniform1f(s.keep, depth > 0 ? Math.exp((-REF_FADE * f) / depth) : 0);
       gl.uniform3f(s.ground, ground[0], ground[1], ground[2]);
       gl.uniform3f(s.text, text[0], text[1], text[2]);
       gl.uniform1i(s.palette, palette === "spectrum" ? 0 : 1);
@@ -257,6 +284,7 @@ export default function IsoField({
       const px = w / Math.max(1, canvas.clientWidth);
       gl.uniform2f(v.off, 2 * px, -1.5 * px);
       gl.uniform1f(v.amt, second ? 0.7 : 0);
+      gl.uniform1f(v.strength, strength);
       gl.drawArrays(gl.TRIANGLES, 0, 3);
     };
 
@@ -326,7 +354,7 @@ export default function IsoField({
       gl.deleteProgram(show);
       gl.deleteBuffer(quad);
     };
-  }, [palette, scale, maxDpr, second]);
+  }, [palette, scale, maxDpr, second, cell, strength, anchored, depth]);
 
   return <canvas ref={ref} aria-hidden className={`block h-full w-full ${className}`} />;
 }

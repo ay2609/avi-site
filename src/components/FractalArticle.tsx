@@ -390,7 +390,8 @@ export default function FractalArticle({
           <nav
             aria-label="Chapters"
             className={`absolute top-4 @max-[419px]:left-auto @max-[419px]:right-4 @max-[419px]:top-[calc(100%+12px)] [@media(max-height:479px)]:!top-0 [@media(max-height:479px)]:!right-[calc(100cqw+32px-100vw)] ${
-              columns ? "left-[calc(100%+16px)] w-max" : "right-4"
+              // In the band it sits on the stage's isovalues (Nov 6), so it carries a patch of the page's ground.
+              columns ? "-mt-2 left-[calc(100%+16px)] w-max bg-ink py-2 pr-3" : "right-4"
             }`}
           >
             <div className="relative pl-4">

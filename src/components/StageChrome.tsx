@@ -4,14 +4,21 @@ import type { Ref } from "react";
 
 import { HIT, LABEL } from "@/components/furniture";
 import ThemeSwitch from "@/components/ThemeSwitch";
+import IsoField from "@/lib/iso/IsoField";
 import type { Article } from "@/lib/stage/articles";
+
+/** The cells beside the box, left and right, between the rules above and below it. */
+const SIDES = [
+  { left: 0, width: "var(--sx)", top: "var(--sy)", height: "var(--sh)" },
+  { left: "calc(var(--sx) + var(--sw))", right: 0, top: "var(--sy)", height: "var(--sh)" },
+];
 
 /**
  * The periphery of an expanded article: the newspaper's grid, grown to the
  * viewport. The article's box is `--sx --sy --sw --sh` (set by the stage);
  * its four edges extend as dashed hairlines to the screen edges, which
  * leaves four bands around it: light and dark, and Esc, above (Nov 4: no kicker), the
- * controls below, and nothing at the sides. Touch screens get their own words for both: no
+ * controls below, and at the sides the front page's isovalues, quieter and flatter (Nov 6). Touch screens get their own words for both: no
  * Esc key to name, and swipes rather than a wheel.
  *
  * Rule geometry is set from JS (see Stage.placeRules) so the rule variant can
@@ -22,10 +29,13 @@ import type { Article } from "@/lib/stage/articles";
 export default function StageChrome({
   chromeRef,
   article,
+  live,
   onClose,
 }: {
   chromeRef: Ref<HTMLDivElement>;
   article: Article;
+  /** An article is open: the side fields draw only then (hidden by visibility, they'd still run). */
+  live: boolean;
   onClose: () => void;
 }) {
   const rule = "absolute border-dashed border-rule";
@@ -33,6 +43,17 @@ export default function StageChrome({
 
   return (
     <div ref={chromeRef} data-stage-chrome className="invisible fixed inset-0 z-20 bg-ink">
+      {/* The margins beside the box, filled with the front page's seam (the owner's pick over the corners, Nov 6):
+          under the rules, so they still frame it. Not on a phone, where the margins are slivers. */}
+      {live &&
+        SIDES.map((style, k) => (
+          <div key={k} aria-hidden className="absolute overflow-hidden max-sm:hidden" style={style}>
+            {/* Quieter than the seam: wider contours, nearer the ground, and flatter (short trails: the seam's
+                stacked terraces were too much here). Anchored, so the boxes are windows onto one field rather
+                than the same picture over again. */}
+            <IsoField palette="ink" cell={125} strength={0.45} second anchored depth={0.3} />
+          </div>
+        ))}
       <div data-rule="x0" className={`${rule} border-t`} />
       <div data-rule="x1" className={`${rule} border-t`} />
       <div data-rule="y0" className={`${rule} border-l`} />

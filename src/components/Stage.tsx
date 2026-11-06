@@ -678,7 +678,7 @@ export default function Stage() {
       <SoundBoard />
       <LiveIcon />
       <Newspaper mainRef={mainRef} slotRefs={slotRefs} onOpen={open} />
-      <StageChrome chromeRef={chromeRef} article={staged} onClose={close} />
+      <StageChrome chromeRef={chromeRef} article={staged} live={openId !== null} onClose={close} />
       {ARTICLE_IDS.map((id) => {
         const field = ARTICLES[id].backdrop;
         if (!field) return null;
